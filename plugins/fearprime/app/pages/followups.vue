@@ -1,13 +1,45 @@
 <script setup lang="ts">
-const { listPendingFollowUps } = useFearprimeStore();
+const { listPendingFollowUps, completeFollowUp } = useFearprimeStore();
 const followUps = ref<Awaited<ReturnType<typeof listPendingFollowUps>>>([]);
-
-onMounted(async () => {
-  followUps.value = await listPendingFollowUps();
+const selectedId = ref<string | null>(null);
+const form = reactive({
+  fear: 3,
+  threatExpectancy: 30,
+  safetyExpectancy: 70,
+  intrusion: 2,
+  sleepQuality: 6,
+  sameContextResponse: 70,
+  newContextResponse: 55
 });
+const saved = ref(false);
+
+async function refresh() {
+  followUps.value = await listPendingFollowUps();
+}
+
+onMounted(refresh);
 
 function isDue(timestamp: string) {
   return new Date(timestamp).getTime() <= Date.now();
+}
+
+function openFollowUp(id: string) {
+  selectedId.value = id;
+  saved.value = false;
+}
+
+async function submit() {
+  if (!selectedId.value) return;
+  const item = followUps.value.find((entry) => String(entry.id) === selectedId.value);
+  if (!item) return;
+  await completeFollowUp({
+    followUpId: selectedId.value,
+    timepoint: String(item.timepoint) as "24h" | "7d" | "30d" | "custom",
+    ...form
+  });
+  saved.value = true;
+  await refresh();
+  selectedId.value = null;
 }
 </script>
 
@@ -26,14 +58,43 @@ function isDue(timestamp: string) {
             <p class="font-medium">{{ item.timepoint === '24h' ? '24-timers retention' : '7-dages retention' }}</p>
             <p class="text-xs text-muted">Kilde-event: {{ String(item.sourceEventId).slice(0, 8) }}</p>
           </div>
-          <UBadge :color="isDue(String(item.timestamp)) ? 'warning' : 'neutral'" variant="subtle">
-            {{ isDue(String(item.timestamp)) ? 'Forfalden' : new Date(String(item.timestamp)).toLocaleString('da-DK') }}
-          </UBadge>
+          <div class="flex items-center gap-2">
+            <UBadge :color="isDue(String(item.timestamp)) ? 'warning' : 'neutral'" variant="subtle">
+              {{ isDue(String(item.timestamp)) ? 'Forfalden' : new Date(String(item.timestamp)).toLocaleString('da-DK') }}
+            </UBadge>
+            <UButton size="sm" @click="openFollowUp(String(item.id))">Åbn</UButton>
+          </div>
         </div>
       </div>
       <div v-else class="py-8 text-center text-sm text-muted">
-        Ingen pending follow-ups. Når et learning event gemmes, oprettes 24h og 7d automatisk.
+        Ingen pending follow-ups.
       </div>
     </UCard>
+
+    <UCard v-if="selectedId">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <h2 class="font-semibold">Retention outcome</h2>
+          <UBadge variant="subtle">{{ followUps.find(f => String(f.id) === selectedId)?.timepoint }}</UBadge>
+        </div>
+      </template>
+
+      <div class="grid gap-6 sm:grid-cols-2">
+        <UFormField label="Fear"><USlider v-model="form.fear" :min="0" :max="10" /><span class="text-sm text-muted">{{ form.fear }}/10</span></UFormField>
+        <UFormField label="Threat expectancy"><USlider v-model="form.threatExpectancy" :min="0" :max="100" /><span class="text-sm text-muted">{{ form.threatExpectancy }}/100</span></UFormField>
+        <UFormField label="Safety expectancy"><USlider v-model="form.safetyExpectancy" :min="0" :max="100" /><span class="text-sm text-muted">{{ form.safetyExpectancy }}/100</span></UFormField>
+        <UFormField label="Intrusioner"><USlider v-model="form.intrusion" :min="0" :max="10" /><span class="text-sm text-muted">{{ form.intrusion }}/10</span></UFormField>
+        <UFormField label="Søvnkvalitet"><USlider v-model="form.sleepQuality" :min="0" :max="10" /><span class="text-sm text-muted">{{ form.sleepQuality }}/10</span></UFormField>
+        <UFormField label="Same-context response"><USlider v-model="form.sameContextResponse" :min="0" :max="100" /><span class="text-sm text-muted">{{ form.sameContextResponse }}/100</span></UFormField>
+        <UFormField label="New-context response"><USlider v-model="form.newContextResponse" :min="0" :max="100" /><span class="text-sm text-muted">{{ form.newContextResponse }}/100</span></UFormField>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-3 border-t border-default pt-4">
+        <UButton color="neutral" variant="soft" @click="selectedId = null">Annuller</UButton>
+        <UButton icon="i-lucide-check" @click="submit">Gem follow-up</UButton>
+      </div>
+    </UCard>
+
+    <UAlert v-if="saved" color="success" variant="subtle" title="Follow-up gemt" description="Rå outcome-data er gemt separat og kan senere bruges til F4/F5/F6-analyse." />
   </div>
 </template>
