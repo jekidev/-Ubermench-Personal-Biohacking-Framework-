@@ -1,8 +1,10 @@
+import type { Client, Stronghold } from '@tauri-apps/plugin-stronghold'
+
 const VAULT_PATH = 'ubermench-secrets.hold'
 const CLIENT_NAME = 'llm-provider-secrets'
 
-let stronghold: Awaited<ReturnType<typeof import('@tauri-apps/plugin-stronghold').Stronghold.load>> | null = null
-let client: Awaited<ReturnType<NonNullable<typeof stronghold>['loadClient']>> | null = null
+let stronghold: Stronghold | null = null
+let client: Client | null = null
 const browserSecrets = new Map<string, string>()
 
 function isTauriRuntime(): boolean {
@@ -19,7 +21,7 @@ export async function unlockSecretVault(masterPassword: string): Promise<void> {
 
   const { Stronghold } = await getStrongholdModule()
   const instance = await Stronghold.load(VAULT_PATH, masterPassword)
-  let nextClient
+  let nextClient: Client
   try {
     nextClient = await instance.loadClient(CLIENT_NAME)
   } catch {
@@ -65,9 +67,7 @@ export async function removeSecret(key: string): Promise<void> {
 }
 
 export async function lockSecretVault(): Promise<void> {
-  if (isTauriRuntime() && stronghold) {
-    await stronghold.unload()
-  }
+  if (isTauriRuntime() && stronghold) await stronghold.unload()
   stronghold = null
   client = null
   browserSecrets.clear()
