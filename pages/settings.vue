@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <div>
       <h1 class="text-2xl font-semibold">Settings</h1>
-      <p class="text-zinc-500">LLM providers are stored locally in this browser/profile.</p>
+      <p class="text-zinc-500">Provider configuration is stored locally. API keys are kept in session storage and are not written to persistent local storage.</p>
     </div>
 
     <UCard>
@@ -18,8 +18,8 @@
       <UCard v-for="provider in settings.providers" :key="provider.provider">
         <template #header><div class="flex items-center justify-between"><span class="font-medium capitalize">{{ provider.provider }}</span><span class="text-xs text-zinc-500">priority {{ provider.priority }}</span></div></template>
         <div class="space-y-3">
-          <UInput v-model="provider.apiKey" type="password" :placeholder="'API key'" autocomplete="off" @change="save" />
-          <UInput v-model="provider.model" placeholder="Model (optional)" @change="save" />
+          <UInput v-model="provider.apiKey" type="password" placeholder="API key" autocomplete="off" @change="save" />
+          <UInput v-model="provider.model" placeholder="Model (OpenRouter can use openrouter/free)" @change="save" />
           <UInput v-model="provider.baseUrl" placeholder="Base URL (optional)" @change="save" />
           <label class="flex items-center gap-2 text-sm"><input v-model="provider.enabled" type="checkbox" @change="save" /> Enabled</label>
         </div>
@@ -30,7 +30,7 @@
       <UButton @click="clearKeys">Clear keys</UButton>
       <UButton color="neutral" variant="outline" @click="reset">Reset settings</UButton>
     </div>
-    <p class="text-xs text-zinc-500">For high-security deployments, move provider secrets to the Tauri OS keychain/server proxy before sharing builds.</p>
+    <p class="text-xs text-zinc-500">For high-security deployments, move provider secrets to the Tauri OS keychain or a server-side proxy. Session storage is preferable to persistent browser storage but is not a hardware-backed secret vault.</p>
   </div>
 </template>
 
