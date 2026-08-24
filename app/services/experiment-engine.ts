@@ -37,8 +37,10 @@ export function summarizeNOf1(experiment: NOf1Experiment, nowInput: Date = new D
     return Number.isFinite(item.value) && !Number.isNaN(date.getTime()) && (!experiment.metric || item.metric === experiment.metric)
   })
 
-  // Baseline includes the observation at the washout boundary. The washout
-  // interval itself is the time between washoutStart and interventionStart.
+  // The washout interval is open at its baseline-side boundary: an observation
+  // exactly at washoutStart belongs to baseline, while observations after it
+  // and through interventionStart are washout. The intervention start itself
+  // remains outside the intervention window.
   const baseline = observations.filter((item) => {
     const date = new Date(item.recordedAt)
     return date >= baselineStart && date <= washoutStart
