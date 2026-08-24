@@ -1,6 +1,6 @@
 import type { HFModelEngine } from '~/types/hf-model'
 import type { LLMRequest } from '~/types/llm'
-import type { InterventionCandidate, PersonalBiologyProfile } from '~/types/biology'
+import type { InterventionCandidate } from '~/types/biology'
 import type { ObjectiveWeight } from '~/types/core'
 import { routeHFModel } from '~/services/hf-router'
 import { runHFInference } from '~/services/inference-engine'
@@ -11,6 +11,8 @@ import { screenInterventionSafety } from '~/services/safety-engine'
 import { compileProtocol } from '~/services/protocol-compiler'
 import { runClosedLoop } from '~/services/closed-loop-engine'
 import { detectAnomalies } from '~/services/anomaly-engine'
+import { assessDataQuality, identifyDataGaps } from '~/services/data-quality-engine'
+import { buildBiologyTimeline } from '~/services/timeline-engine'
 import { usePersonalBiology } from './usePersonalBiology'
 import { useLLM } from './useLLM'
 
@@ -67,6 +69,21 @@ export function useBiohackingAI() {
     return detectAnomalies(metrics, baselines)
   }
 
+  async function dataQuality() {
+    await biology.initialize()
+    return assessDataQuality(biology.profile.value)
+  }
+
+  async function dataGaps() {
+    await biology.initialize()
+    return identifyDataGaps(biology.profile.value)
+  }
+
+  async function timeline() {
+    await biology.initialize()
+    return buildBiologyTimeline(biology.profile.value)
+  }
+
   async function ask(request: LLMRequest) {
     await biology.initialize()
     const context = [
@@ -78,5 +95,5 @@ export function useBiohackingAI() {
     return llm.run({ ...request, system })
   }
 
-  return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, compileGoal, runDecisionLoop, anomalies, ask, llm, biology }
+  return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, compileGoal, runDecisionLoop, anomalies, dataQuality, dataGaps, timeline, ask, llm, biology }
 }
