@@ -1,5 +1,5 @@
 import { runAgentTask } from '~/services/agent-runtime/runtime'
-import { browserRuntimeStore } from '~/services/agent-runtime/memory-store'
+import { createRuntimeStore } from '~/services/agent-runtime/store'
 import type { AgentTask } from '~/services/agent-superstack/types'
 import type { AgentRun } from '~/services/agent-runtime/types'
 
@@ -22,7 +22,7 @@ export function useAgentRuntime() {
     }
   }
 
-  async function recentRuns(limit = 20) { return browserRuntimeStore.loadRuns(limit) }
+  async function recentRuns(limit = 20) { return createRuntimeStore().loadRuns(limit) }
 
   return { activeRun, status, error, run, recentRuns }
 }
