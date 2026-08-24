@@ -28,9 +28,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          # Do not enable setup-node's npm cache until a lockfile exists.
-          # setup-node cache: npm requires package-lock.json, npm-shrinkwrap.json,
-          # or yarn.lock and otherwise fails before the job reaches npm install.
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -86,7 +85,7 @@ jobs:
           pkg-config --modversion libsoup-3.0
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund --no-package-lock
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Unit tests
         run: npm test
