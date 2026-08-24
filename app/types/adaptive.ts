@@ -33,9 +33,11 @@ export interface ValueOfInformationItem {
 
 export interface OutcomeLearningResult {
   metric: string
+  direction: 'higher-is-better' | 'lower-is-better'
   baselineMean: number
   interventionMean: number
   delta: number
+  beneficialDelta: number
   standardizedEffect: number
   confidence: 'low' | 'moderate' | 'high'
   recommendation: 'retain-signal' | 'insufficient-signal' | 'possible-harm'
