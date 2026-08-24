@@ -42,10 +42,23 @@ const LearningInputSchema = z.object({
   expectedProbability: z.number().min(0).max(100)
 });
 
+const FollowUpInputSchema = z.object({
+  followUpId: z.string().min(1),
+  timepoint: z.enum(["24h", "7d", "30d", "custom"]),
+  fear: z.number().min(0).max(10),
+  threatExpectancy: z.number().min(0).max(100),
+  safetyExpectancy: z.number().min(0).max(100),
+  intrusion: z.number().min(0).max(10),
+  sleepQuality: z.number().min(0).max(10),
+  sameContextResponse: z.number().min(0).max(100),
+  newContextResponse: z.number().min(0).max(100)
+});
+
 export type MemoryTarget = z.infer<typeof MemoryTargetSchema>;
 export type FearprimeEvent = z.infer<typeof EventSchema>;
 export type Prediction = z.infer<typeof PredictionSchema>;
 export type LearningInput = z.infer<typeof LearningInputSchema>;
+export type FollowUpInput = z.infer<typeof FollowUpInputSchema>;
 
 const EVENTS_KEY = "events";
 const MEMORY_KEY = "memoryTargets";
@@ -215,6 +228,25 @@ export function useFearprimeStore() {
       .sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
   }
 
+  async function completeFollowUp(input: FollowUpInput) {
+    const parsed = FollowUpInputSchema.parse(input);
+    const source = (await loadEvents()).find((event) => event.id === parsed.followUpId);
+
+    await appendEvent({
+      id: crypto.randomUUID(),
+      type: "follow_up",
+      timestamp: new Date().toISOString(),
+      payload: {
+        ...parsed,
+        sourceEventId: source?.payload && "sourceEventId" in source.payload ? source.payload.sourceEventId : undefined,
+        status: "completed"
+      },
+      schemaVersion: "1.1"
+    });
+
+    return parsed;
+  }
+
   return {
     loadEvents,
     appendEvent,
@@ -222,6 +254,7 @@ export function useFearprimeStore() {
     createMemoryTarget,
     lockPrediction,
     createLearningEvent,
-    listPendingFollowUps
+    listPendingFollowUps,
+    completeFollowUp
   };
 }
