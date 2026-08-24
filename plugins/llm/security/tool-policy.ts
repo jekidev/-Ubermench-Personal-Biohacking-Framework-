@@ -1,4 +1,4 @@
-export type ToolRisk = 'read' | 'write' | 'execute'
+export type ToolRisk = 'read' | 'retrieve' | 'write' | 'execute'
 
 export type ToolPolicy = {
   enabled: boolean
@@ -7,11 +7,20 @@ export type ToolPolicy = {
   requiresExplicitApproval: boolean
 }
 
+// Pure local reads may remain available without approval.
 export const DEFAULT_TOOL_POLICY: ToolPolicy = {
   enabled: true,
   risk: 'read',
   requiresNativeTauri: false,
   requiresExplicitApproval: false,
+}
+
+// Network/RAG/scraping are retrieval actions and always require explicit approval.
+export const RETRIEVAL_TOOL_POLICY: ToolPolicy = {
+  enabled: true,
+  risk: 'retrieve',
+  requiresNativeTauri: false,
+  requiresExplicitApproval: true,
 }
 
 export const WRITE_TOOL_POLICY: ToolPolicy = {
