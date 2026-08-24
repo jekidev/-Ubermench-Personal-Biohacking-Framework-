@@ -3,16 +3,35 @@ import { DEFAULT_LLM_SETTINGS } from '~/types/llm'
 
 const STORAGE_KEY = 'ubermench-llm-settings-v1'
 
+type PersistedLLMSettings = Omit<LLMSettings, 'providers'> & {
+  providers: Array<Omit<LLMProviderConfig, 'apiKey'> & { apiKey?: never }>
+}
+
+function sanitizeForStorage(settings: LLMSettings): PersistedLLMSettings {
+  return {
+    preferFree: settings.preferFree,
+    autoRotate: settings.autoRotate,
+    showModel: settings.showModel,
+    providers: settings.providers.map(({ apiKey: _apiKey, ...provider }) => provider),
+  }
+}
+
 export function loadLLMSettings(): LLMSettings {
   if (import.meta.server || typeof localStorage === 'undefined') return structuredClone(DEFAULT_LLM_SETTINGS)
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return structuredClone(DEFAULT_LLM_SETTINGS)
-    const parsed = JSON.parse(raw) as Partial<LLMSettings>
+    const parsed = JSON.parse(raw) as Partial<PersistedLLMSettings>
     return {
       ...structuredClone(DEFAULT_LLM_SETTINGS),
       ...parsed,
-      providers: Array.isArray(parsed.providers) ? parsed.providers : structuredClone(DEFAULT_LLM_SETTINGS.providers),
+      providers: Array.isArray(parsed.providers)
+        ? parsed.providers.map((stored) => ({
+            ...structuredClone(DEFAULT_LLM_SETTINGS.providers.find((p) => p.provider === stored.provider) ?? { provider: stored.provider, enabled: false, priority: 99 }),
+            ...stored,
+            apiKey: undefined,
+          }))
+        : structuredClone(DEFAULT_LLM_SETTINGS.providers),
     }
   } catch {
     return structuredClone(DEFAULT_LLM_SETTINGS)
@@ -21,7 +40,7 @@ export function loadLLMSettings(): LLMSettings {
 
 export function saveLLMSettings(settings: LLMSettings) {
   if (import.meta.server || typeof localStorage === 'undefined') return
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizeForStorage(settings)))
 }
 
 function modelFor(provider: LLMProviderConfig): string {
@@ -86,7 +105,7 @@ async function requestAnthropic(provider: LLMProviderConfig, request: LLMRequest
   })
   const body = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(`${response.status}: ${body?.error?.message ?? 'Anthropic request failed'}`)
-  const text = Array.isArray(body?.content) ? body.content.filter((x: any) => x?.type === 'text').map((x: any) => x.text).join('\n') : ''
+  const text = Array.isArray(body?.content) ? body.content.filter((x: unknown): x is { type: string; text: string } => typeof x === 'object' && x !== null && 'type' in x && 'text' in x).filter((x) => x.type === 'text').map((x) => x.text).join('\n') : ''
   if (!text.trim()) throw new Error('Anthropic returned no text')
   return { text, usage: body?.usage, raw: body }
 }
