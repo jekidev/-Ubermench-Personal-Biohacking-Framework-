@@ -18,17 +18,22 @@ export interface OutcomePersistenceAdapter {
 }
 
 const memoryStore = new Map<string, OutcomeRecord>()
-const memoryAdapter: OutcomePersistenceAdapter = {
+
+export const memoryOutcomePersistenceAdapter: OutcomePersistenceAdapter = {
   save(record) { memoryStore.set(record.id, structuredClone(record)) },
   get(id) { const value = memoryStore.get(id); return value ? structuredClone(value) : undefined },
   list() { return [...memoryStore.values()].map((item) => structuredClone(item)).sort((a, b) => a.createdAt.localeCompare(b.createdAt)) },
   remove(id) { return memoryStore.delete(id) },
 }
 
-let adapter: OutcomePersistenceAdapter = memoryAdapter
+let adapter: OutcomePersistenceAdapter = memoryOutcomePersistenceAdapter
 
 export function configureOutcomePersistence(next: OutcomePersistenceAdapter) {
   adapter = next
+}
+
+export function getOutcomePersistence(): OutcomePersistenceAdapter {
+  return adapter
 }
 
 export async function saveOutcome(record: OutcomeRecord): Promise<OutcomeRecord> {
