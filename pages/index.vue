@@ -20,6 +20,19 @@
     </div>
 
     <UCard>
+      <template #header><div class="font-medium">AI console</div></template>
+      <form class="space-y-3" @submit.prevent="runAI">
+        <textarea v-model="prompt" class="min-h-28 w-full rounded-md border border-zinc-200 bg-transparent p-3 text-sm dark:border-zinc-700" placeholder="Ask Ubermench to research, analyse or reason about a health optimisation question..." />
+        <div class="flex flex-wrap items-center gap-3">
+          <UButton type="submit" :loading="loading" :disabled="!prompt.trim()">Run</UButton>
+          <span v-if="lastRun" class="text-xs text-zinc-500">{{ lastRun.provider }} / {{ lastRun.model }} · {{ lastRun.latencyMs }} ms · {{ lastRun.attempts }} attempt{{ lastRun.attempts === 1 ? '' : 's' }}</span>
+        </div>
+        <div v-if="error" class="rounded-md border border-red-300 p-3 text-sm text-red-700">{{ error }}</div>
+        <div v-if="lastRun" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">{{ lastRun.text }}</div>
+      </form>
+    </UCard>
+
+    <UCard>
       <template #header><div class="font-medium">AI orchestration</div></template>
       <div class="grid gap-3 sm:grid-cols-3 text-sm">
         <div><span class="text-zinc-500">Providers:</span> {{ enabledProviders }}</div>
@@ -41,6 +54,11 @@
 
 <script setup lang="ts">
 const llm = useLLM()
+const ai = useBiohackingAI()
+const prompt = ref('')
+const loading = ref(false)
+const error = ref('')
+const lastRun = ref<Awaited<ReturnType<typeof ai.ask>> | null>(null)
 const enabledProviders = computed(() => llm.settings.value.providers.filter((p) => p.enabled).length)
 const cards = [
   { title: 'Plugins', value: 'Fearprime + Longevity', note: 'Modular domain architecture' },
@@ -48,4 +66,21 @@ const cards = [
   { title: 'AI', value: 'Multi-provider', note: 'OpenRouter, OpenAI, Anthropic and HF routing' },
   { title: 'Desktop', value: 'Tauri 2', note: 'Native shell boundary ready' },
 ]
+
+async function runAI() {
+  error.value = ''
+  lastRun.value = null
+  loading.value = true
+  try {
+    lastRun.value = await ai.ask({
+      prompt: prompt.value,
+      mode: 'biohacker',
+      system: 'You are the Uberm3nch research assistant. Separate evidence from speculation. Do not invent sources. Flag uncertainty and safety concerns. Do not autonomously prescribe, start, stop or titrate medical treatment.',
+    })
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : String(cause)
+  } finally {
+    loading.value = false
+  }
+}
 </script>
