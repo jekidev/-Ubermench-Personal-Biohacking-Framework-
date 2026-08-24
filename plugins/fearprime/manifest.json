@@ -1,0 +1,17 @@
+{
+  "id": "fearprime",
+  "name": "Fearprime",
+  "version": "0.1.0",
+  "schemaVersion": "1.0.0",
+  "description": "PTSD, fear-learning, memory, psychophysiology and intervention research plugin for the Ubermench Personal Biohacking Framework.",
+  "entryPoints": {
+    "domain": "./domain/schema.ts",
+    "protocol": "./protocols/state-machine.md",
+    "interventions": "./interventions/registry.md"
+  },
+  "platforms": ["android", "ios", "macos", "windows", "linux", "web"],
+  "architecture": "offline-first-pwa",
+  "clinicalMode": true,
+  "researchMode": true,
+  "autonomousPrescribing": false
+}
