@@ -11,7 +11,10 @@
     "tauri": "npx --yes @tauri-apps/cli@^2",
     "tauri:dev": "npx --yes @tauri-apps/cli@^2 dev",
     "tauri:build": "npx --yes @tauri-apps/cli@^2 build",
-    "test": "nuxt prepare && vitest run"
+    "test": "nuxt prepare && vitest run",
+    "deployment:bootstrap": "node deployment/bootstrap.mjs",
+    "deployment:replit": "node deployment/replit.mjs",
+    "deployment:manus": "node deployment/manus.mjs"
   },
   "dependencies": {
     "@nuxt/ui": "^4.0.0",
