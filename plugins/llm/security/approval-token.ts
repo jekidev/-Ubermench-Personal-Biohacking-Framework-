@@ -11,14 +11,22 @@ export type ApprovalToken = {
   used: boolean
 }
 
-export async function issueApprovalToken(request: ApprovalRequest, exactPayload: unknown = request.payloadPreview, ttlMs = 120_000): Promise<ApprovalToken> {
+export function issueApprovalToken(request: ApprovalRequest, ttlMs?: number): Promise<ApprovalToken>
+export function issueApprovalToken(request: ApprovalRequest, exactPayload: unknown, ttlMs?: number): Promise<ApprovalToken>
+export async function issueApprovalToken(request: ApprovalRequest, exactPayloadOrTtl: unknown = request.payloadPreview, ttlMs = 120_000): Promise<ApprovalToken> {
+  const exactPayload = typeof exactPayloadOrTtl === 'number' && arguments.length === 2
+    ? request.payloadPreview
+    : exactPayloadOrTtl
+  const effectiveTtlMs = typeof exactPayloadOrTtl === 'number' && arguments.length === 2
+    ? exactPayloadOrTtl
+    : ttlMs
   const payloadHash = await fingerprintPayload(exactPayload)
   return {
     tokenId: crypto.randomUUID(),
     action: request.action,
     target: request.target,
     payloadHash,
-    expiresAt: new Date(Date.now() + ttlMs).toISOString(),
+    expiresAt: new Date(Date.now() + effectiveTtlMs).toISOString(),
     decision: 'approved',
     used: false,
   }

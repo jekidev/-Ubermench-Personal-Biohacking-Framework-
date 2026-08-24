@@ -12,13 +12,14 @@ export class AgentMemory {
 
   search(query: string, limit = 8): MemoryRecord[] {
     const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
+    if (terms.length === 0) return []
     return this.records
       .map((record) => {
         const haystack = `${record.text} ${record.tags.join(' ')}`.toLowerCase()
         const matches = terms.reduce((n, term) => n + (haystack.includes(term) ? 1 : 0), 0)
-        return { record, score: matches + record.importance * 0.15 + record.accessCount * 0.01 }
+        return { record, matches, score: matches + record.importance * 0.15 + record.accessCount * 0.01 }
       })
-      .filter((item) => item.score > 0)
+      .filter((item) => item.matches > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
       .map(({ record }) => { record.accessCount++; return record })
