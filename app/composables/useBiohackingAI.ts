@@ -13,8 +13,14 @@ import { runClosedLoop } from '~/services/closed-loop-engine'
 import { detectAnomalies } from '~/services/anomaly-engine'
 import { assessDataQuality, identifyDataGaps } from '~/services/data-quality-engine'
 import { buildBiologyTimeline } from '~/services/timeline-engine'
+import { estimateInterventionEffect, type CausalObservation } from '~/services/causal-engine'
+import { simulateIntervention } from '~/services/digital-twin-simulator'
+import { SemanticMemoryIndex } from '~/services/semantic-memory'
+import { normalizeHealthRecords, deduplicateHealthRecords, type UnifiedHealthRecord } from '~/services/health-data-normalizer'
 import { usePersonalBiology } from './usePersonalBiology'
 import { useLLM } from './useLLM'
+
+const memory = new SemanticMemoryIndex()
 
 export function useBiohackingAI() {
   const biology = usePersonalBiology()
@@ -84,6 +90,22 @@ export function useBiohackingAI() {
     return buildBiologyTimeline(biology.profile.value)
   }
 
+  async function simulate(intervention: InterventionCandidate, horizonDays = 28) {
+    await biology.initialize()
+    return simulateIntervention(biology.profile.value, { intervention, horizonDays })
+  }
+
+  function estimateEffect(observations: CausalObservation[], metric: string, intervention: string) {
+    return estimateInterventionEffect(observations, metric, intervention)
+  }
+
+  function remember(item: Parameters<typeof memory.upsert>[0]) { return memory.upsert(item) }
+  function recall(query: string, embedding?: number[], limit = 10) { return memory.search(query, embedding, limit) }
+
+  function ingestHealth(records: Parameters<typeof normalizeHealthRecords>[0], source: UnifiedHealthRecord['source']) {
+    return deduplicateHealthRecords(normalizeHealthRecords(records, source))
+  }
+
   async function ask(request: LLMRequest) {
     await biology.initialize()
     const context = [
@@ -95,5 +117,9 @@ export function useBiohackingAI() {
     return llm.run({ ...request, system })
   }
 
-  return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, compileGoal, runDecisionLoop, anomalies, dataQuality, dataGaps, timeline, ask, llm, biology }
+  return {
+    selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal,
+    safetyCheck, compileGoal, runDecisionLoop, anomalies, dataQuality, dataGaps, timeline,
+    simulate, estimateEffect, remember, recall, ingestHealth, ask, llm, biology,
+  }
 }
