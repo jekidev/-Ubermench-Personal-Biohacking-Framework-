@@ -1,4 +1,4 @@
-import type { EvidencePreview } from '~/plugins/longevity/evidence/live-lookup'
+import type { EvidencePreview } from '../../plugins/longevity/evidence/live-lookup'
 import { buildResearchQuery, searchEuropePMC } from './research-engine'
 
 export interface ResearchWorkflowRequest {
@@ -30,6 +30,7 @@ export async function runResearchWorkflow(request: ResearchWorkflowRequest): Pro
       doi: hit.doi,
       pmid: /^\d+$/.test(hit.id) ? hit.id : undefined,
       abstract: hit.abstract,
+      canonicalUrl: hit.url,
       retrievedAt: research.retrievedAt,
     },
     status: 'candidate',
