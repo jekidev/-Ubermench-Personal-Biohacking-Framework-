@@ -1,9 +1,7 @@
 import type { PersonalBiologyProfile } from '~/types/biology'
+import { clearSqliteBiologyProfile, loadSqliteBiologyProfile, saveSqliteBiologyProfile } from './sqlite-store'
 
 const STORAGE_KEY = 'ubermench.personal-biology.v1'
-const TAURI_STORAGE_FILE = 'personal-biology.v1.json'
-
-type TauriFs = typeof import('@tauri-apps/plugin-fs')
 
 export const emptyBiologyProfile = (): PersonalBiologyProfile => ({
   version: 1,
@@ -22,25 +20,18 @@ function isTauriRuntime(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 }
 
-async function getTauriFs(): Promise<TauriFs> {
-  return import('@tauri-apps/plugin-fs')
-}
-
 export async function loadBiologyProfile(): Promise<PersonalBiologyProfile> {
   if (typeof window === 'undefined') return emptyBiologyProfile()
 
   try {
-    const raw = isTauriRuntime()
-      ? await (async () => {
-          const { BaseDirectory, readTextFile } = await getTauriFs()
-          return readTextFile(TAURI_STORAGE_FILE, { baseDir: BaseDirectory.AppData })
-        })()
-      : window.localStorage.getItem(STORAGE_KEY)
+    if (isTauriRuntime()) {
+      return (await loadSqliteBiologyProfile()) ?? emptyBiologyProfile()
+    }
 
+    const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return emptyBiologyProfile()
     const parsed = JSON.parse(raw) as PersonalBiologyProfile
-    if (parsed.version !== 1) return emptyBiologyProfile()
-    return parsed
+    return parsed.version === 1 ? parsed : emptyBiologyProfile()
   } catch {
     return emptyBiologyProfile()
   }
@@ -49,27 +40,20 @@ export async function loadBiologyProfile(): Promise<PersonalBiologyProfile> {
 export async function saveBiologyProfile(profile: PersonalBiologyProfile): Promise<void> {
   if (typeof window === 'undefined') return
 
-  const value = JSON.stringify({ ...profile, updatedAt: new Date().toISOString() })
-
+  const next = { ...profile, updatedAt: new Date().toISOString() }
   if (isTauriRuntime()) {
-    const { BaseDirectory, writeTextFile } = await getTauriFs()
-    await writeTextFile(TAURI_STORAGE_FILE, value, { baseDir: BaseDirectory.AppData })
+    await saveSqliteBiologyProfile(next)
     return
   }
 
-  window.localStorage.setItem(STORAGE_KEY, value)
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
 }
 
 export async function clearBiologyProfile(): Promise<void> {
   if (typeof window === 'undefined') return
 
   if (isTauriRuntime()) {
-    try {
-      const { BaseDirectory, remove } = await getTauriFs()
-      await remove(TAURI_STORAGE_FILE, { baseDir: BaseDirectory.AppData })
-    } catch {
-      // Missing local profile is already the desired state.
-    }
+    await clearSqliteBiologyProfile()
     return
   }
 
