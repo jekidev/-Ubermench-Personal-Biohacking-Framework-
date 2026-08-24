@@ -27,9 +27,20 @@ export async function issueApprovalToken(request: ApprovalRequest, exactPayload:
 export async function consumeApprovalToken(token: ApprovalToken, action: LlmAction, target: string, payload: unknown): Promise<void> {
   if (token.used) throw new Error('LLM action blocked: approval token has already been used.')
   if (token.decision !== 'approved') throw new Error('LLM action blocked: approval was denied.')
-  if (Date.parse(token.expiresAt) <= Date.now()) throw new Error('LLM action blocked: approval token has expired.')
-  if (token.action !== action || token.target !== target) throw new Error('LLM action blocked: approval scope does not match the requested action.')
+
+  const expiresAt = Date.parse(token.expiresAt)
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+    throw new Error('LLM action blocked: approval token has expired.')
+  }
+
+  if (token.action !== action || token.target !== target) {
+    throw new Error('LLM action blocked: approval scope does not match the requested action.')
+  }
+
   const payloadHash = await fingerprintPayload(payload)
-  if (token.payloadHash !== payloadHash) throw new Error('LLM action blocked: approved payload does not match the requested payload.')
+  if (token.payloadHash !== payloadHash) {
+    throw new Error('LLM action blocked: approved payload does not match the requested payload.')
+  }
+
   token.used = true
 }
