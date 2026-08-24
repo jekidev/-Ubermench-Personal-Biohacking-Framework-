@@ -321,12 +321,12 @@ mod tests {
 
     #[test]
     fn rejects_oversized_args() {
-        assert!(validate_args(&vec!["x".repeat(MAX_ARG_BYTES + 1)]).is_err());
+        assert!(validate_args(&["x".repeat(MAX_ARG_BYTES + 1)]).is_err());
     }
 
     #[test]
     fn rejects_too_many_args() {
-        assert!(validate_args(&vec!["x".into(); MAX_ARGS + 1]).is_err());
+        assert!(validate_args(&["x".into(); MAX_ARGS + 1]).is_err());
     }
 
     #[test]
