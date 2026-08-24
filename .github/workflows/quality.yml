@@ -26,14 +26,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: package.json
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Clear npm cache
+        run: npm cache clean --force
+
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund --no-package-lock
 
       - name: Unit tests
         run: npm test
