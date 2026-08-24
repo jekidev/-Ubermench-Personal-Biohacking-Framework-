@@ -8,11 +8,28 @@ import { recordAudit } from './audit'
 import { withRecovery } from './recovery'
 import { SkillEvolutionEngine } from './skill-evolution'
 import { executeApprovedToolCalls } from './tool-loop'
+import { extractToolCalls } from './tool-plan'
 
 const skillEvolution = new SkillEvolutionEngine()
 
 function auditEvent(runId: string, type: Parameters<typeof recordAudit>[1]['type'], detail: string, metadata?: Record<string, unknown>) {
   return { id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, runId, type, detail, createdAt: new Date().toISOString(), metadata }
+}
+
+function splitToolCalls(calls: AgentToolCall[]): { executable: AgentToolCall[]; awaitingApproval: AgentToolCall[] } {
+  const executable = calls.filter((call) => !call.requiresApproval || Boolean(call.approvalToken?.trim()))
+  const awaitingApproval = calls.filter((call) => call.requiresApproval && !call.approvalToken?.trim())
+  return { executable, awaitingApproval }
+}
+
+async function askModel(task: AgentTask, system: string, provider?: string, model?: string) {
+  return withRecovery(() => orchestrateLLM({
+    prompt: task.prompt,
+    system,
+    mode: task.kind === 'research' ? 'researcher' : 'biohacker',
+    preferredProvider: provider as LLMProvider | undefined,
+    preferredModel: model,
+  }))
 }
 
 export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
@@ -37,6 +54,8 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     const skillContext = context.skills.map((s) => `- ${s.name}: ${s.description}`).join('\n')
     const system = [
       'You are the Uberm3nch agent kernel. Follow policy and never bypass approval gates.',
+      'When a tool would materially help, return a JSON object with a toolCalls array and do not claim the tool ran.',
+      'Each tool call must contain id, name, args, and requiresApproval. Never invent approval tokens.',
       `Task kind: ${task.kind}`,
       `Selected model: ${context.selectedModel?.provider ?? 'unavailable'}/${context.selectedModel?.model ?? 'unavailable'}`,
       memoryContext ? `Relevant memory:\n${memoryContext}` : 'Relevant memory: none',
@@ -44,13 +63,7 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     ].join('\n\n')
     run.status = 'executing'
     const response = await withRecovery(
-      () => orchestrateLLM({
-        prompt: task.prompt,
-        system,
-        mode: task.kind === 'research' ? 'researcher' : 'biohacker',
-        preferredProvider: context.selectedModel?.provider as LLMProvider | undefined,
-        preferredModel: context.selectedModel?.model,
-      }),
+      () => askModel(task, system, context.selectedModel?.provider, context.selectedModel?.model),
       undefined,
       async (attempt, error, delayMs) => {
         run.retryCount = attempt
@@ -58,10 +71,44 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       },
     )
     run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() } as AgentObservation)
-    await recordAudit(store, auditEvent(id, 'model.completed', 'Model execution completed', { provider: response.provider, model: response.model, attempts: response.attempts }))
+    const calls = extractToolCalls(response.text)
+    run.toolCalls.push(...calls)
+    for (const call of calls) await recordAudit(store, auditEvent(id, 'tool.requested', `Tool requested: ${call.name}`, { toolCallId: call.id, requiresApproval: call.requiresApproval === true }))
+
+    const { executable, awaitingApproval } = splitToolCalls(calls)
+    if (awaitingApproval.length) {
+      run.status = 'waiting-approval'
+      await recordAudit(store, auditEvent(id, 'tool.blocked', 'Execution paused pending explicit approval', { toolCalls: awaitingApproval.map((call) => call.name) }))
+      await store.appendRun(run)
+      return run
+    }
+
+    if (executable.length) {
+      const result = await executeApprovedToolCalls(task, run, executable)
+      await recordAudit(store, auditEvent(id, 'tool.completed', `Executed ${result.executed} tool call(s)`))
+      const toolContext = run.observations.filter((observation) => observation.kind === 'tool').slice(-8).map((observation) => observation.text).join('\n')
+      const continuation = await withRecovery(
+        () => orchestrateLLM({
+          prompt: `${task.prompt}\n\nVerified tool results:\n${toolContext}`,
+          system: 'Continue using only verified tool results. Never claim a tool ran unless present in the observations. If another risky tool is needed, return a structured toolCalls JSON object without executing it.',
+          mode: task.kind === 'research' ? 'researcher' : 'biohacker',
+          preferredProvider: context.selectedModel?.provider as LLMProvider | undefined,
+          preferredModel: context.selectedModel?.model,
+        }),
+        undefined,
+        async (attempt, error, delayMs) => {
+          run.retryCount = (run.retryCount ?? 0) + 1
+          await recordAudit(store, auditEvent(id, 'recovery.retry', 'Retrying continuation model execution', { attempt, delayMs, error: error instanceof Error ? error.message : String(error) }))
+        },
+      )
+      run.observations.push({ kind: 'model', text: continuation.text, createdAt: new Date().toISOString() })
+    }
+
+    await recordAudit(store, auditEvent(id, 'model.completed', 'Model execution completed', { provider: response.provider, model: response.model, attempts: response.attempts, toolCalls: calls.length }))
     run.status = 'completed'
     run.completedAt = new Date().toISOString()
     skillEvolution.propose(task.prompt, 'success: model response completed')
+    agentKernel.learnFromTask(task, 'success: agent run completed')
     await store.saveMemory(agentKernel.memory.all())
     await store.appendRun(run)
     await recordAudit(store, auditEvent(id, 'run.completed', 'Agent run completed'))
@@ -80,13 +127,15 @@ export async function continueAgentWithTools(task: AgentTask, run: AgentRun, cal
   if (run.task.id !== task.id) throw new Error('Agent continuation task does not match the run task.')
   if (run.status === 'failed') throw new Error('Cannot continue a failed agent run.')
   const store = createRuntimeStore()
+  for (const call of calls) await recordAudit(store, auditEvent(run.id, 'tool.requested', `Tool continuation requested: ${call.name}`, { toolCallId: call.id }))
   const result = await executeApprovedToolCalls(task, run, calls, maxToolCalls)
   run.status = 'executing'
+  await recordAudit(store, auditEvent(run.id, 'tool.completed', `Executed ${result.executed} continuation tool call(s)`))
   const toolContext = run.observations.filter((observation) => observation.kind === 'tool').slice(-maxToolCalls).map((observation) => observation.text).join('\n')
   const response = await withRecovery(
     () => orchestrateLLM({
       prompt: `${task.prompt}\n\nTool results:\n${toolContext}`,
-      system: 'Continue the agent task using only verified tool results. Never claim an unobserved tool execution.',
+      system: 'Continue the agent task using only verified tool results. Never claim an unobserved tool execution. Return structured toolCalls JSON if another tool is required.',
       mode: task.kind === 'research' ? 'researcher' : 'biohacker',
       preferredProvider: run.selectedModel?.provider as LLMProvider | undefined,
       preferredModel: run.selectedModel?.model,
@@ -98,11 +147,11 @@ export async function continueAgentWithTools(task: AgentTask, run: AgentRun, cal
     },
   )
   run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() })
-  run.status = 'completed'
-  run.completedAt = new Date().toISOString()
+  run.status = extractToolCalls(response.text).some((call) => call.requiresApproval && !call.approvalToken) ? 'waiting-approval' : 'completed'
+  run.completedAt = run.status === 'completed' ? new Date().toISOString() : undefined
   await recordAudit(store, auditEvent(run.id, 'model.completed', 'Continuation model execution completed', { provider: response.provider, model: response.model }))
   await store.appendRun(run)
-  return result.run
+  return run
 }
 
 export function pendingSkillCandidates() { return skillEvolution.listPending() }
