@@ -1,0 +1,1 @@
+Native MCP stdio lifecycle is implemented in `src-tauri/src/mcp.rs` and is approval-gated.
