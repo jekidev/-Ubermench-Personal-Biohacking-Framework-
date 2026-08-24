@@ -30,7 +30,8 @@ export function calculateBiomarkerTrend(records: BiomarkerRecord[], name: string
   }
 
   const first = values[0]
-  const latest = values.at(-1)!
+  const latest = values.at(-1)
+  if (!first || !latest) return { name, unit: '', count: values.length, direction: 'insufficient-data' }
   const delta = latest.value - first.value
   const percentChange = first.value === 0 ? undefined : (delta / Math.abs(first.value)) * 100
   const direction = Math.abs(delta) < Math.max(Math.abs(first.value) * 0.01, 0.000001) ? 'stable' : delta > 0 ? 'up' : 'down'
