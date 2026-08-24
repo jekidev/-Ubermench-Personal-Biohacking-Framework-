@@ -42,7 +42,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.toml') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
@@ -64,8 +64,11 @@ jobs:
           pkg-config --modversion javascriptcoregtk-4.1
           pkg-config --modversion libsoup-3.0
 
+      # The repository's lockfile currently contains only the root package
+      # metadata, so npm ci would reject it. npm install resolves the complete
+      # dependency graph until a fully generated lockfile is committed.
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Unit tests
         run: npm test
@@ -101,8 +104,11 @@ jobs:
           RUST_BACKTRACE: "1"
         run: cargo clippy --all-targets --all-features -- -D warnings
 
+      - name: Tauri CLI smoke test
+        run: npx --yes @tauri-apps/cli@^2 info
+
       - name: Tauri production build
         env:
           PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
           RUST_BACKTRACE: "1"
-        run: npm run tauri:build -- --ci
+        run: npx --yes @tauri-apps/cli@^2 build --ci
