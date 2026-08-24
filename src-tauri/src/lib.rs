@@ -38,7 +38,12 @@ pub fn run() {
             })
             .build(),
         )
-        .invoke_handler(tauri::generate_handler![fingerprint_bytes, app_name, mcp::mcp_stdio_preflight])
+        .invoke_handler(tauri::generate_handler![
+            fingerprint_bytes,
+            app_name,
+            mcp::mcp_stdio_preflight,
+            mcp::mcp_stdio_execute
+        ])
         .run(tauri::generate_context!())
         .expect("error while running Ubermench application");
 }
