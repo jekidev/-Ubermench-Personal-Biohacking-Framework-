@@ -39,11 +39,11 @@ export function summarizeNOf1(experiment: NOf1Experiment, nowInput: Date = new D
 
   const baseline = observations.filter((item) => {
     const date = new Date(item.recordedAt)
-    return date >= baselineStart && date <= washoutStart
+    return date >= baselineStart && date < washoutStart
   })
   const intervention = observations.filter((item) => {
     const date = new Date(item.recordedAt)
-    return date >= interventionStart && date <= now
+    return date > interventionStart && date <= now
   })
   const baselineValues = baseline.map((x) => x.value)
   const interventionValues = intervention.map((x) => x.value)
