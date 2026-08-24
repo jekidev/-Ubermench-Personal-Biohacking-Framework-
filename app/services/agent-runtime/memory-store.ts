@@ -24,14 +24,17 @@ export class BrowserRuntimeStore implements RuntimeStore {
   async saveMemory(records: MemoryRecord[]): Promise<void> { writeJson(MEMORY_KEY, records) }
   async appendRun(run: AgentRun): Promise<void> {
     const runs = readJson<AgentRun[]>(RUN_KEY, [])
-    runs.unshift(run)
-    writeJson(RUN_KEY, runs.slice(0, 100))
+    const next = [run, ...runs.filter((item) => item.id !== run.id)]
+    writeJson(RUN_KEY, next.slice(0, 100))
   }
   async loadRuns(limit = 20): Promise<AgentRun[]> { return readJson<AgentRun[]>(RUN_KEY, []).slice(0, limit) }
+  async findRunByTaskId(taskId: string): Promise<AgentRun | undefined> {
+    return readJson<AgentRun[]>(RUN_KEY, []).find((item) => item.task.id === taskId)
+  }
   async appendAudit(event: AgentAuditEvent): Promise<void> {
     const events = readJson<AgentAuditEvent[]>(AUDIT_KEY, [])
-    events.unshift(event)
-    writeJson(AUDIT_KEY, events.slice(0, 500))
+    const next = [event, ...events.filter((item) => item.id !== event.id)]
+    writeJson(AUDIT_KEY, next.slice(0, 500))
   }
   async loadAudit(limit = 100): Promise<AgentAuditEvent[]> { return readJson<AgentAuditEvent[]>(AUDIT_KEY, []).slice(0, Math.max(1, Math.min(500, limit))) }
 }
