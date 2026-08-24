@@ -31,9 +31,12 @@ function cosineSimilarity(a: number[], b: number[]) {
   let normA = 0
   let normB = 0
   for (let i = 0; i < a.length; i += 1) {
-    dot += a[i] * b[i]
-    normA += a[i] ** 2
-    normB += b[i] ** 2
+    const av = a[i]
+    const bv = b[i]
+    if (av === undefined || bv === undefined) return undefined
+    dot += av * bv
+    normA += av ** 2
+    normB += bv ** 2
   }
   if (!normA || !normB) return 0
   return dot / Math.sqrt(normA * normB)
