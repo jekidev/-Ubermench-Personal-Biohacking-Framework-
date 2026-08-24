@@ -1,11 +1,16 @@
 import type { HFModelEngine } from '~/types/hf-model'
 import type { LLMRequest } from '~/types/llm'
+import type { InterventionCandidate, PersonalBiologyProfile } from '~/types/biology'
+import type { ObjectiveWeight } from '~/types/core'
 import { routeHFModel } from '~/services/hf-router'
 import { runHFInference } from '~/services/inference-engine'
 import { buildEvidenceQuery } from '~/services/evidence-engine'
 import { buildResearchQuery } from '~/services/research-engine'
 import { runResearchWorkflow } from '~/services/research-workflow'
 import { screenInterventionSafety } from '~/services/safety-engine'
+import { compileProtocol } from '~/services/protocol-compiler'
+import { runClosedLoop } from '~/services/closed-loop-engine'
+import { detectAnomalies } from '~/services/anomaly-engine'
 import { usePersonalBiology } from './usePersonalBiology'
 import { useLLM } from './useLLM'
 
@@ -48,6 +53,20 @@ export function useBiohackingAI() {
     return screenInterventionSafety(intervention, biology.profile.value.medications, biology.profile.value.supplements)
   }
 
+  async function compileGoal(goal: string, candidates: InterventionCandidate[] = [], objectives?: ObjectiveWeight[]) {
+    await biology.initialize()
+    return compileProtocol(biology.profile.value, { goal, candidates, objectives })
+  }
+
+  async function runDecisionLoop(request: Parameters<typeof runClosedLoop>[1]) {
+    await biology.initialize()
+    return runClosedLoop(biology.profile.value, request)
+  }
+
+  async function anomalies(metrics: Parameters<typeof detectAnomalies>[0], baselines: Parameters<typeof detectAnomalies>[1]) {
+    return detectAnomalies(metrics, baselines)
+  }
+
   async function ask(request: LLMRequest) {
     await biology.initialize()
     const context = [
@@ -59,5 +78,5 @@ export function useBiohackingAI() {
     return llm.run({ ...request, system })
   }
 
-  return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, ask, llm, biology }
+  return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, compileGoal, runDecisionLoop, anomalies, ask, llm, biology }
 }
