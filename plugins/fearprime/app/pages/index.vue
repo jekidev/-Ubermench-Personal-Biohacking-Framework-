@@ -1,12 +1,21 @@
 <script setup lang="ts">
-const modules = [
-  { title: "Daglig state", value: "08", description: "Baseline og løbende state" },
-  { title: "Memory targets", value: "03", description: "Aktive targets" },
-  { title: "Hypoteser", value: "04", description: "Åbne competing hypotheses" },
-  { title: "Follow-ups", value: "02", description: "Afventer måling" }
-];
+const { listMemoryTargets, listPendingFollowUps } = useFearprimeStore();
 
-const nextStep = "Standardiseret retentionstest";
+const memoryCount = ref(0);
+const followUpCount = ref(0);
+const modules = computed(() => [
+  { title: "Daglig state", value: "—", description: "Baseline og løbende state", to: "/state" },
+  { title: "Memory targets", value: String(memoryCount.value), description: "Aktive targets", to: "/memory" },
+  { title: "Learning events", value: "—", description: "Prediction → outcome", to: "/learning" },
+  { title: "Follow-ups", value: String(followUpCount.value), description: "Afventer måling", to: "/followups" }
+]);
+
+const nextStep = computed(() => followUpCount.value > 0 ? "Gennemfør næste retention follow-up" : "Opret første memory target");
+
+onMounted(async () => {
+  memoryCount.value = (await listMemoryTargets()).length;
+  followUpCount.value = (await listPendingFollowUps()).length;
+});
 </script>
 
 <template>
@@ -17,7 +26,7 @@ const nextStep = "Standardiseret retentionstest";
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Ubermench Framework</p>
           <h1 class="text-xl font-semibold">Fearprime</h1>
         </div>
-        <UBadge color="primary" variant="subtle">v0.1 prototype</UBadge>
+        <UBadge color="primary" variant="subtle">Nuxt 4 · Tauri 2</UBadge>
       </div>
     </header>
 
@@ -36,6 +45,7 @@ const nextStep = "Standardiseret retentionstest";
             </p>
             <div class="flex flex-wrap gap-2">
               <UButton to="/memory" icon="i-lucide-brain">Memory target</UButton>
+              <UButton to="/learning" color="neutral" variant="soft" icon="i-lucide-flask-conical">Learning event</UButton>
               <UButton to="/state" color="neutral" variant="soft" icon="i-lucide-activity">Daglig state</UButton>
             </div>
           </div>
@@ -45,18 +55,20 @@ const nextStep = "Standardiseret retentionstest";
           <div class="space-y-3">
             <p class="text-sm text-muted">Next-best-test</p>
             <p class="text-lg font-semibold">{{ nextStep }}</p>
-            <p class="text-sm text-muted">Valgt for at skelne mellem aktive hypoteser uden at ændre prediction lock.</p>
-            <UBadge color="warning" variant="subtle">Clinician review</UBadge>
+            <p class="text-sm text-muted">Systemet foreslår først en måling; interventioner og kliniske beslutninger holdes adskilt fra denne motor.</p>
+            <UBadge color="warning" variant="subtle">Clinician review hvor relevant</UBadge>
           </div>
         </UCard>
       </section>
 
       <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <UCard v-for="item in modules" :key="item.title">
-          <p class="text-sm text-muted">{{ item.title }}</p>
-          <p class="mt-2 text-3xl font-semibold">{{ item.value }}</p>
-          <p class="mt-1 text-xs text-muted">{{ item.description }}</p>
-        </UCard>
+        <NuxtLink v-for="item in modules" :key="item.title" :to="item.to" class="block">
+          <UCard class="h-full transition hover:-translate-y-0.5 hover:shadow-md">
+            <p class="text-sm text-muted">{{ item.title }}</p>
+            <p class="mt-2 text-3xl font-semibold">{{ item.value }}</p>
+            <p class="mt-1 text-xs text-muted">{{ item.description }}</p>
+          </UCard>
+        </NuxtLink>
       </section>
 
       <section class="grid gap-4 lg:grid-cols-2">
@@ -68,9 +80,13 @@ const nextStep = "Standardiseret retentionstest";
             </div>
           </template>
           <div class="grid gap-2 sm:grid-cols-3">
-            <div v-for="step in ['Prediction lock', 'Learning event', 'Follow-up']" :key="step" class="rounded-lg border border-default p-3 text-sm">
-              {{ step }}
-            </div>
+            <NuxtLink v-for="step in [
+              ['Memory', '/memory'],
+              ['Learning', '/learning'],
+              ['Follow-up', '/followups']
+            ]" :key="step[0]" :to="step[1]" class="rounded-lg border border-default p-3 text-sm transition hover:bg-elevated">
+              {{ step[0] }}
+            </NuxtLink>
           </div>
         </UCard>
 
@@ -79,9 +95,9 @@ const nextStep = "Standardiseret retentionstest";
             <h2 class="font-semibold">Aktive phenotype-hypoteser</h2>
           </template>
           <div class="space-y-3 text-sm">
-            <div class="flex items-center justify-between"><span>F4 · Consolidation</span><UBadge color="primary" variant="subtle">0.78</UBadge></div>
-            <div class="flex items-center justify-between"><span>F5 · Generalisation</span><UBadge color="neutral" variant="subtle">0.44</UBadge></div>
-            <div class="flex items-center justify-between"><span>F8 · Reconsolidation</span><UBadge color="neutral" variant="subtle">0.31</UBadge></div>
+            <div class="flex items-center justify-between"><span>F4 · Consolidation</span><UBadge color="neutral" variant="subtle">Afventer data</UBadge></div>
+            <div class="flex items-center justify-between"><span>F5 · Generalisation</span><UBadge color="neutral" variant="subtle">Afventer data</UBadge></div>
+            <div class="flex items-center justify-between"><span>F11 · Chronic state</span><UBadge color="neutral" variant="subtle">Afventer data</UBadge></div>
           </div>
         </UCard>
       </section>
