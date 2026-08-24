@@ -16,24 +16,19 @@ import { assessDataQuality, identifyDataGaps } from '~/services/data-quality-eng
 import { buildBiologyTimeline } from '~/services/timeline-engine'
 import { estimateInterventionEffect, type CausalObservation } from '~/services/causal-engine'
 import { simulateIntervention } from '~/services/digital-twin-simulator'
-import { calibrateDigitalTwin, type CalibratedModel } from '~/services/digital-twin-calibration'
 import { SemanticMemoryIndex } from '~/services/semantic-memory'
 import { normalizeHealthRecords, deduplicateHealthRecords, type UnifiedHealthRecord } from '~/services/health-data-normalizer'
 import { evaluatePolicyRules } from '~/services/policy-engine'
 import { buildDailyPlan } from '~/services/daily-planner'
 import { learnOutcome } from '~/services/outcome-learning'
 import { rankValueOfInformation } from '~/services/value-of-information'
-import { saveOutcome, listOutcomes, type OutcomeRecord } from '~/services/persistent-outcome-store'
-import { BackgroundSyncScheduler } from '~/services/background-sync'
 import { usePersonalBiology } from './usePersonalBiology'
 import { useLLM } from './useLLM'
-
-const memory = new SemanticMemoryIndex()
-const syncScheduler = new BackgroundSyncScheduler()
 
 export function useBiohackingAI() {
   const biology = usePersonalBiology()
   const llm = useLLM()
+  const memory = new SemanticMemoryIndex()
 
   function selectModel(engine: HFModelEngine) { return routeHFModel(engine, { runtime: 'hybrid' }) }
 
@@ -73,33 +68,23 @@ export function useBiohackingAI() {
   }
 
   async function anomalies(metrics: Parameters<typeof detectAnomalies>[0], baselines: Parameters<typeof detectAnomalies>[1]) { return detectAnomalies(metrics, baselines) }
+
   async function dataQuality() { await biology.initialize(); return assessDataQuality(biology.profile.value) }
   async function dataGaps() { await biology.initialize(); return identifyDataGaps(biology.profile.value) }
   async function timeline() { await biology.initialize(); return buildBiologyTimeline(biology.profile.value) }
-  async function simulate(intervention: InterventionCandidate, horizonDays = 28) { await biology.initialize(); return simulateIntervention(biology.profile.value, { intervention, horizonDays }) }
+
+  async function simulate(intervention: InterventionCandidate, horizonDays = 28) {
+    await biology.initialize()
+    return simulateIntervention(biology.profile.value, { intervention, horizonDays })
+  }
+
   function estimateEffect(observations: CausalObservation[], metric: string, intervention: string) { return estimateInterventionEffect(observations, metric, intervention) }
   function evaluatePolicy(observations: Array<{ metric: string; value: number }>, rules: PolicyRule[]) { return evaluatePolicyRules(observations, rules) }
+
   async function dailyPlan(request: Omit<DailyPlanRequest, 'profile'>) { await biology.initialize(); return buildDailyPlan({ ...request, profile: biology.profile.value }) }
-
-  function learn(metric: string, baseline: number[], intervention: number[], metadata?: Omit<OutcomeRecord, 'id' | 'metric' | 'baseline' | 'observed' | 'createdAt'>) {
-    const estimate = learnOutcome(metric, baseline, intervention)
-    const record: OutcomeRecord = {
-      id: crypto.randomUUID(), metric, baseline, observed: intervention, createdAt: new Date().toISOString(), intervention: metadata?.intervention ?? 'unknown', estimate,
-    }
-    saveOutcome(record)
-    return record
-  }
-
-  async function calibrate(estimates: ReturnType<typeof estimateInterventionEffect>[], previous?: CalibratedModel) {
-    await biology.initialize()
-    return calibrateDigitalTwin(biology.profile.value, estimates, previous)
-  }
-
-  async function outcomes() { return listOutcomes() }
-  function scheduleSync(id: string, intervalMs: number, run: () => Promise<number>) { return syncScheduler.register(id, intervalMs, run) }
-  function cancelSync(id: string) { syncScheduler.cancel(id) }
-
+  function learn(metric: string, baseline: number[], intervention: number[]) { return learnOutcome(metric, baseline, intervention) }
   async function valueOfInformation() { await biology.initialize(); return rankValueOfInformation(biology.profile.value) }
+
   function remember(item: Parameters<typeof memory.upsert>[0]) { return memory.upsert(item) }
   function recall(query: string, embedding?: number[], limit = 10) { return memory.search(query, embedding, limit) }
   function ingestHealth(records: Parameters<typeof normalizeHealthRecords>[0], source: UnifiedHealthRecord['source']) { return deduplicateHealthRecords(normalizeHealthRecords(records, source)) }
@@ -115,5 +100,5 @@ export function useBiohackingAI() {
     return llm.run({ ...request, system })
   }
 
-  return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, compileGoal, runDecisionLoop, anomalies, dataQuality, dataGaps, timeline, simulate, estimateEffect, evaluatePolicy, dailyPlan, learn, calibrate, outcomes, scheduleSync, cancelSync, valueOfInformation, remember, recall, ingestHealth, ask, llm, biology }
+  return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, compileGoal, runDecisionLoop, anomalies, dataQuality, dataGaps, timeline, simulate, estimateEffect, evaluatePolicy, dailyPlan, learn, valueOfInformation, remember, recall, ingestHealth, ask, llm, biology }
 }
