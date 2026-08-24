@@ -35,6 +35,7 @@
 <script setup lang="ts">
 const navigation = [
   { label: 'Overview', to: '/' },
+  { label: 'Agent', to: '/agent' },
   { label: 'AI Models', to: '/ai-models' },
   { label: 'Settings', to: '/settings' },
   { label: 'Biology', to: '/biology' },
