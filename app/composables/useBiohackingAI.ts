@@ -26,6 +26,7 @@ export function useBiohackingAI() {
   }
 
   async function research(goal: string) {
+    await biology.initialize()
     const profile = biology.profile.value
     return runResearchWorkflow({
       goal,
@@ -48,7 +49,14 @@ export function useBiohackingAI() {
   }
 
   async function ask(request: LLMRequest) {
-    return llm.run(request)
+    await biology.initialize()
+    const context = [
+      ...biology.profile.value.goals.map((goal) => `Goal: ${goal}`),
+      ...biology.profile.value.biomarkers.slice(-8).map((x) => `Biomarker: ${x.name} ${x.value} ${x.unit}`),
+      ...biology.profile.value.variants.slice(0, 8).map((x) => `Variant: ${x.rsId ?? x.gene ?? 'unknown'} ${x.genotype}`),
+    ].join('\n')
+    const system = [request.system, 'Use the supplied personal biology context when relevant. Do not treat missing data as normal data.', context].filter(Boolean).join('\n\n')
+    return llm.run({ ...request, system })
   }
 
   return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, ask, llm, biology }
