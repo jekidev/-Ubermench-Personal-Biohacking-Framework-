@@ -29,6 +29,7 @@ describe('adaptive intelligence', () => {
   it('builds a conservative plan when recovery signals are poor', () => {
     const plan = buildDailyPlan({ profile, objectives: [{ id: 'longevity', weight: 1 }], protocol: [], observations: [{ metric: 'HRV', value: 20 }] })
     expect(plan.recoveryState).toBe('low')
-    expect(plan.actions[0]?.title).toContain('Collect core biomarkers')
+    expect(plan.actions).toHaveLength(1)
+    expect(plan.actions[0]?.title).toContain('Reduce or defer')
   })
 })
