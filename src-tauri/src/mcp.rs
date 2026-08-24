@@ -301,7 +301,8 @@ mod tests {
 
     #[test]
     fn rejects_too_many_args() {
-        assert!(validate_args(&["x".into(); MAX_ARGS + 1]).is_err());
+        let args: Vec<String> = (0..=MAX_ARGS).map(|_| "x".to_string()).collect();
+        assert!(validate_args(&args).is_err());
     }
 
     #[test]
