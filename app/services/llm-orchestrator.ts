@@ -7,8 +7,12 @@ const DEFAULT_TIMEOUT_MS = 45_000
 
 type PersistedLLMSettings = Omit<LLMSettings, 'providers'> & { providers: Array<Omit<LLMProviderConfig, 'apiKey'> & { apiKey?: never }> }
 
+function isTauriRuntime(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+}
+
 function readSessionKeys(): Record<string, string> {
-  if (import.meta.server || typeof sessionStorage === 'undefined') return {}
+  if (isTauriRuntime() || import.meta.server || typeof sessionStorage === 'undefined') return {}
   try {
     const value = JSON.parse(sessionStorage.getItem(SECRET_STORAGE_KEY) ?? '{}')
     return value && typeof value === 'object' ? value as Record<string, string> : {}
@@ -16,7 +20,7 @@ function readSessionKeys(): Record<string, string> {
 }
 
 function writeSessionKeys(settings: LLMSettings) {
-  if (import.meta.server || typeof sessionStorage === 'undefined') return
+  if (isTauriRuntime() || import.meta.server || typeof sessionStorage === 'undefined') return
   try {
     const keys = Object.fromEntries(settings.providers.filter((p) => p.apiKey?.trim()).map((p) => [p.provider, p.apiKey]))
     sessionStorage.setItem(SECRET_STORAGE_KEY, JSON.stringify(keys))
@@ -47,11 +51,14 @@ export function loadLLMSettings(): LLMSettings {
 
 export function saveLLMSettings(settings: LLMSettings) {
   if (import.meta.server || typeof localStorage === 'undefined') return
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizeForStorage(settings))); writeSessionKeys(settings) } catch { /* keep in-memory state */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizeForStorage(settings)))
+    writeSessionKeys(settings)
+  } catch { /* keep in-memory state */ }
 }
 
 export function clearLLMSessionKeys() {
-  if (import.meta.server || typeof sessionStorage === 'undefined') return
+  if (typeof sessionStorage === 'undefined' || isTauriRuntime()) return
   try { sessionStorage.removeItem(SECRET_STORAGE_KEY) } catch { /* ignore */ }
 }
 
@@ -126,7 +133,7 @@ async function callProvider(provider: LLMProviderConfig, request: LLMRequest) {
 export async function orchestrateLLM(request: LLMRequest, settings = loadLLMSettings()): Promise<LLMResponse> {
   const started = performance.now()
   const pool = candidates(settings, request.mode)
-  if (!pool.length) throw new Error('No enabled LLM provider with an API key. Add a key in Settings.')
+  if (!pool.length) throw new Error('No enabled LLM provider with an API key. Unlock the secret vault and add a key in Settings.')
   const errors: string[] = []
   let attempts = 0
   const forceRotation = request.mode === 'safety' || request.mode === 'auditor'
