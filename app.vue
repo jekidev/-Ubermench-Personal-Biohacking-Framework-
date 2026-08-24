@@ -27,6 +27,9 @@
 <script setup lang="ts">
 const navigation = [
   { label: 'Overview', to: '/' },
+  { label: 'AI Models', to: '/ai-models' },
+  { label: 'Settings', to: '/settings' },
+  { label: 'Biology', to: '/biology' },
   { label: 'Longevity', to: '/longevity' },
   { label: 'Bloods', to: '/longevity/bloods' },
   { label: 'Genetics', to: '/longevity/genetics' },
