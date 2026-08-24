@@ -3,6 +3,7 @@ import { runAgentTask } from '~/services/agent-runtime/runtime'
 import { createRuntimeStore } from '~/services/agent-runtime/store'
 import type { AgentTask } from '~/services/agent-superstack/types'
 import type { AgentRun } from '~/services/agent-runtime/types'
+import { providerHealth } from '~/services/agent-runtime/provider-health'
 
 export function useAgentRuntime() {
   const activeRun = useState<AgentRun | null>('ubermench-agent-active-run', () => null)
@@ -23,8 +24,15 @@ export function useAgentRuntime() {
     }
   }
 
+  async function resume(task: AgentTask) {
+    const existing = await createRuntimeStore().findRunByTaskId(task.id)
+    if (!existing) throw new Error(`No recoverable run found for task ${task.id}.`)
+    return run(task)
+  }
+
   async function recentRuns(limit = 20) { return createRuntimeStore().loadRuns(limit) }
   async function audit(limit = 100) { return recentAudit(createRuntimeStore(), limit) }
+  function providerHealthSnapshot() { return providerHealth.snapshot() }
 
-  return { activeRun, status, error, run, recentRuns, audit }
+  return { activeRun, status, error, run, resume, recentRuns, audit, providerHealthSnapshot }
 }
