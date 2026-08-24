@@ -1,19 +1,7 @@
-# LLM Human Approval Gate
+# LLM security boundary
 
-The LLM is fail-closed for all actions that retrieve external information, access RAG, change state, execute code/processes, transmit data, or persist data.
+All LLM/MCP retrieval and side-effect actions are fail-closed and require an explicit human approval token before execution. Approval tokens are scoped to the exact action, target and payload and expire after a short TTL.
 
-## Approval is required before
+Future tool adapters must execute through the centralized tool execution gate. Direct provider/network/filesystem/process/storage calls from LLM tool handlers are prohibited unless they are reached through that gate.
 
-- web/network search
-- scraping/fetching external content
-- reading from RAG/vector stores
-- creating anything
-- modifying anything
-- deleting anything
-- sending data/messages/API requests
-- saving/persisting anything
-- executing commands/processes
-
-The approval request must show the intended action, target, reason, and a safe payload preview where applicable. A missing, expired, denied, or ambiguous decision blocks execution.
-
-This is an authorization boundary, not merely a UI confirmation. Tool implementations must call the gate before performing the side effect.
+Pure local reads may remain read-only, but web/network retrieval, scraping, RAG access, writes, deletes, sends, persistence and process execution require explicit approval. Destructive/data-changing operations also require the Tauri runtime.
