@@ -1,0 +1,18 @@
+{
+  "id": "longevity",
+  "name": "Longevity",
+  "version": "0.1.0",
+  "schemaVersion": "1.0.0",
+  "description": "Evidence-weighted longevity dashboard for cardiovascular, metabolic, fitness, organ-health and geroscience tracking.",
+  "entryPoints": {
+    "domain": "./domain/schema.ts",
+    "protocol": "./protocols/dashboard.md",
+    "interventions": "./interventions/registry.md",
+    "evidence": "./evidence/registry.md"
+  },
+  "platforms": ["android", "ios", "macos", "windows", "linux", "web"],
+  "architecture": "offline-first-pwa",
+  "clinicalMode": true,
+  "researchMode": true,
+  "autonomousPrescribing": false
+}
