@@ -1,0 +1,154 @@
+{
+  "version": "0.1.0",
+  "lastReviewed": "2026-08-24",
+  "tiers": {
+    "E0": "Præklinisk mekanistisk evidens",
+    "E1": "Human mekanistisk/laboratorieevidens",
+    "E2": "Begrænset eller heterogen human klinisk evidens",
+    "E3": "Robust klinisk evidens"
+  },
+  "interventions": [
+    {
+      "id": "pe",
+      "name": "Prolonged Exposure",
+      "role": "clinical",
+      "target": ["F1","F2","F3","F5","F6","F10"],
+      "evidenceTier": "E3",
+      "status": "core"
+    },
+    {
+      "id": "cpt",
+      "name": "Cognitive Processing Therapy",
+      "role": "clinical",
+      "target": ["F2","F3","F5","F9","F13"],
+      "evidenceTier": "E3",
+      "status": "core"
+    },
+    {
+      "id": "emdr",
+      "name": "EMDR",
+      "role": "clinical",
+      "target": ["F10","F14"],
+      "evidenceTier": "E3",
+      "status": "core"
+    },
+    {
+      "id": "moclobemide",
+      "name": "Moclobemid",
+      "role": "chronic_state_modifier",
+      "target": ["F11"],
+      "evidenceTier": "E2",
+      "status": "clinician_led_research"
+    },
+    {
+      "id": "memantine",
+      "name": "Memantin",
+      "role": "learning_augmenter",
+      "target": ["F3"],
+      "evidenceTier": "E1",
+      "status": "clinician_led_research"
+    },
+    {
+      "id": "sodium_butyrate",
+      "name": "Natriumbutyrat",
+      "role": "consolidation_candidate",
+      "target": ["F4"],
+      "evidenceTier": "E1",
+      "status": "exploratory"
+    },
+    {
+      "id": "l_dopa",
+      "name": "Levodopa/L-DOPA",
+      "role": "learning_augmenter",
+      "target": ["F4","F5","F6"],
+      "evidenceTier": "E2",
+      "status": "clinician_led_research"
+    },
+    {
+      "id": "dcs",
+      "name": "D-cycloserin",
+      "role": "learning_augmenter",
+      "target": ["F3","F4"],
+      "evidenceTier": "E2",
+      "status": "research"
+    },
+    {
+      "id": "oxytocin",
+      "name": "Oxytocin",
+      "role": "retrieval_social_state_candidate",
+      "target": ["F2","F3","F10","F13"],
+      "evidenceTier": "E1",
+      "status": "conditional_research"
+    },
+    {
+      "id": "pentoxifylline",
+      "name": "Pentoxifyllin",
+      "role": "inflammatory_vascular_state",
+      "target": ["F12"],
+      "evidenceTier": "E1",
+      "status": "clinician_led_research"
+    },
+    {
+      "id": "prazosin",
+      "name": "Prazosin",
+      "role": "nightmare_sleep",
+      "target": ["F15"],
+      "evidenceTier": "E2",
+      "status": "conditional_clinical"
+    },
+    {
+      "id": "sertraline",
+      "name": "Sertralin",
+      "role": "clinical_chronic_state",
+      "target": ["F11"],
+      "evidenceTier": "E3",
+      "status": "clinical_reference"
+    },
+    {
+      "id": "paroxetine",
+      "name": "Paroxetin",
+      "role": "clinical_chronic_state",
+      "target": ["F11"],
+      "evidenceTier": "E3",
+      "status": "clinical_reference"
+    },
+    {
+      "id": "venlafaxine",
+      "name": "Venlafaxin",
+      "role": "clinical_chronic_state",
+      "target": ["F11"],
+      "evidenceTier": "E3",
+      "status": "clinical_reference"
+    },
+    {
+      "id": "lithium",
+      "name": "Lithium",
+      "role": "longitudinal_state_modifier",
+      "target": ["F11"],
+      "evidenceTier": "E1",
+      "status": "separate_clinician_module"
+    },
+    {
+      "id": "lithium_orotate",
+      "name": "Lithiumorotat",
+      "role": "exploratory_lithium_hypothesis",
+      "target": ["F11"],
+      "evidenceTier": "E0",
+      "status": "exploratory"
+    }
+  ],
+  "excluded": [
+    {
+      "name": "Kanna/Sceletium",
+      "reason": "Fjernet fra aktiv protokol pga. utilstrækkelig PTSD-specifik evidens og unødig serotonerg kompleksitet."
+    },
+    {
+      "name": "Selegilin",
+      "reason": "Fjernet fra aktiv protokol pga. manglende robust PTSD-evidens og høj MAO/interaktionskompleksitet."
+    },
+    {
+      "name": "BNC210",
+      "reason": "Forskningsmæssigt interessant, men ikke i den nuværende praktiske kandidatpulje."
+    }
+  ]
+}
