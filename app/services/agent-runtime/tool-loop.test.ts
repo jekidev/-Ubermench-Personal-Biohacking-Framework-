@@ -3,7 +3,7 @@ import { executeApprovedToolCalls } from './tool-loop'
 import type { AgentRun, AgentToolCall } from './types'
 import type { AgentTask } from '~/services/agent-superstack/types'
 
-const task: AgentTask = { prompt: 'inspect local memory', kind: 'coding', riskLevel: 'low' }
+const task: AgentTask = { id: 'task_test', prompt: 'inspect local memory', kind: 'coding', riskLevel: 'low' }
 
 function runFixture(): AgentRun {
   return {
@@ -31,7 +31,7 @@ describe('agent tool loop', () => {
 
   it('bounds tool execution count', async () => {
     const run = runFixture()
-    const calls = Array.from({ length: 12 }, (_, index) => ({ id: `c${index}`, name: 'memory.search', args: { query: String(index) } }))
+    const calls: AgentToolCall[] = Array.from({ length: 12 }, (_, index) => ({ id: `c${index}`, name: 'memory.search', args: { query: String(index) } }))
     const result = await executeApprovedToolCalls(task, run, calls, 2)
     expect(result.executed).toBe(2)
   })
