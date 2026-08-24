@@ -27,9 +27,25 @@ const EventSchema = z.object({
   schemaVersion: z.string()
 });
 
+const LearningInputSchema = z.object({
+  memoryId: z.string().min(1),
+  eventType: z.enum(["retrieval", "extinction", "safety_discrimination", "counterconditioning", "imagery_rescripting", "interoceptive", "generalisation", "retention_test", "naturalistic_trigger"]),
+  context: z.string().optional(),
+  stimulus: z.string().optional(),
+  fearPre: z.number().min(0).max(10),
+  threatPre: z.number().min(0).max(100),
+  safetyPre: z.number().min(0).max(100),
+  fearPost: z.number().min(0).max(10),
+  threatPost: z.number().min(0).max(100),
+  safetyPost: z.number().min(0).max(100),
+  actualOutcome: z.string().min(1),
+  expectedProbability: z.number().min(0).max(100)
+});
+
 export type MemoryTarget = z.infer<typeof MemoryTargetSchema>;
 export type FearprimeEvent = z.infer<typeof EventSchema>;
 export type Prediction = z.infer<typeof PredictionSchema>;
+export type LearningInput = z.infer<typeof LearningInputSchema>;
 
 const EVENTS_KEY = "events";
 const MEMORY_KEY = "memoryTargets";
@@ -50,12 +66,16 @@ function browserSet<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+async function getStore() {
+  return Store.load(DB_NAME);
+}
+
 export function useFearprimeStore() {
   const isTauri = computed(() => import.meta.client && Boolean(window.__TAURI_INTERNALS__));
 
   async function loadEvents(): Promise<FearprimeEvent[]> {
     if (!isTauri.value) return browserGet<FearprimeEvent[]>(EVENTS_KEY, []);
-    const store = await Store.load(DB_NAME);
+    const store = await getStore();
     return (await store.get<FearprimeEvent[]>(EVENTS_KEY)) ?? [];
   }
 
@@ -64,7 +84,7 @@ export function useFearprimeStore() {
       browserSet(EVENTS_KEY, events);
       return;
     }
-    const store = await Store.load(DB_NAME);
+    const store = await getStore();
     await store.set(EVENTS_KEY, events);
     await store.save();
   }
@@ -78,7 +98,7 @@ export function useFearprimeStore() {
 
   async function listMemoryTargets(): Promise<MemoryTarget[]> {
     if (!isTauri.value) return browserGet<MemoryTarget[]>(MEMORY_KEY, []);
-    const store = await Store.load(DB_NAME);
+    const store = await getStore();
     return (await store.get<MemoryTarget[]>(MEMORY_KEY)) ?? [];
   }
 
@@ -95,7 +115,7 @@ export function useFearprimeStore() {
     if (!isTauri.value) {
       browserSet(MEMORY_KEY, next);
     } else {
-      const store = await Store.load(DB_NAME);
+      const store = await getStore();
       await store.set(MEMORY_KEY, next);
       await store.save();
     }
@@ -136,5 +156,72 @@ export function useFearprimeStore() {
     return prediction;
   }
 
-  return { loadEvents, appendEvent, listMemoryTargets, createMemoryTarget, lockPrediction };
+  async function createLearningEvent(input: LearningInput) {
+    const parsed = LearningInputSchema.parse(input);
+    const timestamp = new Date().toISOString();
+    const threatChange = parsed.threatPost - parsed.threatPre;
+    const safetyGain = parsed.safetyPost - parsed.safetyPre;
+    const actualOutcomeProbability = parsed.actualOutcome.trim().toLowerCase() === "ja" ? 100 : 0;
+    const predictionError = Math.abs(parsed.expectedProbability - actualOutcomeProbability);
+
+    const learningQuality = {
+      activation: "pass",
+      predictionError: predictionError >= 20 ? "pass" : "unclear",
+      safetyLearning: safetyGain > 0 ? "pass" : "unclear",
+      engagement: "pass",
+      stability: "pass",
+      overall: predictionError >= 20 && safetyGain > 0 ? "high_quality" : "acceptable"
+    };
+
+    const event = {
+      id: crypto.randomUUID(),
+      type: "learning_event" as const,
+      timestamp,
+      payload: {
+        ...parsed,
+        derived: { threatChange, safetyGain, predictionError },
+        learningQuality
+      },
+      schemaVersion: "1.1"
+    };
+
+    const saved = await appendEvent(event);
+
+    await appendEvent({
+      id: crypto.randomUUID(),
+      type: "follow_up",
+      timestamp: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      payload: { sourceEventId: saved.id, timepoint: "24h", status: "pending" },
+      schemaVersion: "1.1"
+    });
+
+    await appendEvent({
+      id: crypto.randomUUID(),
+      type: "follow_up",
+      timestamp: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      payload: { sourceEventId: saved.id, timepoint: "7d", status: "pending" },
+      schemaVersion: "1.1"
+    });
+
+    return saved;
+  }
+
+  async function listPendingFollowUps() {
+    const events = await loadEvents();
+    return events
+      .filter((event) => event.type === "follow_up")
+      .map((event) => ({ id: event.id, timestamp: event.timestamp, ...(event.payload as Record<string, unknown>) }))
+      .filter((followUp) => followUp.status === "pending")
+      .sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
+  }
+
+  return {
+    loadEvents,
+    appendEvent,
+    listMemoryTargets,
+    createMemoryTarget,
+    lockPrediction,
+    createLearningEvent,
+    listPendingFollowUps
+  };
 }
