@@ -1,48 +1,21 @@
-# Evidence / Risk Engine
+# Evidence Registry
 
-This layer links confirmed observations to versioned evidence without changing the raw measurement.
-
-## Separation of layers
-
-```text
-Observed value
-    ↓
-Evidence record
-    ↓
-Risk/context interpretation
-    ↓
-Human-readable statement
-```
-
-### Observation
-What was actually measured.
-
-### Evidence
-What the available literature supports, with grade and source/version.
-
-### Context
-Which personal context variables were explicitly applied.
-
-### Interpretation
-A bounded statement that preserves uncertainty and distinguishes association from causality.
-
-### Hypothesis
-Speculative ideas remain explicitly labelled and cannot be promoted to clinical evidence by the engine.
+The registry is a versioned evidence layer. It remains separate from raw observations, personal context and hypotheses.
 
 ## Evidence grades
 
-- `A` — highest-confidence evidence in the plugin's evidence registry
-- `B` — strong but not highest-confidence evidence
-- `C` — moderate/limited evidence
-- `D` — weak/inconclusive evidence
-- `E` — hypothesis/insufficient evidence
+- `A` — strong, replicated evidence for the specific claim, endpoint and population
+- `B` — good evidence with meaningful limitations
+- `C` — mixed or moderate evidence
+- `D` — weak or indirect evidence
+- `E` — hypothesis or insufficient evidence
 
-These grades are framework metadata, not a validated medical scoring system. Individual evidence entries must include their own source and review date.
+The grade applies to a specific claim, population and endpoint. It is not a universal quality label for an intervention.
 
-## Safety rules
+## Versioning
 
-- Never change the raw observation.
-- Never infer a diagnosis from a single biomarker.
-- Do not turn missing context into a normal/abnormal assumption.
-- Do not treat observational associations as causal evidence.
-- Do not generate autonomous treatment or dose changes.
+A new evidence record supersedes an older record rather than rewriting it. The UI can therefore show how the interpretation changed over time.
+
+## Safety
+
+Evidence records are informational. They cannot directly trigger diagnosis, medication changes, dose changes or treatment escalation.
