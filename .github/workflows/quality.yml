@@ -17,7 +17,7 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,6 +28,9 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: package.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -40,3 +43,7 @@ jobs:
 
       - name: Nuxt build
         run: npm run build
+
+      - name: Rust check
+        working-directory: src-tauri
+        run: cargo check --locked
