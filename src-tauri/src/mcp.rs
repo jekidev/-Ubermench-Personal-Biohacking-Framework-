@@ -11,6 +11,9 @@ use std::{
 
 const DEFAULT_TIMEOUT_MS: u64 = 15_000;
 const MAX_OUTPUT_BYTES: usize = 2 * 1024 * 1024;
+const MAX_STDIN_BYTES: usize = 1024 * 1024;
+const MAX_ARGS: usize = 64;
+const MAX_ARG_BYTES: usize = 8 * 1024;
 const APPROVAL_TTL_MS: u64 = 30_000;
 
 #[derive(Debug, Deserialize)]
@@ -79,6 +82,16 @@ fn allowlisted_command(command: &str) -> bool {
     matches!(command, "node" | "nodejs" | "npx" | "bun" | "deno" | "python" | "python3")
 }
 
+fn validate_args(args: &[String]) -> Result<(), String> {
+    if args.len() > MAX_ARGS {
+        return Err(format!("MCP stdio blocked: too many arguments (max {MAX_ARGS})."));
+    }
+    if args.iter().any(|arg| arg.len() > MAX_ARG_BYTES) {
+        return Err(format!("MCP stdio blocked: an argument exceeds the {MAX_ARG_BYTES}-byte limit."));
+    }
+    Ok(())
+}
+
 fn validate_command(command: &str) -> Result<(), String> {
     if command.trim().is_empty() {
         return Err("MCP stdio blocked: command is required.".into());
@@ -99,6 +112,7 @@ fn timeout_ms(value: Option<u64>) -> u64 {
 #[tauri::command]
 pub fn mcp_stdio_preflight(request: McpStdioRequest) -> Result<McpStdioPreflight, String> {
     validate_command(&request.command)?;
+    validate_args(&request.args)?;
     Ok(McpStdioPreflight {
         transport: "stdio",
         command: request.command,
@@ -115,6 +129,7 @@ pub fn mcp_issue_approval(
     registry: tauri::State<'_, McpApprovalRegistry>,
 ) -> Result<McpApproval, String> {
     validate_command(&request.command)?;
+    validate_args(&request.args)?;
     let fingerprint = fingerprint(&request.command, &request.args);
     let now = now_ms();
     let count = registry.tokens.lock().map_err(|_| "MCP approval registry poisoned.")?.len();
@@ -141,6 +156,8 @@ fn consume_approval(
     if token.trim().is_empty() {
         return Err("MCP stdio blocked: explicit approval is required.".into());
     }
+    validate_command(command)?;
+    validate_args(args)?;
     let mut tokens = registry.tokens.lock().map_err(|_| "MCP approval registry poisoned.")?;
     let record = tokens.remove(token).ok_or_else(|| "MCP stdio blocked: approval is missing, expired, or already used.".to_string())?;
     if record.expires_at_ms < now_ms() {
@@ -179,6 +196,10 @@ pub fn mcp_stdio_execute(
     registry: tauri::State<'_, McpApprovalRegistry>,
 ) -> Result<McpStdioResult, String> {
     validate_command(&request.command)?;
+    validate_args(&request.args)?;
+    if stdin_payload.len() > MAX_STDIN_BYTES {
+        return Err(format!("MCP stdio blocked: stdin payload exceeds the {MAX_STDIN_BYTES}-byte limit."));
+    }
     let timeout = timeout_ms(request.timeout_ms);
     consume_approval(&registry, &request.approval_token, &request.command, &request.args)?;
 
@@ -237,6 +258,16 @@ mod tests {
     fn clamps_timeout() {
         assert_eq!(timeout_ms(Some(1)), 250);
         assert_eq!(timeout_ms(Some(100_000)), 60_000);
+    }
+
+    #[test]
+    fn rejects_oversized_args() {
+        assert!(validate_args(&vec!["x".repeat(MAX_ARG_BYTES + 1)]).is_err());
+    }
+
+    #[test]
+    fn rejects_too_many_args() {
+        assert!(validate_args(&vec!["x".into(); MAX_ARGS + 1]).is_err());
     }
 
     #[test]
