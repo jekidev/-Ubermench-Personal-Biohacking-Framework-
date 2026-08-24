@@ -66,11 +66,32 @@ pub fn mcp_stdio_execute(request: McpStdioRequest, stdin_payload: String, regist
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test] fn rejects_non_allowlisted_command() { assert!(validate_command("rm").is_err()); }
-    #[test] fn rejects_path_based_command() { assert!(validate_command("/usr/bin/node").is_err()); }
-    #[test] fn clamps_timeout() { assert_eq!(timeout_ms(Some(1)), 250); assert_eq!(timeout_ms(Some(100_000)), 60_000); }
-    #[test] fn rejects_oversized_args() { assert!(validate_args(&["x".repeat(MAX_ARG_BYTES + 1)]).is_err()); }
-    #[test] fn rejects_too_many_args() { assert!(validate_args(&["x".into(); MAX_ARGS + 1]).is_err()); }
-    #[test] fn approval_is_single_use_and_exactly_bound() { let registry = McpApprovalRegistry::default(); let command = "node"; let args = vec!["server.js".to_string()]; let token = "token".to_string(); registry.tokens.lock().unwrap().insert(token.clone(), ApprovalRecord { fingerprint: fingerprint(command, &args), expires_at_ms: now_ms() + 10_000 }); assert!(consume_approval(&registry, &token, command, &args).is_ok()); assert!(consume_approval(&registry, &token, command, &args).is_err()); }
-    #[test] fn rejects_exact_argument_mismatch() { let registry = McpApprovalRegistry::default(); let token = "token".to_string(); registry.tokens.lock().unwrap().insert(token.clone(), ApprovalRecord { fingerprint: fingerprint("node", &["safe.js".into()]), expires_at_ms: now_ms() + 10_000 }); assert!(consume_approval(&registry, &token, "node", &["other.js".into()]).is_err()); }
+
+    #[test]
+    fn rejects_non_allowlisted_command() { assert!(validate_command("rm").is_err()); }
+
+    #[test]
+    fn rejects_path_based_command() { assert!(validate_command("/usr/bin/node").is_err()); }
+
+    #[test]
+    fn clamps_timeout() {
+        assert_eq!(timeout_ms(Some(1)), 250);
+        assert_eq!(timeout_ms(Some(100_000)), 60_000);
+    }
+
+    #[test]
+    fn rejects_oversized_args() {
+        assert!(validate_args(&["x".repeat(MAX_ARG_BYTES + 1)]).is_err());
+    }
+
+    #[test]
+    fn rejects_too_many_args() {
+        assert!(validate_args(&["x".into(); MAX_ARGS + 1]).is_err());
+    }
+
+    #[test]
+    fn approval_is_single_use_and_exactly_bound() { let registry = McpApprovalRegistry::default(); let command = "node"; let args = vec!["server.js".to_string()]; let token = "token".to_string(); registry.tokens.lock().unwrap().insert(token.clone(), ApprovalRecord { fingerprint: fingerprint(command, &args), expires_at_ms: now_ms() + 10_000 }); assert!(consume_approval(&registry, &token, command, &args).is_ok()); assert!(consume_approval(&registry, &token, command, &args).is_err()); }
+
+    #[test]
+    fn rejects_exact_argument_mismatch() { let registry = McpApprovalRegistry::default(); let token = "token".to_string(); registry.tokens.lock().unwrap().insert(token.clone(), ApprovalRecord { fingerprint: fingerprint("node", &["safe.js".into()]), expires_at_ms: now_ms() + 10_000 }); assert!(consume_approval(&registry, &token, "node", &["other.js".into()]).is_err()); }
 }
