@@ -1,5 +1,6 @@
 import type { MemoryRecord } from '~/services/agent-superstack/types'
 import type { RuntimeStore, AgentRun } from './types'
+import { TauriRuntimeStore, isTauriRuntime } from './tauri-store'
 
 const MEMORY_KEY = 'ubermench-agent-memory-v2'
 const RUN_KEY = 'ubermench-agent-runs-v2'
@@ -29,3 +30,8 @@ export class BrowserRuntimeStore implements RuntimeStore {
 }
 
 export const browserRuntimeStore = new BrowserRuntimeStore()
+export const tauriRuntimeStore = new TauriRuntimeStore()
+
+export function getRuntimeStore(): RuntimeStore {
+  return isTauriRuntime() ? tauriRuntimeStore : browserRuntimeStore
+}
