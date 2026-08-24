@@ -75,7 +75,8 @@ function withTimeout(signal: AbortSignal | undefined, timeoutMs: number) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(new Error('LLM request timed out')), timeoutMs)
   const abort = () => controller.abort(signal?.reason)
-  signal?.addEventListener('abort', abort, { once: true })
+  if (signal?.aborted) abort()
+  else signal?.addEventListener('abort', abort, { once: true })
   return { signal: controller.signal, cleanup: () => { clearTimeout(timer); signal?.removeEventListener('abort', abort) } }
 }
 
@@ -128,6 +129,7 @@ export async function orchestrateLLM(request: LLMRequest, settings = loadLLMSett
   if (!pool.length) throw new Error('No enabled LLM provider with an API key. Add a key in Settings.')
   const errors: string[] = []
   let attempts = 0
+  const forceRotation = request.mode === 'safety' || request.mode === 'auditor'
   for (const provider of pool) {
     attempts += 1
     try {
@@ -135,7 +137,7 @@ export async function orchestrateLLM(request: LLMRequest, settings = loadLLMSett
       return { id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, provider: provider.provider, model: modelFor(provider) || 'configured-provider', text: result.text, latencyMs: Math.round(performance.now() - started), attempts, fallbackUsed: attempts > 1, usage: result.usage, raw: result.raw }
     } catch (error) {
       errors.push(`${provider.provider}/${modelFor(provider) || 'unknown'}: ${error instanceof Error ? error.message : String(error)}`)
-      if (!settings.autoRotate) break
+      if (!settings.autoRotate && !forceRotation) break
     }
   }
   throw new Error(`All configured LLM providers failed. ${errors.join(' | ')}`)
