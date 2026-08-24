@@ -2,9 +2,10 @@ import { orchestrateLLM } from '~/services/llm-orchestrator'
 import type { LLMProvider } from '~/types/llm'
 import { agentKernel } from '~/services/agent-superstack/kernel'
 import type { AgentTask } from '~/services/agent-superstack/types'
-import type { AgentRun, AgentObservation } from './types'
+import type { AgentObservation, AgentRun, AgentToolCall } from './types'
 import { createRuntimeStore } from './store'
 import { SkillEvolutionEngine } from './skill-evolution'
+import { executeApprovedToolCalls } from './tool-loop'
 
 const skillEvolution = new SkillEvolutionEngine()
 
@@ -50,6 +51,31 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     await store.appendRun(run)
     throw error
   }
+}
+
+export async function continueAgentWithTools(task: AgentTask, run: AgentRun, calls: AgentToolCall[], maxToolCalls = 8): Promise<AgentRun> {
+  if (run.task.id !== task.id) throw new Error('Agent continuation task does not match the run task.')
+  if (run.status === 'failed') throw new Error('Cannot continue a failed agent run.')
+  const result = await executeApprovedToolCalls(task, run, calls, maxToolCalls)
+  const store = createRuntimeStore()
+  run.status = 'executing'
+  const toolContext = run.observations
+    .filter((observation) => observation.kind === 'tool')
+    .slice(-maxToolCalls)
+    .map((observation) => observation.text)
+    .join('\n')
+  const response = await orchestrateLLM({
+    prompt: `${task.prompt}\n\nTool results:\n${toolContext}`,
+    system: 'Continue the agent task using the verified tool results. Do not claim tools were executed unless present in the observations.',
+    mode: task.kind === 'research' ? 'researcher' : 'biohacker',
+    preferredProvider: run.selectedModel?.provider as LLMProvider | undefined,
+    preferredModel: run.selectedModel?.model,
+  })
+  run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() })
+  run.status = 'completed'
+  run.completedAt = new Date().toISOString()
+  await store.appendRun(run)
+  return result.run
 }
 
 export function pendingSkillCandidates() { return skillEvolution.listPending() }
