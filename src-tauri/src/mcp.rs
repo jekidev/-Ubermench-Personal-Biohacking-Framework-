@@ -64,7 +64,10 @@ pub(crate) struct ApprovalRecord {
 }
 
 fn now_ms() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64
 }
 
 fn fingerprint(command: &str, args: &[String]) -> String {
@@ -79,15 +82,22 @@ fn fingerprint(command: &str, args: &[String]) -> String {
 }
 
 fn allowlisted_command(command: &str) -> bool {
-    matches!(command, "node" | "nodejs" | "npx" | "bun" | "deno" | "python" | "python3")
+    matches!(
+        command,
+        "node" | "nodejs" | "npx" | "bun" | "deno" | "python" | "python3"
+    )
 }
 
 fn validate_args(args: &[String]) -> Result<(), String> {
     if args.len() > MAX_ARGS {
-        return Err(format!("MCP stdio blocked: too many arguments (max {MAX_ARGS})."));
+        return Err(format!(
+            "MCP stdio blocked: too many arguments (max {MAX_ARGS})."
+        ));
     }
     if args.iter().any(|arg| arg.len() > MAX_ARG_BYTES) {
-        return Err(format!("MCP stdio blocked: an argument exceeds the {MAX_ARG_BYTES}-byte limit."));
+        return Err(format!(
+            "MCP stdio blocked: an argument exceeds the {MAX_ARG_BYTES}-byte limit."
+        ));
     }
     Ok(())
 }
@@ -97,7 +107,10 @@ fn validate_command(command: &str) -> Result<(), String> {
         return Err("MCP stdio blocked: command is required.".into());
     }
     if command.contains('/') || command.contains('\\') {
-        return Err("MCP stdio blocked: executable paths are not permitted; use an allowlisted executable name.".into());
+        return Err(
+            "MCP stdio blocked: executable paths are not permitted; use an allowlisted executable name."
+                .into(),
+        );
     }
     if !allowlisted_command(command) {
         return Err("MCP stdio blocked: executable is not allowlisted.".into());
@@ -132,19 +145,33 @@ pub fn mcp_issue_approval(
     validate_args(&request.args)?;
     let fingerprint = fingerprint(&request.command, &request.args);
     let now = now_ms();
-    let count = registry.tokens.lock().map_err(|_| "MCP approval registry poisoned.")?.len();
+    let count = registry
+        .tokens
+        .lock()
+        .map_err(|_| "MCP approval registry poisoned.")?
+        .len();
     let seed = format!("{}:{}:{}", fingerprint, now, count);
     let mut hasher = Sha256::new();
     hasher.update(seed.as_bytes());
     let token = format!("mcp-{:x}", hasher.finalize());
     let expires_at_ms = now.saturating_add(APPROVAL_TTL_MS);
 
-    registry.tokens.lock().map_err(|_| "MCP approval registry poisoned.")?.insert(
-        token.clone(),
-        ApprovalRecord { fingerprint, expires_at_ms },
-    );
+    registry
+        .tokens
+        .lock()
+        .map_err(|_| "MCP approval registry poisoned.")?
+        .insert(
+            token.clone(),
+            ApprovalRecord {
+                fingerprint,
+                expires_at_ms,
+            },
+        );
 
-    Ok(McpApproval { token, expires_in_ms: APPROVAL_TTL_MS })
+    Ok(McpApproval {
+        token,
+        expires_in_ms: APPROVAL_TTL_MS,
+    })
 }
 
 fn consume_approval(
@@ -158,8 +185,13 @@ fn consume_approval(
     }
     validate_command(command)?;
     validate_args(args)?;
-    let mut tokens = registry.tokens.lock().map_err(|_| "MCP approval registry poisoned.")?;
-    let record = tokens.remove(token).ok_or_else(|| "MCP stdio blocked: approval is missing, expired, or already used.".to_string())?;
+    let mut tokens = registry
+        .tokens
+        .lock()
+        .map_err(|_| "MCP approval registry poisoned.")?;
+    let record = tokens.remove(token).ok_or_else(|| {
+        "MCP stdio blocked: approval is missing, expired, or already used.".to_string()
+    })?;
     if record.expires_at_ms < now_ms() {
         return Err("MCP stdio blocked: approval expired.".into());
     }
@@ -198,10 +230,17 @@ pub fn mcp_stdio_execute(
     validate_command(&request.command)?;
     validate_args(&request.args)?;
     if stdin_payload.len() > MAX_STDIN_BYTES {
-        return Err(format!("MCP stdio blocked: stdin payload exceeds the {MAX_STDIN_BYTES}-byte limit."));
+        return Err(format!(
+            "MCP stdio blocked: stdin payload exceeds the {MAX_STDIN_BYTES}-byte limit."
+        ));
     }
     let timeout = timeout_ms(request.timeout_ms);
-    consume_approval(&registry, &request.approval_token, &request.command, &request.args)?;
+    consume_approval(
+        &registry,
+        &request.approval_token,
+        &request.command,
+        &request.args,
+    )?;
 
     let mut child = Command::new(&request.command)
         .args(&request.args)
@@ -212,18 +251,29 @@ pub fn mcp_stdio_execute(
         .map_err(|e| format!("MCP stdio spawn failed: {e}"))?;
 
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(stdin_payload.as_bytes()).map_err(|e| format!("MCP stdio stdin failed: {e}"))?;
+        stdin
+            .write_all(stdin_payload.as_bytes())
+            .map_err(|e| format!("MCP stdio stdin failed: {e}"))?;
     }
 
-    let stdout_reader = child.stdout.take().ok_or_else(|| "MCP stdio stdout unavailable.".to_string())?;
-    let stderr_reader = child.stderr.take().ok_or_else(|| "MCP stdio stderr unavailable.".to_string())?;
+    let stdout_reader = child
+        .stdout
+        .take()
+        .ok_or_else(|| "MCP stdio stdout unavailable.".to_string())?;
+    let stderr_reader = child
+        .stderr
+        .take()
+        .ok_or_else(|| "MCP stdio stderr unavailable.".to_string())?;
     let stdout_handle = collect_output(stdout_reader);
     let stderr_handle = collect_output(stderr_reader);
     let deadline = Instant::now() + Duration::from_millis(timeout);
     let mut timed_out = false;
 
     loop {
-        match child.try_wait().map_err(|e| format!("MCP stdio wait failed: {e}"))? {
+        match child
+            .try_wait()
+            .map_err(|e| format!("MCP stdio wait failed: {e}"))?
+        {
             Some(_) => break,
             None if Instant::now() >= deadline => {
                 timed_out = true;
@@ -234,10 +284,19 @@ pub fn mcp_stdio_execute(
         }
     }
 
-    let exit_code = child.try_wait().ok().flatten().and_then(|status| status.code());
+    let exit_code = child
+        .try_wait()
+        .ok()
+        .flatten()
+        .and_then(|status| status.code());
     let stdout = String::from_utf8_lossy(&stdout_handle.join().unwrap_or_default()).into_owned();
     let stderr = String::from_utf8_lossy(&stderr_handle.join().unwrap_or_default()).into_owned();
-    Ok(McpStdioResult { stdout, stderr, exit_code, timed_out })
+    Ok(McpStdioResult {
+        stdout,
+        stderr,
+        exit_code,
+        timed_out,
+    })
 }
 
 #[cfg(test)]
@@ -276,7 +335,13 @@ mod tests {
         let command = "node";
         let args = vec!["server.js".to_string()];
         let token = "token".to_string();
-        registry.tokens.lock().unwrap().insert(token.clone(), ApprovalRecord { fingerprint: fingerprint(command, &args), expires_at_ms: now_ms() + 10_000 });
+        registry.tokens.lock().unwrap().insert(
+            token.clone(),
+            ApprovalRecord {
+                fingerprint: fingerprint(command, &args),
+                expires_at_ms: now_ms() + 10_000,
+            },
+        );
         assert!(consume_approval(&registry, &token, command, &args).is_ok());
         assert!(consume_approval(&registry, &token, command, &args).is_err());
     }
@@ -285,7 +350,13 @@ mod tests {
     fn rejects_exact_argument_mismatch() {
         let registry = McpApprovalRegistry::default();
         let token = "token".to_string();
-        registry.tokens.lock().unwrap().insert(token.clone(), ApprovalRecord { fingerprint: fingerprint("node", &["safe.js".into()]), expires_at_ms: now_ms() + 10_000 });
+        registry.tokens.lock().unwrap().insert(
+            token.clone(),
+            ApprovalRecord {
+                fingerprint: fingerprint("node", &["safe.js".into()]),
+                expires_at_ms: now_ms() + 10_000,
+            },
+        );
         assert!(consume_approval(&registry, &token, "node", &["other.js".into()]).is_err());
     }
 }
