@@ -21,8 +21,6 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Hugging Face remains available through the dedicated inference/model registry path
 - Explicit researcher, biohacker, clinician, coach, scientist, auditor and safety modes at the orchestration contract level
 
-OpenRouter's current API supports OpenAI-compatible chat completions and a free router model, which the framework uses as the default free-first path. citehttps://openrouter.ai/request-builderhttps://openrouter.ai/openrouter/free/uptime
-
 ### Research
 - Europe PMC search integration
 - Personalised query builder using goals, recent biomarkers and genomic variants
