@@ -68,14 +68,24 @@ export function appendDocument(store: LongevityLocalStore, document: LocalSource
 }
 
 export function appendObservations(store: LongevityLocalStore, observations: LocalObservation[]): LongevityLocalStore {
-  const existing = new Set(store.observations.map((item) => item.id))
-  const fresh = observations.filter((item) => !existing.has(item.id))
+  const seen = new Set(store.observations.map((item) => item.id))
+  const fresh: LocalObservation[] = []
+  for (const item of observations) {
+    if (seen.has(item.id)) continue
+    seen.add(item.id)
+    fresh.push(item)
+  }
   return fresh.length ? { ...store, observations: [...store.observations, ...fresh] } : store
 }
 
 export function appendVariants(store: LongevityLocalStore, variants: LocalGeneticVariant[]): LongevityLocalStore {
-  const existing = new Set(store.variants.map((item) => item.id))
-  const fresh = variants.filter((item) => !existing.has(item.id))
+  const seen = new Set(store.variants.map((item) => item.id))
+  const fresh: LocalGeneticVariant[] = []
+  for (const item of variants) {
+    if (seen.has(item.id)) continue
+    seen.add(item.id)
+    fresh.push(item)
+  }
   return fresh.length ? { ...store, variants: [...store.variants, ...fresh] } : store
 }
 
