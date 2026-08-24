@@ -109,9 +109,7 @@ fn timeout_ms(value: Option<u64>) -> u64 {
 }
 
 #[tauri::command]
-pub fn mcp_stdio_preflight(
-    request: McpStdioRequest,
-) -> Result<McpStdioPreflight, String> {
+pub fn mcp_stdio_preflight(request: McpStdioRequest) -> Result<McpStdioPreflight, String> {
     validate_command(&request.command)?;
     validate_args(&request.args)?;
     Ok(McpStdioPreflight {
@@ -180,9 +178,7 @@ fn consume_approval(
         return Err("MCP stdio blocked: approval expired.".into());
     }
     if record.fingerprint != fingerprint(command, args) {
-        return Err(
-            "MCP stdio blocked: approved command/arguments do not match execution.".into(),
-        );
+        return Err("MCP stdio blocked: approved command/arguments do not match execution.".into());
     }
     Ok(())
 }
