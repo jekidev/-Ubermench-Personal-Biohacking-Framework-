@@ -10,27 +10,47 @@ export interface OutcomeRecord {
   createdAt: string
 }
 
+export interface OutcomePersistenceAdapter {
+  save(record: OutcomeRecord): Promise<void> | void
+  get(id: string): Promise<OutcomeRecord | undefined> | OutcomeRecord | undefined
+  list(): Promise<OutcomeRecord[]> | OutcomeRecord[]
+  remove(id: string): Promise<boolean> | boolean
+}
+
 const memoryStore = new Map<string, OutcomeRecord>()
-
-function runtimeStore(): Map<string, OutcomeRecord> {
-  return memoryStore
+const memoryAdapter: OutcomePersistenceAdapter = {
+  save(record) { memoryStore.set(record.id, structuredClone(record)) },
+  get(id) { const value = memoryStore.get(id); return value ? structuredClone(value) : undefined },
+  list() { return [...memoryStore.values()].map((item) => structuredClone(item)).sort((a, b) => a.createdAt.localeCompare(b.createdAt)) },
+  remove(id) { return memoryStore.delete(id) },
 }
 
-export function saveOutcome(record: OutcomeRecord): OutcomeRecord {
+let adapter: OutcomePersistenceAdapter = memoryAdapter
+
+export function configureOutcomePersistence(next: OutcomePersistenceAdapter) {
+  adapter = next
+}
+
+export async function saveOutcome(record: OutcomeRecord): Promise<OutcomeRecord> {
   if (!record.id.trim()) throw new Error('Outcome id is required.')
-  runtimeStore().set(record.id, structuredClone(record))
-  return record
+  if (!record.intervention.trim() || !record.metric.trim()) throw new Error('Outcome intervention and metric are required.')
+  if (!record.observed.every(Number.isFinite) || !record.baseline.every(Number.isFinite)) throw new Error('Outcome observations must be finite numbers.')
+  await adapter.save(record)
+  return structuredClone(record)
 }
 
-export function getOutcome(id: string): OutcomeRecord | undefined {
-  const value = runtimeStore().get(id)
+export async function getOutcome(id: string): Promise<OutcomeRecord | undefined> {
+  if (!id.trim()) return undefined
+  const value = await adapter.get(id)
   return value ? structuredClone(value) : undefined
 }
 
-export function listOutcomes(): OutcomeRecord[] {
-  return [...runtimeStore().values()].map((item) => structuredClone(item)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+export async function listOutcomes(): Promise<OutcomeRecord[]> {
+  const value = await adapter.list()
+  return value.map((item) => structuredClone(item)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 }
 
-export function removeOutcome(id: string): boolean {
-  return runtimeStore().delete(id)
+export async function removeOutcome(id: string): Promise<boolean> {
+  if (!id.trim()) return false
+  return adapter.remove(id)
 }
