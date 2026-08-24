@@ -3,6 +3,7 @@ import { routeHFModel } from '../app/services/hf-router'
 import { calculateBiomarkerTrend } from '../app/services/biomarker-engine'
 import { aggregateEvidence } from '../app/services/evidence-engine'
 import { screenInteractions } from '../app/services/interaction-engine'
+import { parseVcf } from '../app/services/genomics-parser'
 
 describe('biohacking core', () => {
   it('routes genomics to a local-safe model when restricted models are disallowed', () => {
@@ -34,5 +35,19 @@ describe('biohacking core', () => {
     )
     expect(flags.length).toBe(1)
     expect(flags[0]?.severity).toBe('caution')
+  })
+
+  it('parses phased VCF genotypes and rejects invalid positions', () => {
+    const variants = parseVcf([
+      '##fileformat=VCFv4.3',
+      '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE',
+      '1\t123\trs123\tA\tG\t.\tPASS\t.\tGT\t0|1',
+      '1\tbad\trs999\tC\tT\t.\tPASS\t.\tGT\t1/1',
+    ].join('\n'))
+
+    expect(variants).toHaveLength(1)
+    expect(variants[0]?.position).toBe(123)
+    expect(variants[0]?.zygosity).toBe('heterozygous')
+    expect(variants[0]?.rsId).toBe('rs123')
   })
 })
