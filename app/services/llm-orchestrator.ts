@@ -6,6 +6,7 @@ const SECRET_STORAGE_KEY = 'ubermench-llm-session-keys-v1'
 const DEFAULT_TIMEOUT_MS = 45_000
 
 type PersistedLLMSettings = Omit<LLMSettings, 'providers'> & { providers: Array<Omit<LLMProviderConfig, 'apiKey'> & { apiKey?: never }> }
+type AnthropicContentBlock = { type: string; text: string }
 
 function isTauriRuntime(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
@@ -115,7 +116,13 @@ async function requestAnthropic(provider: LLMProviderConfig, request: LLMRequest
     const response = await fetch(`${(provider.baseUrl ?? 'https://api.anthropic.com/v1').replace(/\/$/, '')}/messages`, { method: 'POST', headers: { 'x-api-key': provider.apiKey ?? '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model, max_tokens: request.maxTokens ?? 1800, temperature: request.temperature ?? 0.2, ...(request.system ? { system: request.system } : {}), messages: [{ role: 'user', content: request.prompt }] }), signal: timed.signal })
     const body = await response.json().catch(() => ({}))
     if (!response.ok) throw new Error(`${response.status}: ${body?.error?.message ?? 'Anthropic request failed'}`)
-    const text = Array.isArray(body?.content) ? body.content.filter((x: unknown): x is { type: string; text: string } => typeof x === 'object' && x !== null && 'type' in x && 'text' in x).filter((x) => x.type === 'text').map((x) => x.text).join('\n') : ''
+    const text = Array.isArray(body?.content)
+      ? body.content
+        .filter((x: unknown): x is AnthropicContentBlock => typeof x === 'object' && x !== null && 'type' in x && 'text' in x && typeof (x as { type?: unknown }).type === 'string' && typeof (x as { text?: unknown }).text === 'string')
+        .filter((x: AnthropicContentBlock) => x.type === 'text')
+        .map((x: AnthropicContentBlock) => x.text)
+        .join('\n')
+      : ''
     if (!text.trim()) throw new Error('Anthropic returned no text')
     return { text, usage: normalizeUsage(body?.usage), raw: body }
   } finally { timed.cleanup() }
@@ -133,19 +140,3 @@ async function callProvider(provider: LLMProviderConfig, request: LLMRequest) {
 export async function orchestrateLLM(request: LLMRequest, settings = loadLLMSettings()): Promise<LLMResponse> {
   const started = performance.now()
   const pool = candidates(settings, request.mode)
-  if (!pool.length) throw new Error('No enabled LLM provider with an API key. Unlock the secret vault and add a key in Settings.')
-  const errors: string[] = []
-  let attempts = 0
-  const forceRotation = request.mode === 'safety' || request.mode === 'auditor'
-  for (const provider of pool) {
-    attempts += 1
-    try {
-      const result = await callProvider(provider, request)
-      return { id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, provider: provider.provider, model: modelFor(provider) || 'configured-provider', text: result.text, latencyMs: Math.round(performance.now() - started), attempts, fallbackUsed: attempts > 1, usage: result.usage, raw: result.raw }
-    } catch (error) {
-      errors.push(`${provider.provider}/${modelFor(provider) || 'unknown'}: ${error instanceof Error ? error.message : String(error)}`)
-      if (!settings.autoRotate && !forceRotation) break
-    }
-  }
-  throw new Error(`All configured LLM providers failed. ${errors.join(' | ')}`)
-}
