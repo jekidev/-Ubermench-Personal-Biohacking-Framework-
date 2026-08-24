@@ -13,8 +13,9 @@ export class AgentToolGateway {
     const tool = this.tools.get(call.name)
     if (!tool) throw new Error(`Unknown agent tool: ${call.name}`)
     const policy = evaluateTask({ ...task, allowTools: true, riskLevel: tool.risk })
-    if (!policy.allowed || policy.requiresConfirmation || tool.requiresApproval || call.requiresApproval) {
-      throw new Error(`Tool execution requires approval: ${tool.name}`)
+    if (!policy.allowed) throw new Error(`Tool execution blocked: ${policy.reason}`)
+    if (policy.requiresConfirmation || tool.requiresApproval || call.requiresApproval) {
+      throw new Error(`Tool execution requires explicit approval: ${tool.name}`)
     }
     return tool.execute(call.args)
   }
@@ -22,7 +23,19 @@ export class AgentToolGateway {
 
 export function createDefaultToolGateway(): AgentToolGateway {
   const gateway = new AgentToolGateway()
-  gateway.register({ name: 'memory.search', description: 'Search persistent agent memory.', risk: 'low', requiresApproval: false, async execute(args) { return args } })
-  gateway.register({ name: 'graph.query', description: 'Query the local knowledge graph.', risk: 'low', requiresApproval: false, async execute(args) { return args } })
+  gateway.register({
+    name: 'memory.search',
+    description: 'Search persistent agent memory.',
+    risk: 'low',
+    requiresApproval: false,
+    async execute(args) { return args },
+  })
+  gateway.register({
+    name: 'graph.query',
+    description: 'Query the local knowledge graph.',
+    risk: 'low',
+    requiresApproval: false,
+    async execute(args) { return args },
+  })
   return gateway
 }
