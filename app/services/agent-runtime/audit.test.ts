@@ -8,6 +8,7 @@ class MemoryAuditStore implements RuntimeStore {
   async saveMemory(): Promise<void> {}
   async appendRun(_run: AgentRun): Promise<void> {}
   async loadRuns(): Promise<AgentRun[]> { return [] }
+  async findRunByTaskId(_taskId: string): Promise<AgentRun | undefined> { return undefined }
   async appendAudit(event: AgentAuditEvent): Promise<void> { this.events.unshift(event) }
   async loadAudit(limit = 100): Promise<AgentAuditEvent[]> { return this.events.slice(0, limit) }
 }
