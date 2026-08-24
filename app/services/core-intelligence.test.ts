@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { EvidenceItem } from '~/types/evidence'
 import type { InterventionCandidate, PersonalBiologyProfile } from '~/types/biology'
 import { detectAnomalies } from './anomaly-engine'
 import { auditRecommendation } from './audit-engine'
@@ -19,6 +20,8 @@ const profile: PersonalBiologyProfile = {
   updatedAt: '2026-08-20T00:00:00.000Z',
 }
 
+const evidence: EvidenceItem = { id: 'e1', title: 'Human study', source: 'test', evidenceLevel: 'human-study', confidence: 0.9 }
+
 const candidate: InterventionCandidate = {
   id: 'i1',
   name: 'cardiovascular training',
@@ -26,7 +29,7 @@ const candidate: InterventionCandidate = {
   expectedBenefits: ['cardiovascular health', 'performance'],
   risks: [],
   interactions: [],
-  evidence: [{ id: 'e1', title: 'Human study', source: 'test', evidenceLevel: 'human-study', confidence: 0.9 }],
+  evidence: [evidence],
   personalFit: 0.9,
   priority: 0,
 }
@@ -53,7 +56,7 @@ describe('core intelligence', () => {
 
   it('blocks recommendations with red safety findings', () => {
     const findings = auditRecommendation({
-      evidence: [candidate.evidence[0]],
+      evidence: [evidence],
       interventions: [candidate],
       safetyFlags: [{ severity: 'red', code: 'TEST', requiresReview: true }],
       dataCompleteness: 1,
