@@ -19,11 +19,11 @@ export function calibrateDigitalTwin(
   previous?: CalibratedModel,
 ): CalibratedModel {
   const adjustments = estimates
-    .filter((estimate) => Number.isFinite(estimate.delta) && estimate.confidence !== 'low')
+    .filter((estimate): estimate is CausalEstimate & { delta: number } => Number.isFinite(estimate.delta) && estimate.confidence >= 0.5)
     .map((estimate) => ({
       target: estimate.metric,
       observedDelta: estimate.delta,
-      confidence: estimate.confidence === 'high' ? 0.85 : 0.6,
+      confidence: Math.max(0, Math.min(1, estimate.confidence)),
       updatedAt: new Date().toISOString(),
     }))
   return {
