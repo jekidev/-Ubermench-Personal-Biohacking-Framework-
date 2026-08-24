@@ -50,6 +50,12 @@ export class TauriRuntimeStore implements RuntimeStore {
     return rows.map((row) => JSON.parse(row.payload) as AgentRun)
   }
 
+  async findRunByTaskId(taskId: string): Promise<AgentRun | undefined> {
+    const db = await database()
+    const rows = await db.select<Array<{ payload: string }>>('SELECT payload FROM agent_runs ORDER BY created_at DESC LIMIT 100')
+    return rows.map((row) => JSON.parse(row.payload) as AgentRun).find((run) => run.task.id === taskId)
+  }
+
   async appendAudit(event: AgentAuditEvent): Promise<void> {
     const db = await database()
     await db.execute('INSERT OR REPLACE INTO agent_audit (id, run_id, type, detail, payload, created_at) VALUES ($1, $2, $3, $4, $5, $6)', [event.id, event.runId, event.type, event.detail, JSON.stringify(event.metadata ?? {}), event.createdAt])
