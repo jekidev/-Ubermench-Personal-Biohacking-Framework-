@@ -29,7 +29,15 @@
       <UCard v-for="provider in settings.providers" :key="provider.provider">
         <template #header><div class="flex items-center justify-between"><span class="font-medium capitalize">{{ provider.provider }}</span><span class="text-xs text-zinc-500">priority {{ provider.priority }}</span></div></template>
         <div class="space-y-3">
-          <UInput v-model="provider.apiKey" type="password" placeholder="API key" autocomplete="off" @change="saveKey(provider.provider, provider.apiKey ?? '')" />
+          <UInput
+            v-model="provider.apiKey"
+            type="password"
+            placeholder="API key"
+            autocomplete="off"
+            :disabled="!vaultUnlocked"
+            @change="saveKey(provider.provider, provider.apiKey ?? '')"
+          />
+          <p v-if="!vaultUnlocked" class="text-xs text-zinc-500">Unlock the secret vault before changing provider credentials.</p>
           <UInput v-model="provider.model" placeholder="Model (OpenRouter can use openrouter/free)" @change="save" />
           <UInput v-model="provider.baseUrl" placeholder="Base URL (optional)" @change="save" />
           <label class="flex items-center gap-2 text-sm"><input v-model="provider.enabled" type="checkbox" @change="save" /> Enabled</label>
@@ -37,7 +45,7 @@
       </UCard>
     </div>
 
-    <div class="flex gap-3">
+    <div class="flex flex-wrap gap-3">
       <UButton :disabled="!vaultUnlocked" @click="clearKeys">Clear keys</UButton>
       <UButton color="neutral" variant="outline" @click="reset">Reset settings</UButton>
     </div>
