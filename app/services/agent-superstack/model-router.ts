@@ -1,4 +1,5 @@
 import type { AgentTask, ModelCapability, ModelEndpoint } from './types'
+import { providerHealth } from '~/services/agent-runtime/provider-health'
 
 const capabilityWeight = (endpoint: ModelEndpoint, required: ModelCapability[]) =>
   required.length === 0 ? 1 : required.filter((cap) => endpoint.capabilities.includes(cap)).length / required.length
@@ -7,7 +8,7 @@ export class ModelRouter {
   constructor(private readonly endpoints: ModelEndpoint[]) {}
 
   listAvailable(): ModelEndpoint[] {
-    return this.endpoints.filter((item) => item.enabled)
+    return this.endpoints.filter((item) => item.enabled && providerHealth.isAvailable(item.provider))
   }
 
   select(task: AgentTask): ModelEndpoint | undefined {
@@ -27,6 +28,10 @@ export class ModelRouter {
 
     return candidates[0]?.endpoint
   }
+
+  reportSuccess(provider: string): void { providerHealth.recordSuccess(provider) }
+  reportFailure(provider: string): void { providerHealth.recordFailure(provider) }
+  health() { return providerHealth.snapshot() }
 }
 
 export function createDefaultModelRouter(): ModelRouter {
