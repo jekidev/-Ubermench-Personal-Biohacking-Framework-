@@ -8,9 +8,9 @@
     "generate": "nuxt generate",
     "prepare": "nuxt prepare",
     "typecheck": "nuxt prepare && nuxi typecheck",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
+    "tauri": "npx --yes @tauri-apps/cli@^2",
+    "tauri:dev": "npx --yes @tauri-apps/cli@^2 dev",
+    "tauri:build": "npx --yes @tauri-apps/cli@^2 build",
     "test": "nuxt prepare && vitest run"
   },
   "dependencies": {
