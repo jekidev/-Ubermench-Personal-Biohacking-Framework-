@@ -35,4 +35,16 @@ describe('agent tool loop', () => {
     const result = await executeApprovedToolCalls(task, run, calls, 2)
     expect(result.executed).toBe(2)
   })
+
+  it('serializes concurrent submissions for the same run and de-duplicates by call id', async () => {
+    const run = runFixture()
+    const call: AgentToolCall = { id: 'same-call', name: 'memory.search', args: { query: 'omega' } }
+    const [first, second] = await Promise.all([
+      executeApprovedToolCalls(task, run, [call]),
+      executeApprovedToolCalls(task, run, [call]),
+    ])
+    expect(first.executed + second.executed).toBe(1)
+    expect(run.toolCalls).toHaveLength(1)
+    expect(run.observations).toHaveLength(1)
+  })
 })
