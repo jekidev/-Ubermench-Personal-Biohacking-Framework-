@@ -69,7 +69,7 @@ Core areas:
 
 ## Replit / Manus deployment bridge
 
-The deployment pattern is based on the working `jekidev/T1` pattern: one canonical GitHub repository, a platform-specific launcher, setup/validation before launch, and Google Drive kept outside GitHub credentials. T1 documents direct Replit/Manus import and Google Drive connections as part of its deployment flow.
+The deployment pattern is based on the working `jekidev/T1` pattern: one canonical GitHub repository, a platform-specific launcher, setup/validation before launch, and Google Drive kept outside GitHub credentials.
 
 ```bash
 pnpm deployment:replit
@@ -77,18 +77,19 @@ pnpm deployment:replit
 pnpm deployment:manus
 ```
 
-Both launchers call the same validation bootstrap:
+The deployment bootstrap:
 
-1. install dependencies
-2. run Nuxt typecheck
-3. run the Vitest suite
-4. generate the production web bundle
-5. detect the Google Drive connection
-6. write non-secret deployment state to `.runtime/deployment-state.json`
+1. installs dependencies
+2. runs Nuxt typecheck
+3. runs Vitest
+4. generates the production web bundle
+5. validates that a Google Drive connection has been supplied
+6. records non-secret deployment state in `.runtime/deployment-state.json`
+7. serves `.output/public` on `PORT` (default `3000`)
 
-Google Drive OAuth tokens are **never** committed to GitHub. Replit/Manus should provide the authenticated connection through their connection/secret systems. For local development, `GOOGLE_DRIVE_RAG_PATH` can point to a locally synchronized Drive directory.
+Google Drive OAuth tokens are **never** committed to GitHub. Replit/Manus should provide the authenticated connection through platform connections/secrets. The current bridge validates the connection signal but does not itself perform OAuth or silently copy Drive data; the future Drive RAG adapter should consume the authenticated platform connection.
 
-The current bridge validates the connection and prepares the application; it does not pretend to perform OAuth or silently copy Drive data. A future RAG adapter can consume the authenticated connection without changing the deployment contract.
+For the deployment bridge, set `GOOGLE_DRIVE_CONNECTED=true` after the platform connection is authorized. For local development, `GOOGLE_DRIVE_RAG_PATH` can point to a locally synchronized Drive directory.
 
 ## Development and quality
 
@@ -99,7 +100,7 @@ npm run typecheck
 npm run build
 ```
 
-For the deployment validation path:
+For deployment validation and launch:
 
 ```bash
 pnpm deployment:bootstrap
