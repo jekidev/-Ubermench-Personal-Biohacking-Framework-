@@ -1,4 +1,5 @@
 import type { AgentTask } from '~/services/agent-superstack/types'
+import { agentKernel } from '~/services/agent-superstack/kernel'
 import { evaluateTask } from '~/services/agent-superstack/governance'
 import { nativeMcpExecute } from './native-mcp'
 import type { AgentTool, AgentToolCall } from './types'
@@ -15,9 +16,7 @@ export class AgentToolGateway {
     if (!tool) throw new Error(`Unknown agent tool: ${call.name}`)
     const policy = evaluateTask({ ...task, allowTools: true, riskLevel: tool.risk })
     if (!policy.allowed) throw new Error(`Tool execution blocked: ${policy.reason}`)
-    if (policy.requiresConfirmation || tool.requiresApproval || call.requiresApproval) {
-      throw new Error(`Tool execution requires explicit approval: ${tool.name}`)
-    }
+    if (policy.requiresConfirmation || tool.requiresApproval || call.requiresApproval) throw new Error(`Tool execution requires explicit approval: ${tool.name}`)
     return tool.execute(call.args)
   }
 
@@ -40,14 +39,21 @@ export function createDefaultToolGateway(): AgentToolGateway {
     description: 'Search persistent agent memory.',
     risk: 'low',
     requiresApproval: false,
-    async execute(args) { return args },
+    async execute(args) {
+      const query = typeof args.query === 'string' ? args.query : ''
+      return agentKernel.memory.search(query)
+    },
   })
   gateway.register({
     name: 'graph.query',
-    description: 'Query the local knowledge graph.',
+    description: 'Inspect the local knowledge graph.',
     risk: 'low',
     requiresApproval: false,
-    async execute(args) { return args },
+    async execute(args) {
+      const id = typeof args.id === 'string' ? args.id : ''
+      if (!id) return agentKernel.graph.snapshot()
+      return agentKernel.graph.neighbors(id)
+    },
   })
   gateway.register({
     name: 'mcp.stdio',
