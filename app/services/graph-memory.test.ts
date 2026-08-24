@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseDRKG } from './drkg-importer'
 import { LocalMemoryIndex } from './local-memory'
+import { KnowledgeGraph } from './knowledge-graph'
 
 describe('graph and memory integrations', () => {
   it('imports DRKG-style triples with typed nodes and provenance', () => {
@@ -9,6 +10,12 @@ describe('graph and memory integrations', () => {
     expect(result.edges).toBe(2)
     expect(result.graph.nodes.get('Gene::G1')?.type).toBe('gene')
     expect(result.graph.edges[0]?.provenance).toBe('DRKG')
+  })
+
+  it('rejects non-finite edge confidence', () => {
+    const graph = new KnowledgeGraph()
+    expect(() => graph.addEdge({ from: 'a', relation: 'relates_to', to: 'b', confidence: Number.NaN })).toThrow(RangeError)
+    expect(() => graph.addEdge({ from: 'a', relation: 'relates_to', to: 'b', confidence: Number.POSITIVE_INFINITY })).toThrow(RangeError)
   })
 
   it('ranks local memory by token overlap', () => {
