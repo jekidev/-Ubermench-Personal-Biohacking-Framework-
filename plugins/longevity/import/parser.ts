@@ -1,5 +1,6 @@
 import type { LocalGeneticVariant, LocalObservation } from '../persistence/local-store'
 import { detectImportMime, type SelectedLocalFile } from '../tauri/file-adapter'
+import type { PdfExtractionResult } from '../tauri/pdf-adapter'
 
 export type ImportCandidate =
   | { type: 'observation'; value: LocalObservation }
@@ -16,7 +17,7 @@ const MARKER_ALIASES: Record<string, string> = {
   glucose: 'Glucose',
   'fasting glucose': 'Glucose',
   hba1c: 'HbA1c',
-  'crp': 'CRP',
+  crp: 'CRP',
   creatinine: 'Creatinine',
   egfr: 'eGFR',
 }
@@ -38,12 +39,28 @@ function parseValue(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function observationId(source: string, row: number, marker: string): string {
+function observationId(source: string, row: string | number, marker: string): string {
   return `obs-${source.slice(0, 16)}-${row}-${marker.toLowerCase().replace(/\W+/g, '-')}`
 }
 
-function variantId(source: string, row: number): string {
+function variantId(source: string, row: string | number): string {
   return `var-${source.slice(0, 16)}-${row}`
+}
+
+function parseReferenceRange(input: string): { low?: number; high?: number } {
+  const match = input.match(/(?:reference|ref(?:erence)?)?\s*(?:range|interval)?\s*[:=]?\s*([<>]?\s*-?[0-9]+(?:[.,][0-9]+)?)\s*(?:-|–|to)\s*([<>]?\s*-?[0-9]+(?:[.,][0-9]+)?)/i)
+  if (!match) return {}
+  const low = parseValue(match[1]) ?? undefined
+  const high = parseValue(match[2]) ?? undefined
+  return { low, high }
+}
+
+function extractDate(text: string): string | undefined {
+  const iso = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/)
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`
+  const dmy = text.match(/\b(\d{1,2})[./-](\d{1,2})[./-](20\d{2})\b/)
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`
+  return undefined
 }
 
 function parseDelimited(text: string, separator: ',' | '\t', sourceId: string, file: SelectedLocalFile): ImportCandidate[] {
@@ -121,15 +138,44 @@ function parseVcf(text: string, sourceId: string): ImportCandidate[] {
     .filter((line) => line && !line.startsWith('#'))
     .map((line, index): ImportCandidate | null => {
       const cells = line.split('\t')
-      const info = cells[7] ?? ''
       const rsid = cells[2] && cells[2] !== '.' ? cells[2] : undefined
       const genotype = cells[9]?.split(':')[0] ?? ''
       return genotype ? { type: 'variant', value: {
         id: variantId(sourceId, index + 1), sourceDocumentId: sourceId, rsid,
         chromosome: cells[0], position: Number(cells[1]), genotype, importedAt: new Date().toISOString(),
-      } } : info ? null : null
+      } } : null
     })
     .filter((item): item is ImportCandidate => item !== null)
+}
+
+/** Parse text extracted by the native PDF runtime. */
+export function parsePdfExtraction(extraction: PdfExtractionResult, sourceDocumentId: string, filename: string): ImportCandidate[] {
+  const candidates: ImportCandidate[] = []
+  extraction.pages.forEach((page) => {
+    const lines = page.text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+    lines.forEach((line, index) => {
+      const markerMatch = line.match(/^(Apo\s*B|LDL(?:-C)?|HDL(?:-C)?|Triglycerides?|TG|Glucose|Fasting\s+Glucose|HbA1c|CRP|Creatinine|eGFR)\s+(.+)$/i)
+      if (!markerMatch) return
+      const marker = canonicalMarker(markerMatch[1])
+      const value = parseValue(markerMatch[2])
+      if (value === null) return
+      const range = parseReferenceRange(markerMatch[2])
+      const date = extractDate(page.text) ?? new Date().toISOString().slice(0, 10)
+      candidates.push({ type: 'observation', value: {
+        id: observationId(sourceDocumentId, `${page.page_number}-${index + 1}`, marker),
+        sourceDocumentId,
+        biomarker: marker,
+        value,
+        unit: markerMatch[2].match(/(?:mg\/L|g\/L|mmol\/L|µmol\/L|umol\/L|mg\/dL|%|10\^9\/L)/i)?.[0] ?? 'unknown',
+        collectedAt: date,
+        referenceLow: range.low,
+        referenceHigh: range.high,
+        confidence: range.low !== undefined || range.high !== undefined ? 0.9 : 0.75,
+        locator: `${filename}:page-${page.page_number}`,
+      } })
+    })
+  })
+  return candidates
 }
 
 export function parseSelectedFile(file: SelectedLocalFile, sourceDocumentId: string): ImportCandidate[] {
