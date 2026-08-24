@@ -10,37 +10,69 @@ export interface ResearchHit {
   source: 'europe-pmc'
 }
 
-export interface ResearchResult { query: string; hits: ResearchHit[]; retrievedAt: string }
+export interface ResearchResult {
+  query: string
+  hits: ResearchHit[]
+  retrievedAt: string
+}
 
-function xmlText(value: string, tag: string) {
-  const match = value.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i'))
-  return match?.[1]?.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x27;/g, "'").replace(/\s+/g, ' ').trim()
+interface EuropePMCResult {
+  id?: string
+  title?: string
+  authorString?: string
+  journalTitle?: string
+  firstPublicationDate?: string
+  doi?: string
+  abstractText?: string
+  source?: string
+}
+
+interface EuropePMCResponse {
+  resultList?: { result?: EuropePMCResult[] }
 }
 
 export async function searchEuropePMC(query: string, pageSize = 20, signal?: AbortSignal): Promise<ResearchResult> {
-  if (!query.trim()) return { query, hits: [], retrievedAt: new Date().toISOString() }
+  const cleanQuery = query.trim().replace(/\s+/g, ' ')
+  if (!cleanQuery) return { query: '', hits: [], retrievedAt: new Date().toISOString() }
+
   const url = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search')
-  url.searchParams.set('query', query)
-  url.searchParams.set('format', 'xml')
-  url.searchParams.set('pageSize', String(Math.min(Math.max(pageSize, 1), 100)))
+  url.searchParams.set('query', cleanQuery)
+  url.searchParams.set('format', 'json')
+  url.searchParams.set('pageSize', String(Math.min(Math.max(Math.floor(pageSize), 1), 100)))
+  url.searchParams.set('resultType', 'core')
+
   const response = await fetch(url, { signal })
   if (!response.ok) throw new Error(`Europe PMC search failed: ${response.status}`)
-  const xml = await response.text()
-  const entries = [...xml.matchAll(/<result>([\s\S]*?)<\/result>/gi)].map((m) => m[1])
-  const hits = entries.map((entry, index) => ({
-    id: xmlText(entry, 'id') ?? `pmc-${index}`,
-    title: xmlText(entry, 'title') ?? 'Untitled study',
-    authors: xmlText(entry, 'authorString'),
-    journal: xmlText(entry, 'journalTitle'),
-    publishedAt: xmlText(entry, 'firstPublicationDate'),
-    doi: xmlText(entry, 'doi'),
-    url: xmlText(entry, 'fullTextUrlList') ? undefined : undefined,
-    abstract: xmlText(entry, 'abstractText'),
-    source: 'europe-pmc' as const,
-  }))
-  return { query, hits, retrievedAt: new Date().toISOString() }
+  const body = await response.json() as EuropePMCResponse
+  const entries = Array.isArray(body.resultList?.result) ? body.resultList.result : []
+
+  const hits = entries
+    .map((entry, index) => {
+      const id = entry.id ?? `pmc-${index}`
+      return {
+        id,
+        title: entry.title?.trim() || 'Untitled study',
+        authors: entry.authorString?.trim(),
+        journal: entry.journalTitle?.trim(),
+        publishedAt: entry.firstPublicationDate,
+        doi: entry.doi?.trim(),
+        url: `https://europepmc.org/article/${entry.source ?? 'MED'}/${encodeURIComponent(id)}`,
+        abstract: entry.abstractText?.trim(),
+        source: 'europe-pmc' as const,
+      }
+    })
+    .filter((hit) => hit.title !== 'Untitled study' || hit.abstract || hit.doi)
+
+  return { query: cleanQuery, hits, retrievedAt: new Date().toISOString() }
 }
 
 export function buildResearchQuery(goal: string, biomarkers: string[] = [], variants: string[] = []) {
-  return [goal, ...biomarkers.slice(-8), ...variants.slice(0, 8)].filter(Boolean).join(' ')
+  const clean = (value: string) => value.trim().replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ')
+  const goalTerm = clean(goal)
+  const biomarkerTerms = biomarkers.map(clean).filter(Boolean).slice(-8)
+  const variantTerms = variants.map(clean).filter(Boolean).slice(0, 8)
+
+  if (!goalTerm && biomarkerTerms.length === 0 && variantTerms.length === 0) return ''
+  const context = [...biomarkerTerms, ...variantTerms]
+  return [goalTerm ? `(${goalTerm})` : '', context.length ? `(${context.join(' OR ')})` : ''].filter(Boolean).join(' AND ')
 }
