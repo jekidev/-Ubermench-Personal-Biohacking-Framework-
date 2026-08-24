@@ -1,11 +1,43 @@
 # -Ubermench-Personal-Biohacking-Framework-
-This is a webapp created in order to help me reach peak as a human being in the year 2026.
 
-## Plugins
+A local-first web/desktop framework for personal biology, evidence-driven experimentation and health optimisation.
 
-### Fearprime
+## Current architecture
 
-Fearprime is the PTSD / fear-learning / memory / psychophysiology research and decision-support plugin for this framework.
+### Core
+- Personal biology profile and local persistence
+- Biomarker trend engine
+- Genomics parsing and phenotype-oriented routing
+- Digital-twin foundation
+- Evidence scoring and intervention ranking
+- N-of-1 experiment analysis with baseline windows and standardised effect size
+- Knowledge-graph foundation
+
+### AI orchestration
+- Multi-provider LLM layer for OpenRouter, OpenAI and Anthropic
+- OpenRouter free-first routing with automatic provider/model fallback
+- Manual provider API keys and model selection in Settings
+- Model/provider/latency/attempt provenance displayed after each run
+- Hugging Face remains available through the dedicated inference/model registry path
+- Explicit researcher, biohacker, clinician, coach, scientist, auditor and safety modes at the orchestration contract level
+
+OpenRouter's current API supports OpenAI-compatible chat completions and a free router model, which the framework uses as the default free-first path. citehttps://openrouter.ai/request-builderhttps://openrouter.ai/openrouter/free/uptime
+
+### Research
+- Europe PMC search integration
+- Personalised query builder using goals, recent biomarkers and genomic variants
+- Structured research-hit model for later evidence normalization
+
+### Safety
+- Explicit intervention safety screen
+- CNS-depressant stacking, blood-pressure stacking and duplicate-mechanism checks
+- Severity levels and clinician-review flags
+- Safety rules are conservative and do not constitute proof of safety
+
+### Plugins
+
+#### Fearprime
+PTSD / fear-learning / memory / psychophysiology research and decision-support plugin.
 
 Location: `plugins/fearprime/`
 
@@ -18,11 +50,10 @@ Core areas:
 - Clinician review, adverse-event tracking and reproducible N-of-1 analysis
 - Offline-first cross-platform web architecture
 
-Fearprime is designed as a modular research/decision-support layer and does not autonomously prescribe or modify medical treatment.
+Fearprime is a modular research/decision-support layer and does not autonomously prescribe or modify medical treatment.
 
-### Longevity
-
-Longevity is the healthspan/lifespan decision-support and monitoring plugin.
+#### Longevity
+Healthspan/lifespan decision-support and monitoring plugin.
 
 Location: `plugins/longevity/`
 
@@ -38,4 +69,16 @@ Core areas:
 - Reproducible N-of-1 tracking
 - Safety flags and clinician-review handoffs
 
-Longevity distinguishes established preventive medicine from experimental geroscience. It does not autonomously prescribe, titrate or discontinue medication.
+## Development and quality
+
+```bash
+npm install
+npm test
+npm run build
+```
+
+GitHub Actions runs the test suite and production build on pushes and pull requests to `main`.
+
+## Security note
+
+Provider keys are currently stored locally in browser storage for the settings UI. This is appropriate for a personal prototype, not a hardened multi-user deployment. A future hardened mode should move secrets to the Tauri OS keychain or a server-side credential proxy.
