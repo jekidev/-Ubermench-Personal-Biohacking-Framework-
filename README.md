@@ -19,3 +19,23 @@ Core areas:
 - Offline-first cross-platform web architecture
 
 Fearprime is designed as a modular research/decision-support layer and does not autonomously prescribe or modify medical treatment.
+
+### Longevity
+
+Longevity is the healthspan/lifespan decision-support and monitoring plugin.
+
+Location: `plugins/longevity/`
+
+Core areas:
+- Cardiovascular risk dashboard
+- Metabolic health and laboratory trends
+- Fitness, running, strength and body-composition tracking
+- Sleep, recovery and wearable metrics
+- Kidney, liver and other organ-health monitoring
+- Prevention and screening tracking
+- Intervention and evidence registry
+- Geroscience research watchlist
+- Reproducible N-of-1 tracking
+- Safety flags and clinician-review handoffs
+
+Longevity distinguishes established preventive medicine from experimental geroscience. It does not autonomously prescribe, titrate or discontinue medication.
