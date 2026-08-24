@@ -30,6 +30,27 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      # Tauri's Linux Rust crates (GTK/GLib/WebKitGTK) require native
+      # development libraries. Keep these explicit so cargo check works on
+      # a clean GitHub-hosted runner instead of depending on runner state.
+      - name: Install Linux dependencies for Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libgtk-3-dev \
+            libglib2.0-dev \
+            libgdk-pixbuf-2.0-dev \
+            libsoup-3.0-dev \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev
+
       - name: Clear npm cache
         run: npm cache clean --force
 
