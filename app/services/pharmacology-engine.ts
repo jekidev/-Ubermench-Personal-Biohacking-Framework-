@@ -41,14 +41,18 @@ export function classifyPharmacology(name: string): PharmacologyEntity | undefin
 }
 
 export function checkPharmacologyInteractions(names: string[]): PharmacologyInteraction[] {
-  const classifications = names.map((name) => ({ name, entity: classifyPharmacology(name) })).filter((item): item is { name: string; entity: PharmacologyEntity } => Boolean(item.entity))
+  const classifications = names
+    .map((name) => ({ name, entity: classifyPharmacology(name) }))
+    .filter((item): item is { name: string; entity: PharmacologyEntity } => Boolean(item.entity))
   const findings: PharmacologyInteraction[] = []
   for (let i = 0; i < classifications.length; i += 1) {
+    const left = classifications[i]
+    if (!left) continue
     for (let j = i + 1; j < classifications.length; j += 1) {
-      const a = classifications[i].entity
-      const b = classifications[j].entity
-      const match = INTERACTIONS.find((item) => (item.a === a.id && item.b === b.id) || (item.a === b.id && item.b === a.id))
-      if (match) findings.push({ ...match, a: classifications[i].name, b: classifications[j].name })
+      const right = classifications[j]
+      if (!right) continue
+      const match = INTERACTIONS.find((item) => (item.a === left.entity.id && item.b === right.entity.id) || (item.a === right.entity.id && item.b === left.entity.id))
+      if (match) findings.push({ ...match, a: left.name, b: right.name })
     }
   }
   return findings
