@@ -6,7 +6,11 @@ export class KnowledgeGraph {
   readonly edges: KnowledgeEdge[] = []
 
   addNode(node: KnowledgeNode) { this.nodes.set(node.id, node); return node }
-  addEdge(edge: KnowledgeEdge) { if (edge.confidence >= 0 && edge.confidence <= 1) this.edges.push(edge); return edge }
+  addEdge(edge: KnowledgeEdge) {
+    if (!Number.isFinite(edge.confidence) || edge.confidence < 0 || edge.confidence > 1) throw new RangeError('confidence must be a finite number between 0 and 1')
+    this.edges.push(edge)
+    return edge
+  }
   neighbors(id: string) { return this.edges.filter((edge) => edge.from === id || edge.to === id) }
   related(id: string) { return this.neighbors(id).map((edge) => edge.from === id ? edge.to : edge.from).map((nodeId) => this.nodes.get(nodeId)).filter((node): node is KnowledgeNode => Boolean(node)) }
 }
