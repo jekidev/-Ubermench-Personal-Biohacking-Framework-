@@ -3,6 +3,9 @@ import { agentKernel } from '~/services/agent-superstack/kernel'
 import type { AgentTask } from '~/services/agent-superstack/types'
 import type { AgentRun, AgentObservation } from './types'
 import { browserRuntimeStore } from './memory-store'
+import { SkillEvolutionEngine } from './skill-evolution'
+
+const skillEvolution = new SkillEvolutionEngine()
 
 export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
   const id = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -12,6 +15,8 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
   const context = agentKernel.prepare(task)
   const run: AgentRun = { id, task, status: 'planning', context, observations: [], toolCalls: [], selectedModel: context.selectedModel, startedAt }
   try {
+    if (!context.policy.allowed) throw new Error(`Agent task blocked: ${context.policy.reason}`)
+    if (context.policy.requiresConfirmation) throw new Error('Agent task requires explicit confirmation before execution.')
     const memoryContext = context.memories.map((m) => `- ${m.text}`).join('\n')
     const skillContext = context.skills.map((s) => `- ${s.name}: ${s.description}`).join('\n')
     const system = [
@@ -22,12 +27,18 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       skillContext ? `Available skills:\n${skillContext}` : 'Available skills: none',
     ].join('\n\n')
     run.status = 'executing'
-    const response = await orchestrateLLM({ prompt: task.prompt, system, mode: task.kind === 'research' ? 'researcher' : 'biohacker' })
+    const response = await orchestrateLLM({
+      prompt: task.prompt,
+      system,
+      mode: task.kind === 'research' ? 'researcher' : 'biohacker',
+      preferredProvider: context.selectedModel?.provider as AgentTask extends never ? never : never,
+      preferredModel: context.selectedModel?.model,
+    })
     const observation: AgentObservation = { kind: 'model', text: response.text, createdAt: new Date().toISOString() }
     run.observations.push(observation)
     run.status = 'completed'
     run.completedAt = new Date().toISOString()
-    agentKernel.learnFromTask(task, 'success: model response completed')
+    skillEvolution.propose(task.prompt, 'success: model response completed')
     await browserRuntimeStore.saveMemory(agentKernel.memory.all())
     await browserRuntimeStore.appendRun(run)
     return run
@@ -39,3 +50,5 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     throw error
   }
 }
+
+export function pendingSkillCandidates() { return skillEvolution.listPending() }
