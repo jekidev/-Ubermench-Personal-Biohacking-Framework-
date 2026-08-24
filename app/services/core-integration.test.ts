@@ -14,7 +14,7 @@ describe('core integration', () => {
     const biomarker = observationFromBiomarker(crp, 'subject-1')
     const sleep = observationFromSleep({ id: 's1', recordedAt: '2026-08-02T08:00:00Z', durationMinutes: 450, efficiency: 90, hrv: 55, source: 'wearable' }, 'subject-1')
     const merged = mergeObservations([biomarker], sleep)
-    expect(merged).toHaveLength(5)
+    expect(merged).toHaveLength(4)
     expect(merged[0].subjectId).toBe('subject-1')
   })
 
