@@ -7,6 +7,7 @@ import { detectAnomalies } from './anomaly-engine'
 import { rankByObjectives } from './objective-engine'
 import { screenInterventionSafety } from './safety-engine'
 import { assessDataQuality, identifyDataGaps } from './data-quality-engine'
+import { estimateInterventionEffect, type CausalObservation, type CausalEstimate } from './causal-engine'
 
 export interface ClosedLoopRequest {
   goal: string
@@ -15,6 +16,8 @@ export interface ClosedLoopRequest {
   metrics?: Array<{ metric: string; value: number; recordedAt?: string }>
   baselines?: Array<{ metric: string; baseline: number; tolerancePct?: number }>
   monitoring?: string[]
+  causalObservations?: CausalObservation[]
+  causalTargets?: Array<{ metric: string; intervention: string }>
 }
 
 export interface ClosedLoopResult {
@@ -24,7 +27,8 @@ export interface ClosedLoopResult {
   rankedCandidates: ReturnType<typeof rankByObjectives>
   dataQuality: DataQualityReport
   dataGaps: DataGap[]
-  nextAction: 'research' | 'review-safety' | 'run-experiment' | 'monitor' | 'collect-data'
+  causalEstimates: CausalEstimate[]
+  nextAction: 'research' | 'review-safety' | 'run-experiment' | 'monitor' | 'collect-data' | 'update-model'
 }
 
 export function runClosedLoop(profile: PersonalBiologyProfile, request: ClosedLoopRequest): ClosedLoopResult {
@@ -35,14 +39,16 @@ export function runClosedLoop(profile: PersonalBiologyProfile, request: ClosedLo
   const evidence = rankedCandidates.flatMap((candidate) => candidate.evidence)
   const dataQuality = assessDataQuality(profile)
   const dataGaps = identifyDataGaps(profile)
+  const causalEstimates = (request.causalTargets ?? []).map((target) => estimateInterventionEffect(request.causalObservations ?? [], target.metric, target.intervention))
   const audit = auditRecommendation({ evidence, interventions: rankedCandidates, safetyFlags, dataCompleteness: dataQuality.completeness })
 
   const nextAction: ClosedLoopResult['nextAction'] =
     audit.some((item) => item.blocking) ? 'review-safety' :
     anomalies.some((item) => item.severity === 'critical') ? 'collect-data' :
     dataQuality.completeness < 0.5 ? 'collect-data' :
+    causalEstimates.some((estimate) => estimate.delta !== undefined && estimate.confidence >= 0.6) ? 'update-model' :
     !evidence.length ? 'research' :
     protocol.steps.length ? 'run-experiment' : 'monitor'
 
-  return { protocol, anomalies, audit, rankedCandidates, dataQuality, dataGaps, nextAction }
+  return { protocol, anomalies, audit, rankedCandidates, dataQuality, dataGaps, causalEstimates, nextAction }
 }
