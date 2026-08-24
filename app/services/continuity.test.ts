@@ -18,7 +18,13 @@ describe('continuity layer', () => {
   })
 
   it('calibrates the twin only from usable estimates', () => {
-    const estimate = { metric: 'HRV', intervention: 'training', delta: 5, confidence: 'high' as const }
+    const estimate = {
+      metric: 'HRV',
+      intervention: 'training',
+      delta: 5,
+      confidence: 0.9,
+      limitations: [],
+    }
     const result = calibrateDigitalTwin(profile, [estimate])
     expect(result.version).toBe(1)
     expect(result.adjustments[0]?.target).toBe('HRV')
