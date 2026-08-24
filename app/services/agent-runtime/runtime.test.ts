@@ -26,7 +26,8 @@ describe('agent runtime v2', () => {
       }, observations: [], toolCalls: [], selectedModel: { id: 'model', provider: 'test', model: 'test', baseUrl: 'http://localhost', capabilities: ['research'], costTier: 'free', enabled: true, priority: 1 }, startedAt: new Date().toISOString()
     } as AgentRun
     recordRunInKnowledgeGraph(graph, run)
-    expect(graph.snapshot().nodes.length).toBe(3)
+    // The run creates one node for the task, model, memory and skill.
+    expect(graph.snapshot().nodes.length).toBe(4)
     expect(graph.snapshot().edges.length).toBe(3)
   })
 })
