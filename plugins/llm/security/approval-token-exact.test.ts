@@ -15,6 +15,6 @@ describe('exact approval payload binding', () => {
 
   it('accepts equivalent nested object key ordering', async () => {
     const token = await issueApprovalToken(request, { a: 1, nested: { x: 2, y: 3 } })
-    await expect(consumeApprovalToken(token, 'send', 'provider:test', { nested: { y: 3, x: 2 }, a: 1 })).not.toThrow()
+    await expect(consumeApprovalToken(token, 'send', 'provider:test', { nested: { y: 3, x: 2 }, a: 1 })).resolves.toBeUndefined()
   })
 })
