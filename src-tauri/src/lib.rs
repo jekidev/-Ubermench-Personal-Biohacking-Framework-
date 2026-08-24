@@ -1,3 +1,5 @@
+mod mcp;
+
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
@@ -36,7 +38,7 @@ pub fn run() {
             })
             .build(),
         )
-        .invoke_handler(tauri::generate_handler![fingerprint_bytes, app_name])
+        .invoke_handler(tauri::generate_handler![fingerprint_bytes, app_name, mcp::mcp_stdio_preflight])
         .run(tauri::generate_context!())
         .expect("error while running Ubermench application");
 }
