@@ -29,21 +29,23 @@ export function summarizeNOf1(experiment: NOf1Experiment, nowInput: Date = new D
   interventionStart.setDate(interventionStart.getDate() - interventionDays)
   const washoutStart = new Date(interventionStart)
   washoutStart.setDate(washoutStart.getDate() - washoutDays)
-  const baselineStart = new Date(washoutStart)
-  baselineStart.setDate(baselineStart.getDate() - baselineDays)
+  const baselineStart = new Date(interventionStart)
+  baselineStart.setDate(baselineStart.getDate() - (interventionDays + washoutDays + baselineDays))
 
   const observations = experiment.observations.filter((item) => {
     const date = new Date(item.recordedAt)
     return Number.isFinite(item.value) && !Number.isNaN(date.getTime()) && (!experiment.metric || item.metric === experiment.metric)
   })
 
+  // Baseline covers the interval immediately before washout. Washout is excluded
+  // from both groups, and intervention begins after the washout window.
   const baseline = observations.filter((item) => {
     const date = new Date(item.recordedAt)
     return date >= baselineStart && date < washoutStart
   })
   const intervention = observations.filter((item) => {
     const date = new Date(item.recordedAt)
-    return date > interventionStart && date <= now
+    return date >= now || date > interventionStart
   })
   const baselineValues = baseline.map((x) => x.value)
   const interventionValues = intervention.map((x) => x.value)
