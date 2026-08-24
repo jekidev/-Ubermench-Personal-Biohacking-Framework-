@@ -7,11 +7,11 @@
     "build": "nuxt build",
     "generate": "nuxt generate",
     "prepare": "nuxt prepare",
-    "typecheck": "nuxi typecheck",
+    "typecheck": "nuxt prepare && nuxi typecheck",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "test": "vitest run"
+    "test": "nuxt prepare && vitest run"
   },
   "dependencies": {
     "@nuxt/ui": "^4.0.0",
@@ -27,6 +27,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.0.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.0.0"
   }
 }
