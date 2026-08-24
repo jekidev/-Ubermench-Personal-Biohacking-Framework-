@@ -51,7 +51,7 @@ function browserSet<T>(key: string, value: T) {
 }
 
 export function useFearprimeStore() {
-  const isTauri = computed(() => Boolean(window?.__TAURI_INTERNALS__));
+  const isTauri = computed(() => import.meta.client && Boolean(window.__TAURI_INTERNALS__));
 
   async function loadEvents(): Promise<FearprimeEvent[]> {
     if (!isTauri.value) return browserGet<FearprimeEvent[]>(EVENTS_KEY, []);
@@ -136,11 +136,5 @@ export function useFearprimeStore() {
     return prediction;
   }
 
-  return {
-    loadEvents,
-    appendEvent,
-    listMemoryTargets,
-    createMemoryTarget,
-    lockPrediction
-  };
+  return { loadEvents, appendEvent, listMemoryTargets, createMemoryTarget, lockPrediction };
 }
