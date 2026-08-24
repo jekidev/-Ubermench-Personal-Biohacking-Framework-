@@ -11,7 +11,7 @@ export type ApprovalToken = {
   used: boolean
 }
 
-export async function issueApprovalToken(request: ApprovalRequest, exactPayload: unknown, ttlMs = 120_000): Promise<ApprovalToken> {
+export async function issueApprovalToken(request: ApprovalRequest, exactPayload: unknown = request.payloadPreview, ttlMs = 120_000): Promise<ApprovalToken> {
   const payloadHash = await fingerprintPayload(exactPayload)
   return {
     tokenId: crypto.randomUUID(),
