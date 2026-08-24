@@ -16,8 +16,10 @@ permissions:
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Pin the CI image so Ubuntu changes do not silently break the native
+    # GTK/WebKit toolchain used by Tauri.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,14 +28,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       # Tauri's Linux Rust crates (GTK/GLib/WebKitGTK) require native
-      # development libraries. libglib2.0-dev provides the GLib/GObject
-      # pkg-config metadata; there is no separate libgobject-2.0-dev package
-      # on Ubuntu 24.04.
+      # development libraries. libglib2.0-dev provides both GLib and GObject
+      # pkg-config metadata on Ubuntu 24.04; there is no separate
+      # libgobject-2.0-dev package.
       - name: Install Linux dependencies for Tauri
         shell: bash
         run: |
@@ -52,24 +66,22 @@ jobs:
             libgdk-pixbuf-2.0-dev \
             libsoup-3.0-dev \
             libwebkit2gtk-4.1-dev \
+            libjavascriptcoregtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
             libxdo-dev
 
-          echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig" >> "$GITHUB_ENV"
           export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> "$GITHUB_ENV"
 
           command -v pkg-config
           pkg-config --version
-          test -f /usr/lib/x86_64-linux-gnu/pkgconfig/glib-2.0.pc
-          test -f /usr/lib/x86_64-linux-gnu/pkgconfig/gobject-2.0.pc
           pkg-config --modversion glib-2.0
           pkg-config --modversion gobject-2.0
-          pkg-config --cflags --libs 'glib-2.0 >= 2.70'
-          pkg-config --cflags --libs 'gobject-2.0 >= 2.70'
-
-      - name: Clear npm cache
-        run: npm cache clean --force
+          pkg-config --modversion gtk+-3.0
+          pkg-config --modversion webkit2gtk-4.1
+          pkg-config --modversion javascriptcoregtk-4.1
+          pkg-config --modversion libsoup-3.0
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund --no-package-lock
@@ -87,4 +99,5 @@ jobs:
         working-directory: src-tauri
         env:
           PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
-        run: cargo check
+          RUST_BACKTRACE: "1"
+        run: cargo check --all-targets
