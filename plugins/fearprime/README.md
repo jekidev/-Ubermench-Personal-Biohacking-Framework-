@@ -1,14 +1,12 @@
 # Fearprime
 
-Fearprime er et modul/plugin til Ubermench Personal Biohacking Framework til struktureret PTSD-, fear-learning-, memory- og interventionstracking.
+Fearprime er et modul/plugin til Ubermench Personal Biohacking Framework med fokus på PTSD, fear learning, memory updating, søvn, fysiologi og kontrolleret N-of-1 analyse.
 
-## Formål
+## Hovedprincip
 
-Fearprime er et måle-, forsknings- og beslutningsstøttelag. Det er ikke en autonom ordinationsmotor.
+`måling → phenotype → hypotese → test/intervention → outcome → attribution → replication`
 
-Kerneprincip:
-
-`klinisk state → phenotype → bottleneck → hypotese → intervention → primært endpoint → follow-up → attribution → model update`
+Fearprime er **ikke** en autonom ordinationsmotor. Kliniske beslutninger og medicinændringer skal forblive klinikerstyrede.
 
 ## Scope
 
@@ -25,28 +23,28 @@ Kerneprincip:
 
 ## Aktiv farmakologisk researchliste
 
-- Moclobemide — F11 chronic psychiatric state
-- Memantine — F3 acquisition/cognition
-- Sodium butyrate — F4 consolidation research
+- Moclobemid — F11 chronic psychiatric state
+- Memantin — F3 acquisition/cognition
+- Natriumbutyrat — F4 consolidation research
 - L-DOPA — F4–F6 conditional research
-- Pentoxifylline — F12 inflammatory/vascular state
+- Pentoxifyllin — F12 inflammatory/vascular state
 - Oxytocin — F2/F3/F10/F13 conditional research
-- D-cycloserine — F3/F4 clinician-led research
+- D-cycloserin — F3/F4 research
 - Prazosin — F15/nightmare phenotype
 
 Standard klinisk referenceklasse:
 
-- Sertraline
-- Paroxetine
-- Venlafaxine
+- Sertralin
+- Paroxetin
+- Venlafaxin
 
 ## Eksplicit fjernet fra aktiv protokol
 
 - Kanna/Sceletium
-- Selegiline
+- Selegilin
 - BNC210
 
-De kan fortsat ligge i en separat research library, men må ikke blive behandlingsforslag i aktiv decision engine uden eksplicit re-review.
+De kan fortsat ligge i en separat research library, men må ikke blive aktive behandlingsforslag uden eksplicit re-review.
 
 ## Designprincipper
 
@@ -67,5 +65,10 @@ De kan fortsat ligge i en separat research library, men må ikke blive behandlin
 - `protocols/` — state machine og beslutningsregler
 - `interventions/` — intervention registry
 - `evidence/` — evidensramme og researchnoter
-- `analytics/` — planlagt analysearkitektur
+- `analytics/` — reproducerbare beregninger
+- `engine/` — forklarlig decision engine
 - `tests/` — planlagte syntetiske testcases
+
+## Cross-platform mål
+
+Den planlagte klient er en offline-first PWA til Android/iPhone og Mac/PC. Domænelogikken skal være UI-uafhængig, så samme model og validering kan genbruges på tværs af klienter.
