@@ -31,6 +31,22 @@
       </form>
     </UCard>
 
+    <UCard>
+      <template #header><div class="font-medium">Native MCP approval</div></template>
+      <div class="space-y-3">
+        <p class="text-sm text-zinc-500">Preflight is validated first. Native execution still requires this explicit approval action; the agent cannot mint the token itself.</p>
+        <div class="grid gap-3 md:grid-cols-2">
+          <input v-model="nativeCommand" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700" placeholder="node" />
+          <input v-model="nativeArgs" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700" placeholder="server.js --stdio" />
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <UButton :loading="native.state.value === 'preflight'" :disabled="!nativeCommand.trim()" @click="approveNative">Approve native MCP action</UButton>
+          <span v-if="native.state.value === 'approved'" class="text-xs text-zinc-500">Approved for {{ native.expiresInMs.value }} ms</span>
+        </div>
+        <div v-if="native.error.value" class="rounded-md border border-red-300 p-3 text-sm text-red-700">{{ native.error.value }}</div>
+      </div>
+    </UCard>
+
     <UCard v-if="runtime.activeRun.value">
       <template #header><div class="font-medium">Latest run</div></template>
       <div class="space-y-4">
@@ -56,14 +72,21 @@
 import type { AgentTaskKind } from '~/services/agent-superstack/types'
 import type { AgentAuditEvent } from '~/services/agent-runtime/types'
 const runtime = useAgentRuntime()
+const native = useNativeMcpApproval()
 const prompt = ref('')
 const kind = ref<AgentTaskKind>('research')
 const auditEvents = ref<AgentAuditEvent[]>([])
 const auditLoading = ref(false)
+const nativeCommand = ref('node')
+const nativeArgs = ref('server.js')
 
 async function refreshAudit() {
   auditLoading.value = true
   try { auditEvents.value = await runtime.audit(100) } finally { auditLoading.value = false }
+}
+
+async function approveNative() {
+  await native.request(nativeCommand.value, nativeArgs.value.split(/\s+/).filter(Boolean))
 }
 
 async function submit() {
