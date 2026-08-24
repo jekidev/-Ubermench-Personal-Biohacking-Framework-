@@ -1,6 +1,6 @@
 import type { AgentContext, AgentTask, MemoryRecord, ModelEndpoint } from '~/services/agent-superstack/types'
 
-export type AgentRunStatus = 'queued' | 'planning' | 'executing' | 'waiting-approval' | 'completed' | 'failed'
+export type AgentRunStatus = 'queued' | 'planning' | 'executing' | 'waiting-approval' | 'observing' | 'recovering' | 'completed' | 'failed'
 
 export interface AgentToolCall {
   id: string
