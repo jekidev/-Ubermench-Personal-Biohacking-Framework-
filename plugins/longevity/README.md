@@ -15,6 +15,33 @@ Longevity is the evidence-weighted healthspan/lifespan decision-support plugin f
 - N-of-1 intervention tracking with baseline, exposure, washout and outcome windows
 - Evidence grading and source versioning
 - Safety flags and clinician-review handoffs
+- Review-first blood-test and DNA import
+- Local source-document provenance and append-only biomarker history
+- Native Tauri PDF extraction boundary
+
+## PDF import architecture
+
+```text
+PDF
+ ↓
+Tauri native extractor
+ ↓
+page-level text + extraction method
+ ↓
+Longevity parser
+ ↓
+biomarker candidates
+ ↓
+confidence + reference interval + source page
+ ↓
+editable review
+ ↓
+explicit confirmation
+ ↓
+local append-only store
+```
+
+The importer must fail closed when extraction is unavailable or ambiguous. It must never invent a laboratory value. Scanned PDFs may be routed to an explicit OCR adapter; OCR output must retain its extraction method and confidence.
 
 ## Design rule
 
