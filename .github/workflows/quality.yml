@@ -35,17 +35,6 @@ jobs:
           toolchain: stable
           components: clippy,rustfmt
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
       - name: Install Linux dependencies for Tauri
         shell: bash
         run: |
@@ -64,11 +53,25 @@ jobs:
           pkg-config --modversion javascriptcoregtk-4.1
           pkg-config --modversion libsoup-3.0
 
-      # The repository's lockfile currently contains only the root package
-      # metadata, so npm ci would reject it. npm install resolves the complete
-      # dependency graph until a fully generated lockfile is committed.
-      - name: Install dependencies
+      # The checked-in JS lock is currently incomplete. Resolve it once for the
+      # run, then freeze the resolved graph for every subsequent Node command.
+      - name: Install Node dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Lock Rust dependencies for this run
+        working-directory: src-tauri
+        run: cargo generate-lockfile
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.toml', 'src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Unit tests
         run: npm test
@@ -88,21 +91,21 @@ jobs:
         env:
           PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
           RUST_BACKTRACE: "1"
-        run: cargo test --all-targets
+        run: cargo test --all-targets --locked
 
       - name: Rust check
         working-directory: src-tauri
         env:
           PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
           RUST_BACKTRACE: "1"
-        run: cargo check --all-targets
+        run: cargo check --all-targets --locked
 
       - name: Rust clippy
         working-directory: src-tauri
         env:
           PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
           RUST_BACKTRACE: "1"
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features --locked -- -D warnings
 
       - name: Tauri CLI smoke test
         run: npx --yes @tauri-apps/cli@^2 info
