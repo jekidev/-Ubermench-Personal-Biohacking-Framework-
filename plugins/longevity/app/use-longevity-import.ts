@@ -1,13 +1,14 @@
-import { appendDocument, appendObservations, appendVariants, emptyLongevityStore, loadLongevityStore, saveLongevityStore, type LocalGeneticVariant, type LocalObservation } from '../persistence/local-store'
-import { sha256Hex, type SelectedLocalFile } from '../tauri/file-adapter'
+import { appendObservations, appendVariants, loadLongevityStore, saveLongevityStore, type LocalGeneticVariant, type LocalObservation } from '../persistence/local-store'
+import { detectImportMime, sha256Hex, type SelectedLocalFile } from '../tauri/file-adapter'
 import { confirmDocumentImport, previewImport, type ImportPreview } from '../tauri/import-service'
-import { parseSelectedFile } from '../import/parser'
+import { extractPdfLabText } from '../tauri/pdf-adapter'
+import { parsePdfExtraction, parseSelectedFile, type ImportCandidate } from '../import/parser'
 
 const storage = () => localStorage
 
 export function useLongevityImport() {
   const preview = ref<ImportPreview | null>(null)
-  const candidates = ref<Array<{ type: 'observation' | 'variant'; value: LocalObservation | LocalGeneticVariant }>>([])
+  const candidates = ref<ImportCandidate[]>([])
   const busy = ref(false)
   const error = ref('')
 
@@ -16,7 +17,13 @@ export function useLongevityImport() {
     error.value = ''
     try {
       preview.value = await previewImport(file)
-      candidates.value = parseSelectedFile(file, preview.value.document.id)
+      if (detectImportMime(file.name, file.mimeType) === 'pdf') {
+        const extraction = await extractPdfLabText(file.contents)
+        candidates.value = parsePdfExtraction(extraction, preview.value.document.id, file.name)
+        preview.value = { ...preview.value, warnings: [...new Set([...preview.value.warnings, ...extraction.warnings])] }
+      } else {
+        candidates.value = parseSelectedFile(file, preview.value.document.id)
+      }
     } catch (cause) {
       preview.value = null
       candidates.value = []
@@ -28,6 +35,9 @@ export function useLongevityImport() {
 
   async function confirm(file: SelectedLocalFile) {
     if (!preview.value) throw new Error('No import preview is active')
+    if (preview.value.kind === 'blood_report' && preview.value.format === 'pdf' && candidates.value.length === 0) {
+      throw new Error('No confirmed blood observations were extracted from the PDF')
+    }
     const current = loadLongevityStore(storage())
     const adapter = {
       async persistSourceFile() { return { localPath: `local://${preview.value!.document.sha256}/${file.name}` } },
@@ -43,11 +53,15 @@ export function useLongevityImport() {
     return next
   }
 
+  async function fingerprint(file: SelectedLocalFile): Promise<string> {
+    return sha256Hex(file.contents)
+  }
+
   function cancel() {
     preview.value = null
     candidates.value = []
     error.value = ''
   }
 
-  return { preview, candidates, busy, error, prepare, confirm, cancel }
+  return { preview, candidates, busy, error, prepare, confirm, fingerprint, cancel }
 }
