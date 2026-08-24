@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold">Agent Control Center</h1>
-        <p class="text-zinc-500">Closed-loop model, memory, skills, governance and audit runtime.</p>
+        <p class="text-zinc-500">Closed-loop model, memory, skills, governance, recovery and audit runtime.</p>
       </div>
       <NuxtLink to="/"><UButton variant="outline">Dashboard</UButton></NuxtLink>
     </div>
@@ -17,6 +17,17 @@
     </div>
 
     <UCard>
+      <template #header><div class="font-medium">Provider health</div></template>
+      <div v-if="health.length" class="space-y-2">
+        <div v-for="item in health" :key="item.provider" class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-700">
+          <div><span class="font-medium">{{ item.provider }}</span><span class="ml-2 text-xs text-zinc-500">{{ item.failures }} failures / {{ item.successes }} successes</span></div>
+          <span class="rounded px-2 py-1 text-xs font-medium">{{ item.state }}</span>
+        </div>
+      </div>
+      <div v-else class="text-sm text-zinc-500">No provider failures recorded yet.</div>
+    </UCard>
+
+    <UCard>
       <template #header><div class="font-medium">Run agent</div></template>
       <form class="space-y-3" @submit.prevent="submit">
         <textarea v-model="prompt" class="min-h-32 w-full rounded-md border border-zinc-200 bg-transparent p-3 text-sm dark:border-zinc-700" placeholder="Research, analyze, compare or plan..." />
@@ -26,9 +37,20 @@
           </select>
           <UButton type="submit" :loading="runtime.status.value === 'running'" :disabled="!prompt.trim()">Execute</UButton>
           <UButton type="button" variant="outline" :loading="auditLoading" @click="refreshAudit">Refresh audit</UButton>
+          <UButton type="button" variant="outline" :loading="runsLoading" @click="refreshRecoverable">Refresh recoverable</UButton>
         </div>
         <div v-if="runtime.error.value" class="rounded-md border border-red-300 p-3 text-sm text-red-700">{{ runtime.error.value }}</div>
       </form>
+    </UCard>
+
+    <UCard v-if="recoverable.length">
+      <template #header><div class="font-medium">Recoverable runs</div></template>
+      <div class="space-y-2">
+        <div v-for="run in recoverable" :key="run.id" class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-700">
+          <div><div class="font-medium">{{ run.task.prompt }}</div><div class="text-xs text-zinc-500">{{ run.id }} · {{ run.status }} · {{ run.task.kind }}</div></div>
+          <UButton size="sm" @click="resume(run)">Resume</UButton>
+        </div>
+      </div>
     </UCard>
 
     <UCard>
@@ -70,13 +92,16 @@
 
 <script setup lang="ts">
 import type { AgentTaskKind } from '~/services/agent-superstack/types'
-import type { AgentAuditEvent } from '~/services/agent-runtime/types'
+import type { AgentAuditEvent, AgentRun } from '~/services/agent-runtime/types'
 const runtime = useAgentRuntime()
 const native = useNativeMcpApproval()
 const prompt = ref('')
 const kind = ref<AgentTaskKind>('research')
 const auditEvents = ref<AgentAuditEvent[]>([])
+const recoverable = ref<AgentRun[]>([])
+const health = computed(() => runtime.providerHealthSnapshot())
 const auditLoading = ref(false)
+const runsLoading = ref(false)
 const nativeCommand = ref('node')
 const nativeArgs = ref('server.js')
 
@@ -85,14 +110,27 @@ async function refreshAudit() {
   try { auditEvents.value = await runtime.audit(100) } finally { auditLoading.value = false }
 }
 
+async function refreshRecoverable() {
+  runsLoading.value = true
+  try {
+    const runs = await runtime.recentRuns(100)
+    recoverable.value = runs.filter((run) => ['planning', 'executing', 'waiting-approval', 'recovering'].includes(run.status))
+  } finally { runsLoading.value = false }
+}
+
 async function approveNative() {
   await native.request(nativeCommand.value, nativeArgs.value.split(/\s+/).filter(Boolean))
 }
 
-async function submit() {
-  await runtime.run({ id: `task_${Date.now()}`, kind: kind.value, prompt: prompt.value, requiredCapabilities: kind.value === 'research' ? ['research'] : ['reasoning'] })
-  await refreshAudit()
+async function resume(run: AgentRun) {
+  await runtime.resume(run.task)
+  await Promise.all([refreshAudit(), refreshRecoverable()])
 }
 
-onMounted(refreshAudit)
+async function submit() {
+  await runtime.run({ id: `task_${Date.now()}`, kind: kind.value, prompt: prompt.value, requiredCapabilities: kind.value === 'research' ? ['research'] : ['reasoning'] })
+  await Promise.all([refreshAudit(), refreshRecoverable()])
+}
+
+onMounted(() => Promise.all([refreshAudit(), refreshRecoverable()]))
 </script>
