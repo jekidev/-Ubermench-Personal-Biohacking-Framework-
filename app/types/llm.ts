@@ -17,6 +17,8 @@ export interface LLMRequest {
   temperature?: number
   maxTokens?: number
   signal?: AbortSignal
+  preferredProvider?: LLMProvider
+  preferredModel?: string
 }
 
 export interface LLMResponse {
