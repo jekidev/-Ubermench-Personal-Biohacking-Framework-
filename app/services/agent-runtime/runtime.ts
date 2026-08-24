@@ -17,19 +17,10 @@ function auditEvent(runId: string, type: Parameters<typeof recordAudit>[1]['type
 }
 
 function splitToolCalls(calls: AgentToolCall[]): { executable: AgentToolCall[]; awaitingApproval: AgentToolCall[] } {
-  const executable = calls.filter((call) => !call.requiresApproval || Boolean(call.approvalToken?.trim()))
-  const awaitingApproval = calls.filter((call) => call.requiresApproval && !call.approvalToken?.trim())
+  const approvalRequired = (call: AgentToolCall) => call.requiresApproval === true || call.name === 'mcp.stdio'
+  const executable = calls.filter((call) => !approvalRequired(call) || Boolean(call.approvalToken?.trim()))
+  const awaitingApproval = calls.filter((call) => approvalRequired(call) && !call.approvalToken?.trim())
   return { executable, awaitingApproval }
-}
-
-async function askModel(task: AgentTask, system: string, provider?: string, model?: string) {
-  return withRecovery(() => orchestrateLLM({
-    prompt: task.prompt,
-    system,
-    mode: task.kind === 'research' ? 'researcher' : 'biohacker',
-    preferredProvider: provider as LLMProvider | undefined,
-    preferredModel: model,
-  }))
 }
 
 export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
@@ -55,7 +46,7 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     const system = [
       'You are the Uberm3nch agent kernel. Follow policy and never bypass approval gates.',
       'When a tool would materially help, return a JSON object with a toolCalls array and do not claim the tool ran.',
-      'Each tool call must contain id, name, args, and requiresApproval. Never invent approval tokens.',
+      'Each tool call must contain id, name and args. Set requiresApproval for risky actions. Never invent approval tokens.',
       `Task kind: ${task.kind}`,
       `Selected model: ${context.selectedModel?.provider ?? 'unavailable'}/${context.selectedModel?.model ?? 'unavailable'}`,
       memoryContext ? `Relevant memory:\n${memoryContext}` : 'Relevant memory: none',
@@ -63,7 +54,13 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     ].join('\n\n')
     run.status = 'executing'
     const response = await withRecovery(
-      () => askModel(task, system, context.selectedModel?.provider, context.selectedModel?.model),
+      () => orchestrateLLM({
+        prompt: task.prompt,
+        system,
+        mode: task.kind === 'research' ? 'researcher' : 'biohacker',
+        preferredProvider: context.selectedModel?.provider as LLMProvider | undefined,
+        preferredModel: context.selectedModel?.model,
+      }),
       undefined,
       async (attempt, error, delayMs) => {
         run.retryCount = attempt
@@ -73,7 +70,7 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() } as AgentObservation)
     const calls = extractToolCalls(response.text)
     run.toolCalls.push(...calls)
-    for (const call of calls) await recordAudit(store, auditEvent(id, 'tool.requested', `Tool requested: ${call.name}`, { toolCallId: call.id, requiresApproval: call.requiresApproval === true }))
+    for (const call of calls) await recordAudit(store, auditEvent(id, 'tool.requested', `Tool requested: ${call.name}`, { toolCallId: call.id, requiresApproval: call.requiresApproval === true || call.name === 'mcp.stdio' }))
 
     const { executable, awaitingApproval } = splitToolCalls(calls)
     if (awaitingApproval.length) {
@@ -147,9 +144,10 @@ export async function continueAgentWithTools(task: AgentTask, run: AgentRun, cal
     },
   )
   run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() })
-  run.status = extractToolCalls(response.text).some((call) => call.requiresApproval && !call.approvalToken) ? 'waiting-approval' : 'completed'
-  run.completedAt = run.status === 'completed' ? new Date().toISOString() : undefined
-  await recordAudit(store, auditEvent(run.id, 'model.completed', 'Continuation model execution completed', { provider: response.provider, model: response.model }))
+  const pending = extractToolCalls(response.text).some((call) => (call.requiresApproval || call.name === 'mcp.stdio') && !call.approvalToken)
+  run.status = pending ? 'waiting-approval' : 'completed'
+  run.completedAt = pending ? undefined : new Date().toISOString()
+  await recordAudit(store, auditEvent(run.id, 'model.completed', 'Continuation model execution completed', { provider: response.provider, model: response.model, pendingApproval: pending }))
   await store.appendRun(run)
   return run
 }
