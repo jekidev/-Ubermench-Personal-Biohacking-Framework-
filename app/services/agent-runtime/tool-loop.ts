@@ -1,6 +1,7 @@
 import { createDefaultToolGateway } from './tool-gateway'
 import type { AgentRun, AgentObservation, AgentToolCall } from './types'
 import type { AgentTask } from '~/services/agent-superstack/types'
+import { validateToolResult } from './tool-result-validation'
 
 const DEFAULT_MAX_TOOL_CALLS = 8
 
@@ -15,16 +16,18 @@ export async function executeApprovedToolCalls(task: AgentTask, run: AgentRun, c
   let executed = 0
 
   for (const call of bounded) {
+    if (run.toolCalls.some((existing) => existing.id === call.id)) continue
     run.toolCalls.push(call)
     run.status = call.requiresApproval || gateway.get(call.name)?.requiresApproval ? 'waiting-approval' : 'executing'
     try {
       const result = await (call.requiresApproval || gateway.get(call.name)?.requiresApproval
         ? gateway.executeApproved(task, call)
         : gateway.execute(task, call))
+      const validated = validateToolResult(result)
       const observation: AgentObservation = {
         toolCallId: call.id,
         kind: 'tool',
-        text: typeof result === 'string' ? result : JSON.stringify(result),
+        text: validated.serialized,
         createdAt: new Date().toISOString(),
       }
       run.observations.push(observation)
