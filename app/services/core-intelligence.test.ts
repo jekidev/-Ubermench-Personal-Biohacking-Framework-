@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { EvidenceItem } from '~/types/evidence'
-import type { InterventionCandidate, PersonalBiologyProfile } from '~/types/biology'
+import type { EvidenceItem, InterventionCandidate, PersonalBiologyProfile } from '~/types/biology'
 import { detectAnomalies } from './anomaly-engine'
 import { auditRecommendation } from './audit-engine'
 import { compileProtocol } from './protocol-compiler'
