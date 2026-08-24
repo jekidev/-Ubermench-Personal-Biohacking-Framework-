@@ -53,6 +53,7 @@ export interface RuntimeStore {
   saveMemory(records: MemoryRecord[]): Promise<void>
   appendRun(run: AgentRun): Promise<void>
   loadRuns(limit?: number): Promise<AgentRun[]>
+  findRunByTaskId(taskId: string): Promise<AgentRun | undefined>
   appendAudit(event: AgentAuditEvent): Promise<void>
   loadAudit(limit?: number): Promise<AgentAuditEvent[]>
 }
