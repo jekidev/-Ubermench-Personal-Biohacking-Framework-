@@ -5,7 +5,7 @@ export type UnifiedHealthRecord = {
   value?: number
   unit?: string
   name?: string
-  source: 'health-connect' | 'apple-health' | 'garmin' | 'oura' | 'whoop' | 'fitbit' | 'csv' | 'json' | 'manual'
+  source: 'health-connect' | 'apple-health' | 'garmin' | 'oura' | 'whoop' | 'fitbit' | 'polar' | 'csv' | 'json' | 'manual'
   provenance?: string
 }
 
