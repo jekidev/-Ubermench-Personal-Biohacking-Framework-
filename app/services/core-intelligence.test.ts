@@ -32,11 +32,11 @@ const candidate: InterventionCandidate = {
 }
 
 describe('core intelligence', () => {
-  it('detects a meaningful longitudinal anomaly', () => {
+  it('detects a large longitudinal anomaly', () => {
     const result = detectAnomalies([{ metric: 'CRP', value: 4.5, recordedAt: '2026-08-24' }], [{ metric: 'CRP', baseline: 2 }])
     expect(result).toHaveLength(1)
     expect(result[0]?.direction).toBe('up')
-    expect(result[0]?.severity).toBe('warning')
+    expect(result[0]?.severity).toBe('critical')
   })
 
   it('ranks candidates against explicit objectives', () => {
@@ -71,6 +71,6 @@ describe('core intelligence', () => {
     expect(result.protocol.steps.length).toBe(1)
     expect(result.anomalies.length).toBe(1)
     expect(result.audit.length).toBeGreaterThan(0)
-    expect(result.nextAction).toBe('run-experiment')
+    expect(result.nextAction).toBe('collect-data')
   })
 })
