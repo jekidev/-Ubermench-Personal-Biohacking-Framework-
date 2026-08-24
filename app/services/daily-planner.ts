@@ -14,7 +14,7 @@ function readiness(observations: DailyPlanRequest['observations']) {
 
 export function buildDailyPlan(request: DailyPlanRequest): DailyPlan {
   const readinessScore = readiness(request.observations)
-  const recoveryState: DailyPlan['recoveryState'] = readinessScore < 0.45 ? 'low' : readinessScore < 0.7 ? 'moderate' : 'good'
+  const recoveryState: DailyPlan['recoveryState'] = readinessScore < 0.6 ? 'low' : readinessScore < 0.75 ? 'moderate' : 'good'
   const ranked = rankByObjectives(request.profile.goals.map((goal, index) => ({
     id: `goal-${index}`,
     name: goal,
