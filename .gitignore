@@ -1,0 +1,10 @@
+node_modules/
+.nuxt/
+.output/
+.runtime/
+.DS_Store
+.env
+.env.*
+!.env.example
+coverage/
+src-tauri/target/
