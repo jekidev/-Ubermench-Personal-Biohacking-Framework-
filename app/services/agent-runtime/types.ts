@@ -17,6 +17,15 @@ export interface AgentObservation {
   createdAt: string
 }
 
+export interface AgentAuditEvent {
+  id: string
+  runId: string
+  type: 'run.started' | 'policy.blocked' | 'model.completed' | 'tool.requested' | 'tool.completed' | 'tool.blocked' | 'run.completed' | 'run.failed' | 'recovery.retry'
+  detail: string
+  createdAt: string
+  metadata?: Record<string, unknown>
+}
+
 export interface AgentRun {
   id: string
   task: AgentTask
@@ -28,6 +37,7 @@ export interface AgentRun {
   startedAt: string
   completedAt?: string
   error?: string
+  retryCount?: number
 }
 
 export interface AgentTool {
@@ -43,4 +53,6 @@ export interface RuntimeStore {
   saveMemory(records: MemoryRecord[]): Promise<void>
   appendRun(run: AgentRun): Promise<void>
   loadRuns(limit?: number): Promise<AgentRun[]>
+  appendAudit(event: AgentAuditEvent): Promise<void>
+  loadAudit(limit?: number): Promise<AgentAuditEvent[]>
 }
