@@ -2,6 +2,7 @@ import type { HFModelEngine } from '~/types/hf-model'
 import type { LLMRequest } from '~/types/llm'
 import type { InterventionCandidate } from '~/types/biology'
 import type { ObjectiveWeight } from '~/types/core'
+import type { DailyPlanRequest, PolicyRule } from '~/types/adaptive'
 import { routeHFModel } from '~/services/hf-router'
 import { runHFInference } from '~/services/inference-engine'
 import { buildEvidenceQuery } from '~/services/evidence-engine'
@@ -17,6 +18,10 @@ import { estimateInterventionEffect, type CausalObservation } from '~/services/c
 import { simulateIntervention } from '~/services/digital-twin-simulator'
 import { SemanticMemoryIndex } from '~/services/semantic-memory'
 import { normalizeHealthRecords, deduplicateHealthRecords, type UnifiedHealthRecord } from '~/services/health-data-normalizer'
+import { evaluatePolicyRules } from '~/services/policy-engine'
+import { buildDailyPlan } from '~/services/daily-planner'
+import { learnOutcome } from '~/services/outcome-learning'
+import { rankValueOfInformation } from '~/services/value-of-information'
 import { usePersonalBiology } from './usePersonalBiology'
 import { useLLM } from './useLLM'
 
@@ -99,6 +104,24 @@ export function useBiohackingAI() {
     return estimateInterventionEffect(observations, metric, intervention)
   }
 
+  function evaluatePolicy(observations: Array<{ metric: string; value: number }>, rules: PolicyRule[]) {
+    return evaluatePolicyRules(observations, rules)
+  }
+
+  async function dailyPlan(request: Omit<DailyPlanRequest, 'profile'>) {
+    await biology.initialize()
+    return buildDailyPlan({ ...request, profile: biology.profile.value })
+  }
+
+  function learn(metric: string, baseline: number[], intervention: number[]) {
+    return learnOutcome(metric, baseline, intervention)
+  }
+
+  async function valueOfInformation() {
+    await biology.initialize()
+    return rankValueOfInformation(biology.profile.value)
+  }
+
   function remember(item: Parameters<typeof memory.upsert>[0]) { return memory.upsert(item) }
   function recall(query: string, embedding?: number[], limit = 10) { return memory.search(query, embedding, limit) }
 
@@ -120,6 +143,7 @@ export function useBiohackingAI() {
   return {
     selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal,
     safetyCheck, compileGoal, runDecisionLoop, anomalies, dataQuality, dataGaps, timeline,
-    simulate, estimateEffect, remember, recall, ingestHealth, ask, llm, biology,
+    simulate, estimateEffect, evaluatePolicy, dailyPlan, learn, valueOfInformation,
+    remember, recall, ingestHealth, ask, llm, biology,
   }
 }
