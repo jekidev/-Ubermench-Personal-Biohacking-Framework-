@@ -18,6 +18,16 @@ describe('agent superstack', () => {
     expect(router.select({ id: '1', kind: 'research', prompt: 'research', requiredCapabilities: ['research'] })?.id).toBe('x')
   })
 
+  it('does not select a model missing a required capability', () => {
+    const router = new ModelRouter([{ id: 'x', provider: 'test', model: 'fast', baseUrl: 'http://localhost', capabilities: ['fast'], costTier: 'free', enabled: true, priority: 1 }])
+    expect(router.select({ id: '1', kind: 'research', prompt: 'research', requiredCapabilities: ['research'] })).toBeUndefined()
+  })
+
+  it('does not select disabled models', () => {
+    const router = new ModelRouter([{ id: 'x', provider: 'test', model: 'disabled', baseUrl: 'http://localhost', capabilities: ['research'], costTier: 'free', enabled: false, priority: 1 }])
+    expect(router.select({ id: '1', kind: 'research', prompt: 'research', requiredCapabilities: ['research'] })).toBeUndefined()
+  })
+
   it('matches skills and guards destructive operations', () => {
     const skills = new SkillRegistry()
     skills.register({ id: 'coding', name: 'Coding', description: '', triggers: ['debug'], tools: [], enabled: true })

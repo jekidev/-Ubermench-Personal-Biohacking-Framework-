@@ -13,16 +13,25 @@ export class ModelRouter {
   select(task: AgentTask): ModelEndpoint | undefined {
     const required = task.requiredCapabilities ?? []
     const candidates = this.listAvailable()
-      .map((endpoint) => ({ endpoint, score: capabilityWeight(endpoint, required) * 100 - endpoint.priority + (endpoint.costTier === 'free' ? 12 : endpoint.costTier === 'low' ? 5 : 0) }))
-      .filter(({ endpoint, score }) => score > 0 && required.every((cap) => endpoint.capabilities.includes(cap)) || required.length === 0)
+      .map((endpoint) => ({
+        endpoint,
+        score: capabilityWeight(endpoint, required) * 100
+          - endpoint.priority
+          + (endpoint.costTier === 'free' ? 12 : endpoint.costTier === 'low' ? 5 : 0),
+      }))
+      .filter(({ endpoint, score }) => {
+        const satisfiesCapabilities = required.every((cap) => endpoint.capabilities.includes(cap))
+        return score > 0 && satisfiesCapabilities
+      })
       .sort((a, b) => b.score - a.score)
+
     return candidates[0]?.endpoint
   }
 }
 
 export function createDefaultModelRouter(): ModelRouter {
   return new ModelRouter([
-    { id: 'openrouter-auto', provider: 'openrouter', model: 'openrouter/auto', baseUrl: 'https://openrouter.ai/api/v1', capabilities: ['reasoning', 'coding', 'vision', 'tools', 'fast', 'research'], costTier: 'free', enabled: true, priority: 10 },
+    { id: 'openrouter-auto', provider: 'openrouter', model: 'openrouter/auto', baseUrl: 'https://openrouter.ai/api/v1', capabilities: ['reasoning', 'coding', 'vision', 'tools', 'fast', 'research'], costTier: 'low', enabled: true, priority: 10 },
     { id: 'openai', provider: 'openai', model: 'gpt-5', baseUrl: 'https://api.openai.com/v1', capabilities: ['reasoning', 'coding', 'vision', 'tools', 'research'], costTier: 'paid', enabled: true, priority: 20 },
     { id: 'anthropic', provider: 'anthropic', model: 'claude-sonnet', baseUrl: 'https://api.anthropic.com/v1', capabilities: ['reasoning', 'coding', 'vision', 'tools', 'research'], costTier: 'paid', enabled: true, priority: 30 },
     { id: 'huggingface', provider: 'huggingface', model: 'auto', baseUrl: 'https://router.huggingface.co/v1', capabilities: ['reasoning', 'coding', 'fast'], costTier: 'free', enabled: true, priority: 40 },
