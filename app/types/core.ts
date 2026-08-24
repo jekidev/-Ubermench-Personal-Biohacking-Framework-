@@ -1,4 +1,5 @@
 import type { EvidenceItem, InterventionCandidate, PersonalBiologyProfile } from './biology'
+import type { DataGap, DataQualityReport } from './data-quality'
 
 export type ObjectiveId = 'longevity' | 'cardiovascular' | 'metabolic' | 'brain' | 'mental-resilience' | 'sleep' | 'performance' | 'recovery' | 'quality-of-life'
 
@@ -63,4 +64,10 @@ export interface AuditFinding {
 export interface PersonalizationContext {
   profile: PersonalBiologyProfile
   objectives: ObjectiveWeight[]
+}
+
+export interface ClosedLoopSummary {
+  dataQuality: DataQualityReport
+  dataGaps: DataGap[]
+  nextAction: 'research' | 'review-safety' | 'run-experiment' | 'monitor' | 'collect-data'
 }
