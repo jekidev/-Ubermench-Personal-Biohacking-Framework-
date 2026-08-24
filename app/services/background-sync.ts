@@ -5,6 +5,7 @@ export interface SyncTask {
   intervalMs: number
   nextRunAt: number
   run: SyncAdapter
+  generation: number
 }
 
 export interface SyncResult {
@@ -17,11 +18,12 @@ export interface SyncResult {
 export class BackgroundSyncScheduler {
   private readonly tasks = new Map<string, SyncTask>()
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>()
+  private generation = 0
 
   register(id: string, intervalMs: number, run: SyncAdapter, now = Date.now()) {
     if (!id.trim() || !Number.isFinite(intervalMs) || intervalMs <= 0) throw new Error('Invalid sync task.')
     this.cancel(id)
-    const task: SyncTask = { id, intervalMs, nextRunAt: now + intervalMs, run }
+    const task: SyncTask = { id, intervalMs, nextRunAt: now + intervalMs, run, generation: ++this.generation }
     this.tasks.set(id, task)
     this.schedule(task)
     return task
@@ -35,13 +37,15 @@ export class BackgroundSyncScheduler {
   }
 
   clear() {
-    for (const id of this.tasks.keys()) this.cancel(id)
+    for (const id of [...this.tasks.keys()]) this.cancel(id)
   }
 
   private schedule(task: SyncTask) {
     const delay = Math.max(0, task.nextRunAt - Date.now())
     const timer = setTimeout(async () => {
+      if (this.tasks.get(task.id)?.generation !== task.generation) return
       try { await task.run() } catch { /* scheduler is resilient; consumers inspect their own sync state */ }
+      if (this.tasks.get(task.id)?.generation !== task.generation) return
       task.nextRunAt = Date.now() + task.intervalMs
       this.schedule(task)
     }, delay)
