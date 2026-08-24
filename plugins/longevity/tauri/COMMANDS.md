@@ -1,75 +1,42 @@
-# Longevity Tauri Command Contract v0.1
+# Longevity Tauri Command Contract v0.2
 
-The repository does not currently contain a `src-tauri` shell, so this document defines the stable native boundary that the future Tauri app must implement.
+The native shell now implements the first PDF text-extraction command. Renderer code must continue to use opaque tokens and must never receive arbitrary filesystem write access.
 
-## Commands
-
-### `longevity_pick_file`
-
-Request a native file picker.
+## `extract_pdf_lab_text`
 
 Input:
 
 ```json
 {
-  "acceptedKinds": ["blood_report", "dna_raw", "dna_report"],
-  "extensions": ["pdf", "csv", "tsv", "json", "vcf"]
+  "data": "PDF bytes"
 }
 ```
+
+In the TypeScript adapter this is a `Uint8Array`; Tauri serializes the byte payload for the command boundary.
 
 Output:
 
 ```json
 {
-  "pathToken": "opaque-native-token",
-  "filename": "report.pdf",
-  "mimeType": "application/pdf",
-  "sizeBytes": 12345
+  "method": "native-text",
+  "pages": [
+    { "page_number": 1, "text": "..." }
+  ],
+  "warnings": []
 }
 ```
 
-The path itself must not be exposed to untrusted web content.
+The current native implementation uses `pdf-extract` for text-based PDFs. It does **not** claim to OCR scanned/image-only PDFs. Those return an empty-text warning so the UI can route them to an explicit OCR-capable runtime later.
 
-### `longevity_read_file`
+## PDF safety rules
 
-Input: opaque `pathToken`.
+- Reject empty input.
+- Reject input without a `%PDF-` header.
+- Reject PDFs larger than 50 MiB at this command boundary.
+- Never log PDF contents, DNA, or health values.
+- Extraction output is a candidate only and must remain review-first.
+- Page boundaries are marked as inferred when the extractor does not expose explicit page separators.
 
-Output: bytes + metadata needed by the local import service.
+## Existing file commands
 
-The command must reject paths outside the selected file and application-controlled temporary area.
-
-### `longevity_store_source`
-
-Input: source document metadata + bytes.
-
-Behavior:
-
-- calculate SHA-256
-- store in application-private data directory
-- return source document ID
-- reject duplicate fingerprint unless explicitly requested as a re-import
-
-### `longevity_delete_source`
-
-Delete a source document and associated derived data only after explicit user confirmation. Deletion must be auditable in the local event log.
-
-## Security boundary
-
-- Do not accept arbitrary filesystem paths from Nuxt.
-- Do not log file contents, raw DNA, or health values.
-- Do not expose private app-data paths to the renderer.
-- Use opaque IDs/tokens between the renderer and native layer.
-- All writes are local unless a future feature explicitly opts into remote sync.
-
-## Adapter shape
-
-```ts
-export interface LongevityNativeFileAdapter {
-  pickFile(request: FilePickRequest): Promise<PickedFile>
-  readFile(pathToken: string): Promise<Uint8Array>
-  storeSource(input: StoreSourceInput): Promise<StoredSource>
-  deleteSource(sourceId: string): Promise<void>
-}
-```
-
-The browser implementation may use a development fallback; production Tauri implements the same interface with native commands.
+`longevity_pick_file`, `longevity_read_file`, `longevity_store_source`, and `longevity_delete_source` remain the file lifecycle boundary. The renderer still uses opaque file tokens and application-controlled storage.

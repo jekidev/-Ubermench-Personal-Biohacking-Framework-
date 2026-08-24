@@ -1,3 +1,5 @@
+mod pdf;
+
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
@@ -27,7 +29,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![fingerprint_bytes, app_name])
+        .invoke_handler(tauri::generate_handler![fingerprint_bytes, app_name, pdf::extract_pdf_lab_text])
         .run(tauri::generate_context!())
         .expect("error while running Ubermench application");
 }

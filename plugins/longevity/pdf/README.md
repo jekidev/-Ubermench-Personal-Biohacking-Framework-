@@ -1,44 +1,31 @@
-# Longevity PDF extraction
+# Native PDF extraction
 
-The PDF pipeline is deliberately split into two layers:
+The Tauri shell now performs the first native text-extraction stage for Longevity lab PDFs.
 
-1. **Native extractor** — Tauri/Rust obtains trustworthy PDF text/layout or OCR output and returns page/locator provenance.
-2. **Longevity parser** — platform-independent TypeScript converts extracted text into biomarker candidates, reference intervals and warnings.
+## Runtime behavior
+
+- Text-based PDFs use the Rust `pdf-extract` engine.
+- The command returns normalized page text and an explicit `native-text` method.
+- If page separators are unavailable, the result is marked with a warning rather than pretending page provenance is exact.
+- Scanned/image-only PDFs remain an explicit OCR requirement.
+- The renderer still receives no arbitrary filesystem path.
+
+## Pipeline
 
 ```text
-PDF
- ↓
-Tauri `extract_pdf_lab_text`
- ↓
-page text + spans + method
- ↓
-Longevity extraction engine
- ↓
+Tauri file bytes
+  ↓
+extract_pdf_lab_text
+  ↓
+page text + method + warnings
+  ↓
+Longevity TypeScript lab parser
+  ↓
 biomarker candidates
- ↓
-confidence + warnings + provenance
- ↓
-editable review
- ↓
+  ↓
+review/edit
+  ↓
 explicit confirmation
- ↓
-append-only store
+  ↓
+append-only history
 ```
-
-## Native command contract
-
-`extract_pdf_lab_text` accepts an opaque `sourcePathToken` only. It must not accept arbitrary renderer filesystem paths.
-
-The command should return:
-
-- page number
-- extracted text
-- optional text spans with coordinates
-- extraction method (`native-text` or `ocr`)
-- warnings
-
-OCR is an explicit runtime capability. It is never silently substituted by the renderer.
-
-## Safety
-
-A PDF extraction result is an observation candidate, not a confirmed medical value. The parser must retain provenance and confidence and require user review before persistence.
