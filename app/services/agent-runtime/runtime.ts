@@ -1,4 +1,5 @@
 import { orchestrateLLM } from '~/services/llm-orchestrator'
+import type { LLMProvider } from '~/types/llm'
 import { agentKernel } from '~/services/agent-superstack/kernel'
 import type { AgentTask } from '~/services/agent-superstack/types'
 import type { AgentRun, AgentObservation } from './types'
@@ -31,7 +32,7 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       prompt: task.prompt,
       system,
       mode: task.kind === 'research' ? 'researcher' : 'biohacker',
-      preferredProvider: context.selectedModel?.provider as AgentTask extends never ? never : never,
+      preferredProvider: context.selectedModel?.provider as LLMProvider | undefined,
       preferredModel: context.selectedModel?.model,
     })
     const observation: AgentObservation = { kind: 'model', text: response.text, createdAt: new Date().toISOString() }
