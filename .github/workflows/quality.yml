@@ -28,7 +28,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          # Do not enable setup-node's npm cache until a lockfile exists.
+          # setup-node cache: npm requires package-lock.json, npm-shrinkwrap.json,
+          # or yarn.lock and otherwise fails before the job reaches npm install.
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
