@@ -8,21 +8,21 @@ const DEFAULT_TIMEOUT_MS = 45_000
 type PersistedLLMSettings = Omit<LLMSettings, 'providers'> & { providers: Array<Omit<LLMProviderConfig, 'apiKey'> & { apiKey?: never }> }
 type AnthropicContentBlock = { type: string; text: string }
 
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-}
+function isTauriRuntime(): boolean { return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window }
 function readSessionKeys(): Record<string, string> { if (isTauriRuntime() || import.meta.server || typeof sessionStorage === 'undefined') return {}; try { const value = JSON.parse(sessionStorage.getItem(SECRET_STORAGE_KEY) ?? '{}'); return value && typeof value === 'object' ? value as Record<string, string> : {} } catch { return {} } }
-function writeSessionKeys(settings: LLMSettings) { if (isTauriRuntime() || import.meta.server || typeof sessionStorage === 'undefined') return; try { const keys = Object.fromEntries(settings.providers.filter((p) => p.apiKey?.trim()).map((p) => [p.provider, p.apiKey])); sessionStorage.setItem(SECRET_STORAGE_KEY, JSON.stringify(keys)) } catch { /* privacy-restricted storage */ } }
+function writeSessionKeys(settings: LLMSettings) { if (isTauriRuntime() || import.meta.server || typeof sessionStorage === 'undefined') return; try { sessionStorage.setItem(SECRET_STORAGE_KEY, JSON.stringify(Object.fromEntries(settings.providers.filter((p) => p.apiKey?.trim()).map((p) => [p.provider, p.apiKey])))) } catch { /* ignore */ } }
 function sanitizeForStorage(settings: LLMSettings): PersistedLLMSettings { return { preferFree: settings.preferFree, autoRotate: settings.autoRotate, showModel: settings.showModel, providers: settings.providers.map(({ apiKey: _apiKey, ...provider }) => provider) } }
 export function loadLLMSettings(): LLMSettings { if (import.meta.server || typeof localStorage === 'undefined') return structuredClone(DEFAULT_LLM_SETTINGS); try { const raw = localStorage.getItem(STORAGE_KEY); const parsed = raw ? JSON.parse(raw) as Partial<PersistedLLMSettings> : {}; const sessionKeys = readSessionKeys(); return { ...structuredClone(DEFAULT_LLM_SETTINGS), ...parsed, providers: Array.isArray(parsed.providers) ? parsed.providers.map((stored) => ({ ...structuredClone(DEFAULT_LLM_SETTINGS.providers.find((p) => p.provider === stored.provider) ?? { provider: stored.provider, enabled: false, priority: 99 }), ...stored, apiKey: sessionKeys[stored.provider] })) : structuredClone(DEFAULT_LLM_SETTINGS.providers).map((p) => ({ ...p, apiKey: sessionKeys[p.provider] })) } } catch { return structuredClone(DEFAULT_LLM_SETTINGS) } }
-export function saveLLMSettings(settings: LLMSettings) { if (import.meta.server || typeof localStorage === 'undefined') return; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizeForStorage(settings))); writeSessionKeys(settings) } catch { /* keep in-memory state */ } }
+export function saveLLMSettings(settings: LLMSettings) { if (import.meta.server || typeof localStorage === 'undefined') return; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizeForStorage(settings))); writeSessionKeys(settings) } catch { /* keep memory state */ } }
 export function clearLLMSessionKeys() { if (typeof sessionStorage === 'undefined' || isTauriRuntime()) return; try { sessionStorage.removeItem(SECRET_STORAGE_KEY) } catch { /* ignore */ } }
 function modelFor(provider: LLMProviderConfig): string { if (provider.model?.trim()) return provider.model.trim(); if (provider.provider === 'openrouter') return 'openrouter/free'; return '' }
 function candidates(settings: LLMSettings, request: LLMRequest, mode: LLMMode = 'biohacker'): LLMProviderConfig[] {
   const enabled = settings.providers.filter((p) => p.enabled && p.apiKey?.trim())
-  const preferred = enabled.filter((p) => request.preferredProvider ? p.provider === request.preferredProvider : true).filter((p) => request.preferredModel ? modelFor(p) === request.preferredModel : true)
+  const preferred = enabled.filter((p) => (!request.preferredProvider || p.provider === request.preferredProvider) && (!request.preferredModel || modelFor(p) === request.preferredModel))
   const fallback = enabled.filter((p) => !preferred.includes(p))
-  const ordered = [...preferred, ...fallback].sort((a, b) => { const af = settings.preferFree && a.provider === 'openrouter' && modelFor(a) === 'openrouter/free' ? -1 : 0; const bf = settings.preferFree && b.provider === 'openrouter' && modelFor(b) === 'openrouter/free' ? -1 : 0; return af - bf || a.priority - b.priority })
+  const rank = (provider: LLMProviderConfig) => (settings.preferFree && provider.provider === 'openrouter' && modelFor(provider) === 'openrouter/free' ? 1 : 0)
+  const order = (provider: LLMProviderConfig) => provider.priority
+  const ordered = [...preferred.sort((a, b) => order(a) - order(b)), ...fallback.sort((a, b) => rank(a) - rank(b) || order(a) - order(b))]
   return settings.autoRotate || mode === 'safety' || mode === 'auditor' ? ordered : ordered.slice(0, 1)
 }
 function withTimeout(signal: AbortSignal | undefined, timeoutMs: number) { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(new Error('LLM request timed out')), timeoutMs); const abort = () => controller.abort(signal?.reason); if (signal?.aborted) abort(); else signal?.addEventListener('abort', abort, { once: true }); return { signal: controller.signal, cleanup: () => { clearTimeout(timer); signal?.removeEventListener('abort', abort) } } }
