@@ -9,6 +9,7 @@ import { withRecovery } from './recovery'
 import { SkillEvolutionEngine } from './skill-evolution'
 import { executeApprovedToolCalls } from './tool-loop'
 import { extractToolCalls } from './tool-plan'
+import { auditTaskSecurity } from './security-audit'
 
 const skillEvolution = new SkillEvolutionEngine()
 
@@ -41,6 +42,14 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
   await store.appendRun(run)
   await recordAudit(store, auditEvent(id, 'run.started', existing ? 'Resuming recoverable agent run' : 'Agent run started', { taskKind: task.kind, idempotencyKey: task.id }))
   try {
+    const securityFindings = auditTaskSecurity(task)
+    if (securityFindings.length) {
+      await recordAudit(store, auditEvent(id, 'policy.blocked', 'Runtime security audit produced findings', { findings: securityFindings }))
+      if (securityFindings.some((finding) => finding.severity === 'high' || finding.id === 'prompt-size')) {
+        throw new Error(`Agent task blocked by runtime security audit: ${securityFindings.map((finding) => finding.message).join(' ')}`)
+      }
+    }
+
     if (!context.policy.allowed) {
       await recordAudit(store, auditEvent(id, 'policy.blocked', context.policy.reason))
       throw new Error(`Agent task blocked: ${context.policy.reason}`)
