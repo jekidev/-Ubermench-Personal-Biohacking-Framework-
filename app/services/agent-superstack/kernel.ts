@@ -4,21 +4,25 @@ import { createDefaultModelRouter, ModelRouter } from './model-router'
 import { createDefaultSkillRegistry, SkillRegistry } from './skills'
 import { evaluateTask } from './governance'
 import { KnowledgeGraph } from './knowledge-graph'
+import { AgentRuntimeStateMachine } from './runtime-state'
 
 export class AgentKernel {
   readonly memory: AgentMemory
   readonly skills: SkillRegistry
   readonly graph: KnowledgeGraph
   readonly router: ModelRouter
+  readonly runtime: AgentRuntimeStateMachine
 
   constructor(options?: { memory?: AgentMemory; skills?: SkillRegistry; graph?: KnowledgeGraph; router?: ModelRouter }) {
     this.memory = options?.memory ?? new AgentMemory()
     this.skills = options?.skills ?? createDefaultSkillRegistry()
     this.graph = options?.graph ?? new KnowledgeGraph()
     this.router = options?.router ?? createDefaultModelRouter()
+    this.runtime = new AgentRuntimeStateMachine()
   }
 
   prepare(task: AgentTask): AgentContext {
+    if (this.runtime.state === 'idle' || this.runtime.state === 'completed') this.runtime.transition('planning')
     const policy = evaluateTask(task)
     const memories = this.memory.search(task.prompt)
     const matched = this.skills.match(task.prompt)
