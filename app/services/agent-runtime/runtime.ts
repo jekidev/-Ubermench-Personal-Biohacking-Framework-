@@ -3,15 +3,16 @@ import type { LLMProvider } from '~/types/llm'
 import { agentKernel } from '~/services/agent-superstack/kernel'
 import type { AgentTask } from '~/services/agent-superstack/types'
 import type { AgentRun, AgentObservation } from './types'
-import { browserRuntimeStore } from './memory-store'
+import { createRuntimeStore } from './store'
 import { SkillEvolutionEngine } from './skill-evolution'
 
 const skillEvolution = new SkillEvolutionEngine()
 
 export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
+  const store = createRuntimeStore()
   const id = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   const startedAt = new Date().toISOString()
-  const memories = await browserRuntimeStore.loadMemory()
+  const memories = await store.loadMemory()
   agentKernel.memory.hydrate(memories)
   const context = agentKernel.prepare(task)
   const run: AgentRun = { id, task, status: 'planning', context, observations: [], toolCalls: [], selectedModel: context.selectedModel, startedAt }
@@ -35,19 +36,18 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       preferredProvider: context.selectedModel?.provider as LLMProvider | undefined,
       preferredModel: context.selectedModel?.model,
     })
-    const observation: AgentObservation = { kind: 'model', text: response.text, createdAt: new Date().toISOString() }
-    run.observations.push(observation)
+    run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() } as AgentObservation)
     run.status = 'completed'
     run.completedAt = new Date().toISOString()
     skillEvolution.propose(task.prompt, 'success: model response completed')
-    await browserRuntimeStore.saveMemory(agentKernel.memory.all())
-    await browserRuntimeStore.appendRun(run)
+    await store.saveMemory(agentKernel.memory.all())
+    await store.appendRun(run)
     return run
   } catch (error) {
     run.status = 'failed'
     run.error = error instanceof Error ? error.message : String(error)
     run.completedAt = new Date().toISOString()
-    await browserRuntimeStore.appendRun(run)
+    await store.appendRun(run)
     throw error
   }
 }
