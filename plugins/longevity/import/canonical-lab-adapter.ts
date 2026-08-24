@@ -31,14 +31,14 @@ export function labCandidateToRecord(candidate: LabCandidate) {
   })
 }
 
-export function normalizeNumericUnit(value: number, unit: string, targetUnit: string): number {
-  if (unit === targetUnit) return value
-  const key = `${unit.toLowerCase()}->${targetUnit.toLowerCase()}`
+export function normalizeNumericUnit(value: number, analyte: string, unit: string, targetUnit: string): number {
+  if (unit.trim().toLowerCase() === targetUnit.trim().toLowerCase()) return value
+  const key = `${analyte.trim().toLowerCase()}:${unit.trim().toLowerCase()}->${targetUnit.trim().toLowerCase()}`
   const factors: Record<string, number> = {
-    'mg/dl->mmol/l:glucose': 0.0555,
-    'mmol/l->mg/dl:glucose': 18.0182,
+    'glucose:mg/dl->mmol/l': 0.0555,
+    'glucose:mmol/l->mg/dl': 18.0182,
   }
   const factor = factors[key]
-  if (factor === undefined) throw new Error(`Unsupported unit conversion: ${unit} -> ${targetUnit}`)
+  if (factor === undefined) throw new Error(`Unsupported unit conversion for ${analyte}: ${unit} -> ${targetUnit}`)
   return value * factor
 }
