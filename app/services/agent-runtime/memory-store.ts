@@ -1,9 +1,10 @@
 import type { MemoryRecord } from '~/services/agent-superstack/types'
-import type { RuntimeStore, AgentRun } from './types'
+import type { RuntimeStore, AgentRun, AgentAuditEvent } from './types'
 import { TauriRuntimeStore, isTauriRuntime } from './tauri-store'
 
 const MEMORY_KEY = 'ubermench-agent-memory-v2'
 const RUN_KEY = 'ubermench-agent-runs-v2'
+const AUDIT_KEY = 'ubermench-agent-audit-v1'
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof localStorage === 'undefined') return fallback
@@ -27,6 +28,12 @@ export class BrowserRuntimeStore implements RuntimeStore {
     writeJson(RUN_KEY, runs.slice(0, 100))
   }
   async loadRuns(limit = 20): Promise<AgentRun[]> { return readJson<AgentRun[]>(RUN_KEY, []).slice(0, limit) }
+  async appendAudit(event: AgentAuditEvent): Promise<void> {
+    const events = readJson<AgentAuditEvent[]>(AUDIT_KEY, [])
+    events.unshift(event)
+    writeJson(AUDIT_KEY, events.slice(0, 500))
+  }
+  async loadAudit(limit = 100): Promise<AgentAuditEvent[]> { return readJson<AgentAuditEvent[]>(AUDIT_KEY, []).slice(0, Math.max(1, Math.min(500, limit))) }
 }
 
 export const browserRuntimeStore = new BrowserRuntimeStore()
