@@ -26,7 +26,11 @@ export function createTauriNativeAdapter(): TauriNativeAdapter {
       const selected = await open({
         multiple: false,
         directory: false,
-        filters: [{ name: kind === 'bloods' ? 'Lab reports' : 'DNA / genetics', extensions: kind === 'bloods' ? ['pdf', 'csv', 'tsv', 'json'] : ['vcf', 'csv', 'tsv', 'json', 'pdf', 'txt'] }],
+        fileAccessMode: 'copy',
+        filters: [{
+          name: kind === 'bloods' ? 'Lab reports' : 'DNA / genetics',
+          extensions: kind === 'bloods' ? ['pdf', 'csv', 'tsv', 'json'] : ['vcf', 'csv', 'tsv', 'json', 'pdf', 'txt'],
+        }],
       })
       if (!selected || Array.isArray(selected)) return null
       const name = selected.split(/[\\/]/).pop() ?? 'source'
