@@ -25,13 +25,21 @@ function splitToolCalls(calls: AgentToolCall[]): { executable: AgentToolCall[]; 
 
 export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
   const store = createRuntimeStore()
-  const id = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-  const startedAt = new Date().toISOString()
+  const existing = await store.findRunByTaskId(task.id)
+  if (existing?.status === 'completed') return existing
+  if (existing && existing.status !== 'failed') throw new Error(`Agent task ${task.id} already has an active run (${existing.status}). Resume or cancel that run before creating another.`)
+
+  const id = existing?.id ?? `run_${task.id}`
+  const startedAt = existing?.startedAt ?? new Date().toISOString()
   const memories = await store.loadMemory()
   agentKernel.memory.hydrate(memories)
   const context = agentKernel.prepare(task)
-  const run: AgentRun = { id, task, status: 'planning', context, observations: [], toolCalls: [], selectedModel: context.selectedModel, startedAt, retryCount: 0 }
-  await recordAudit(store, auditEvent(id, 'run.started', 'Agent run started', { taskKind: task.kind }))
+  const run: AgentRun = existing ?? { id, task, status: 'planning', context, observations: [], toolCalls: [], selectedModel: context.selectedModel, startedAt, retryCount: 0 }
+  run.context = context
+  run.selectedModel = context.selectedModel
+  run.status = 'planning'
+  await store.appendRun(run)
+  await recordAudit(store, auditEvent(id, 'run.started', existing ? 'Resuming recoverable agent run' : 'Agent run started', { taskKind: task.kind, idempotencyKey: task.id }))
   try {
     if (!context.policy.allowed) {
       await recordAudit(store, auditEvent(id, 'policy.blocked', context.policy.reason))
@@ -64,19 +72,20 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       undefined,
       async (attempt, error, delayMs) => {
         run.retryCount = attempt
+        await store.appendRun(run)
         await recordAudit(store, auditEvent(id, 'recovery.retry', 'Retrying LLM execution', { attempt, delayMs, error: error instanceof Error ? error.message : String(error) }))
       },
     )
     run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() } as AgentObservation)
     const calls = extractToolCalls(response.text)
-    run.toolCalls.push(...calls)
     for (const call of calls) await recordAudit(store, auditEvent(id, 'tool.requested', `Tool requested: ${call.name}`, { toolCallId: call.id, requiresApproval: call.requiresApproval === true || call.name === 'mcp.stdio' }))
 
     const { executable, awaitingApproval } = splitToolCalls(calls)
     if (awaitingApproval.length) {
+      run.toolCalls.push(...awaitingApproval.filter((call) => !run.toolCalls.some((existingCall) => existingCall.id === call.id)))
       run.status = 'waiting-approval'
-      await recordAudit(store, auditEvent(id, 'tool.blocked', 'Execution paused pending explicit approval', { toolCalls: awaitingApproval.map((call) => call.name) }))
       await store.appendRun(run)
+      await recordAudit(store, auditEvent(id, 'tool.blocked', 'Execution paused pending explicit approval', { toolCalls: awaitingApproval.map((call) => call.name) }))
       return run
     }
 
@@ -95,6 +104,7 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
         undefined,
         async (attempt, error, delayMs) => {
           run.retryCount = (run.retryCount ?? 0) + 1
+          await store.appendRun(run)
           await recordAudit(store, auditEvent(id, 'recovery.retry', 'Retrying continuation model execution', { attempt, delayMs, error: error instanceof Error ? error.message : String(error) }))
         },
       )
@@ -140,6 +150,7 @@ export async function continueAgentWithTools(task: AgentTask, run: AgentRun, cal
     undefined,
     async (attempt, error, delayMs) => {
       run.retryCount = (run.retryCount ?? 0) + 1
+      await store.appendRun(run)
       await recordAudit(store, auditEvent(run.id, 'recovery.retry', 'Retrying continuation model execution', { attempt, delayMs, error: error instanceof Error ? error.message : String(error) }))
     },
   )
