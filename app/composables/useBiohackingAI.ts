@@ -3,7 +3,8 @@ import type { LLMRequest } from '~/types/llm'
 import { routeHFModel } from '~/services/hf-router'
 import { runHFInference } from '~/services/inference-engine'
 import { buildEvidenceQuery } from '~/services/evidence-engine'
-import { searchEuropePMC, buildResearchQuery } from '~/services/research-engine'
+import { buildResearchQuery } from '~/services/research-engine'
+import { runResearchWorkflow } from '~/services/research-workflow'
 import { screenInterventionSafety } from '~/services/safety-engine'
 import { usePersonalBiology } from './usePersonalBiology'
 import { useLLM } from './useLLM'
@@ -26,12 +27,20 @@ export function useBiohackingAI() {
 
   async function research(goal: string) {
     const profile = biology.profile.value
-    const query = buildResearchQuery(
+    return runResearchWorkflow({
+      goal,
+      biomarkers: profile.biomarkers.slice(-8).map((x) => `${x.name} ${x.value} ${x.unit}`),
+      variants: profile.variants.slice(0, 8).map((x) => x.rsId ?? x.gene ?? x.genotype),
+    })
+  }
+
+  function buildResearchQueryForGoal(goal: string) {
+    const profile = biology.profile.value
+    return buildResearchQuery(
       goal,
       profile.biomarkers.slice(-8).map((x) => `${x.name} ${x.value} ${x.unit}`),
       profile.variants.slice(0, 8).map((x) => x.rsId ?? x.gene ?? x.genotype),
     )
-    return searchEuropePMC(query)
   }
 
   function safetyCheck(intervention: string) {
@@ -42,5 +51,5 @@ export function useBiohackingAI() {
     return llm.run(request)
   }
 
-  return { selectModel, infer, evidenceQuery, research, safetyCheck, ask, llm, biology }
+  return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, ask, llm, biology }
 }
