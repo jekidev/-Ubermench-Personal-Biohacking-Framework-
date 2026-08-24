@@ -14,6 +14,11 @@ export function planProviderCall(model: ActiveModel, target: string, reason: str
   const request: ToolRequest = { action: 'send', target, reason, payload }
   return {
     model,
-    approval: createApprovalRequest(request),
+    approval: createApprovalRequest({
+      action: request.action,
+      target: request.target,
+      reason: request.reason,
+      payloadPreview: request.payload,
+    }),
   }
 }
