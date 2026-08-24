@@ -22,7 +22,9 @@ export function learnOutcome(
   const delta = interventionMean - baselineMean
   const beneficialDelta = direction === 'higher-is-better' ? delta : -delta
   const pooled = Math.sqrt((standardDeviation(cleanBaseline, baselineMean) ** 2 + standardDeviation(cleanIntervention, interventionMean) ** 2) / 2)
-  const standardizedEffect = pooled > 0 ? beneficialDelta / pooled : 0
+  const standardizedEffect = pooled > 0
+    ? beneficialDelta / pooled
+    : beneficialDelta > 0 ? Number.POSITIVE_INFINITY : beneficialDelta < 0 ? Number.NEGATIVE_INFINITY : 0
   const sampleSize = cleanBaseline.length + cleanIntervention.length
   const confidence: OutcomeLearningResult['confidence'] = sampleSize >= 20 ? 'high' : sampleSize >= 8 ? 'moderate' : 'low'
   const recommendation: OutcomeLearningResult['recommendation'] =
