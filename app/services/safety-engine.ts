@@ -1,4 +1,5 @@
 import type { MedicationRecord, SupplementRecord } from '~/types/biology'
+import { checkPharmacologyInteractions } from './pharmacology-engine'
 
 export type SafetySeverity = 'green' | 'yellow' | 'orange' | 'red'
 
@@ -50,6 +51,17 @@ export function screenInterventionSafety(
   })
   if (duplicateMechanism) {
     flags.push({ severity: 'yellow', code: 'DUPLICATE_MECHANISM', title: 'Possible duplicate mechanism', detail: 'The proposed intervention may duplicate an active pharmacologic mechanism.', requiresReview: true })
+  }
+
+  const pharmacology = checkPharmacologyInteractions([...all, intervention])
+  for (const finding of pharmacology) {
+    flags.push({
+      severity: finding.severity === 'critical' ? 'red' : finding.severity === 'warning' ? 'orange' : 'yellow',
+      code: `PHARM_${finding.a.toUpperCase()}_${finding.b.toUpperCase()}`.replace(/[^A-Z0-9_]+/g, '_'),
+      title: 'Pharmacology interaction flagged',
+      detail: finding.mechanism,
+      requiresReview: finding.severity !== 'info',
+    })
   }
 
   if (flags.length === 0) flags.push({ severity: 'green', code: 'NO_KNOWN_RULE_TRIGGERED', title: 'No built-in rule triggered', detail: 'The local rule set found no high-priority interaction. This is not proof of safety.', requiresReview: false })
