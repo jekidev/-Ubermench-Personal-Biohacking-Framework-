@@ -1,4 +1,4 @@
-import type { HFModelDefinition, HFModelEngine, HFModelRoute } from '~/types/hf-model'
+import type { HFModelDefinition, HFModelEngine, HFModelRoute, HFModelRuntime } from '~/types/hf-model'
 
 const hf = (id: string) => `https://huggingface.co/${id}`
 
@@ -35,7 +35,7 @@ export const HF_MODEL_ROUTES: readonly HFModelRoute[] = [
   { engine: 'cellular', preferred: ['ctheodoris/Geneformer'], fallback: [] },
   { engine: 'biomedical', preferred: ['microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext', 'google/medgemma-4b-it'], fallback: ['emilyalsentzer/Bio_ClinicalBERT', 'dmis-lab/biobert-base-cased-v1.2'] },
   { engine: 'molecular', preferred: ['nvidia/NV-KERMT-70M-v2', 'ibm-research/MoLFormer-XL-both-10pct'], fallback: ['DeepChem/ChemBERTa-77M-MLM'] },
-  { engine: 'phenotype', preferred: ['google/derm-foundation'], fallback: ['google/medgemma-4b-it'] },
+  { engine: 'phenotype', preferred: ['google/derm-foundation'], fallback: [] },
   { engine: 'benchmark', preferred: ['HuggingFaceBio/clinvar-vep', 'HuggingFaceBio/perturbation-bench', 'HuggingFaceBio/genomic-niah'], fallback: ['HuggingFaceBio/traitgym'] },
 ]
 
