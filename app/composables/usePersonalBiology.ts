@@ -2,6 +2,7 @@ import type { BiomarkerRecord, PersonalBiologyProfile } from '~/types/biology'
 import { emptyBiologyProfile, loadBiologyProfile, saveBiologyProfile, clearBiologyProfile } from '~/services/biology-store'
 import { calculateBiomarkerTrend, getBiomarkerNames } from '~/services/biomarker-engine'
 import { screenInteractions } from '~/services/interaction-engine'
+import { createBiologyBackup, parseBiologyBackup, serializeBiologyBackup } from '~/services/biology-backup'
 
 export function usePersonalBiology() {
   const profile = useState<PersonalBiologyProfile>('personal-biology-profile', () => emptyBiologyProfile())
@@ -28,6 +29,15 @@ export function usePersonalBiology() {
     await persist({ ...profile.value, biomarkers: [...profile.value.biomarkers, record] })
   }
 
+  function exportBackup() {
+    return serializeBiologyBackup(createBiologyBackup(profile.value))
+  }
+
+  async function importBackup(raw: string) {
+    const backup = parseBiologyBackup(raw)
+    await persist(backup.profile)
+  }
+
   function trend(name: string) { return calculateBiomarkerTrend(profile.value.biomarkers, name) }
   function biomarkerNames() { return getBiomarkerNames(profile.value.biomarkers) }
   function interactionFlags() { return screenInteractions(profile.value.medications, profile.value.supplements) }
@@ -37,5 +47,18 @@ export function usePersonalBiology() {
     profile.value = emptyBiologyProfile()
   }
 
-  return { profile, initialized, initializing, initialize, persist, addBiomarker, trend, biomarkerNames, interactionFlags, reset }
+  return {
+    profile,
+    initialized,
+    initializing,
+    initialize,
+    persist,
+    addBiomarker,
+    exportBackup,
+    importBackup,
+    trend,
+    biomarkerNames,
+    interactionFlags,
+    reset,
+  }
 }
