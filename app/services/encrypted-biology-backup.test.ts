@@ -28,14 +28,17 @@ describe('encrypted biology backup', () => {
     await expect(encryptBiologyBackup(backup, 'too-short')).rejects.toThrow(/12 characters/)
   })
 
-  it('rejects an incorrect passphrase', async () => {
+  it('rejects an incorrect passphrase and tampered ciphertext', async () => {
     const backup = createBiologyBackup(emptyBiologyProfile())
     const encrypted = await encryptBiologyBackup(backup, 'correct horse battery staple')
 
     await expect(decryptBiologyBackup(encrypted, 'wrong horse battery staple')).rejects.toThrow(/incorrect passphrase/)
+
+    const tampered = { ...encrypted, ciphertext: `${encrypted.ciphertext.slice(0, -2)}AA` }
+    await expect(decryptBiologyBackup(tampered, 'correct horse battery staple')).rejects.toThrow()
   })
 
-  it('rejects unsupported encrypted formats and parameters', () => {
+  it('rejects unsupported encrypted formats and invalid binary fields', () => {
     expect(() => parseEncryptedBiologyBackup(JSON.stringify({ format: 'other', version: 1 }))).toThrow()
     expect(() => parseEncryptedBiologyBackup(JSON.stringify({
       format: 'ubermench-encrypted-biology-backup',
@@ -48,5 +51,24 @@ describe('encrypted biology backup', () => {
       iv: 'AA==',
       ciphertext: 'AA==',
     }))).toThrow(/KDF parameters/)
+
+    const base = {
+      format: 'ubermench-encrypted-biology-backup',
+      version: 1,
+      exportedAt: '2026-08-25T09:00:00.000Z',
+      kdf: 'PBKDF2-SHA-256',
+      iterations: 210_000,
+      cipher: 'AES-256-GCM',
+      salt: 'AA==',
+      iv: 'AA==',
+      ciphertext: 'AA==',
+    }
+    expect(() => parseEncryptedBiologyBackup(JSON.stringify(base))).toThrow(/salt length is invalid/)
+    expect(() => parseEncryptedBiologyBackup(JSON.stringify({ ...base, salt: 'AAAAAAAAAAAAAAAAAAAAAA==' }))).toThrow(
+      /IV length is invalid/,
+    )
+    expect(() => parseEncryptedBiologyBackup(JSON.stringify({ ...base, salt: 'AAAAAAAAAAAAAAAAAAAAAA==', iv: 'not-base64' }))).toThrow(
+      /not valid base64/,
+    )
   })
 })
