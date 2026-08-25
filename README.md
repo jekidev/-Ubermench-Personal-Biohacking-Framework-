@@ -17,6 +17,8 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Evidence scoring and intervention ranking
 - Bayesian personal-effect estimation and uncertainty summaries
 - N-of-1 experiment analysis with baseline, washout, intervention and follow-up windows
+- Experiment adherence tracking with completion rates and optional dose metadata
+- Adverse-event capture with severity and relatedness fields
 - Automated experiment phase annotation on canonical observations
 - Closed-loop runtime: ingest data -> build HumanState -> rank interventions -> estimate personal signals -> persist the resulting state
 - Knowledge-graph foundation and temporal state support
@@ -180,7 +182,7 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 1. Complete health-provider ingestion beyond canonical adapter/registry contracts, prioritising Android Health Connect and Apple Health native bridges.
 2. Harden credential storage with the Tauri OS keychain rather than browser local storage.
 3. Expand source-specific reconciliation policies and missingness-aware longitudinal analytics; baseline provenance scoring, conflict resolution, provider-aware reconciliation and aggregation are now implemented.
-4. Expand the closed-loop experiment layer with intervention adherence, adverse-event capture and automatic follow-up scheduling.
+4. Expand the closed-loop experiment layer with automatic follow-up scheduling and richer intervention-event timelines; adherence and adverse-event capture are now implemented.
 5. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
 6. Add encrypted, versioned local data snapshots and recovery/restore workflows for the broader personal-biology store.
 
