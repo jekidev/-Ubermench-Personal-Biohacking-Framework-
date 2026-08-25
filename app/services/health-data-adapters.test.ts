@@ -8,8 +8,8 @@ describe('health-data-adapters', () => {
       { id: '2', metric: 'heart.rate.resting', value: 58, unit: 'bpm', recordedAt: '2026-08-25T08:00:00Z', source: 'garmin' },
     ], 's1')
     expect(result).toHaveLength(2)
-    expect(result[0].metric).toBe('hrv')
-    expect(result[0].source).toBe('wearable')
-    expect(result[1].observedAt > result[0].observedAt).toBe(true)
+    expect(result[0]?.metric).toBe('hrv')
+    expect(result[0]?.source).toBe('wearable')
+    expect(result[1]?.observedAt && result[0]?.observedAt && result[1].observedAt > result[0].observedAt).toBe(true)
   })
 })
