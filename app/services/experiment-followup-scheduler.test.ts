@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildExperimentFollowupSchedule, getDueExperimentFollowups, getUpcomingExperimentFollowups } from './experiment-followup-scheduler'
+import { buildExperimentFollowupSchedule, getDueExperimentFollowups, getNextExperimentFollowup, getUpcomingExperimentFollowups } from './experiment-followup-scheduler'
 import type { ExperimentSpec } from './experiment-lifecycle'
 
 const spec: ExperimentSpec = {
@@ -36,11 +36,25 @@ describe('experiment follow-up scheduler', () => {
 
     expect(due.map((item) => item.phase)).toEqual(['baseline', 'washout'])
     expect(upcoming.map((item) => item.phase)).toEqual(['intervention', 'followup'])
+    expect(getNextExperimentFollowup(schedule, '2026-08-07T00:00:00.000Z')?.phase).toBe('intervention')
   })
 
-  it('does not emit due items for an invalid current timestamp', () => {
+  it('ignores malformed timestamps instead of producing unsafe checkpoints', () => {
+    const schedule = buildExperimentFollowupSchedule(spec)
+    const malformed = [
+      ...schedule,
+      { ...schedule[0]!, id: 'malformed', scheduledAt: 'not-a-date' },
+    ]
+
+    expect(getDueExperimentFollowups(malformed, '2026-08-07T00:00:00.000Z').map((item) => item.id)).not.toContain('malformed')
+    expect(getUpcomingExperimentFollowups(malformed, '2026-08-07T00:00:00.000Z').map((item) => item.id)).not.toContain('malformed')
+  })
+
+  it('does not emit due or next items for an invalid current timestamp', () => {
     const schedule = buildExperimentFollowupSchedule(spec)
 
     expect(getDueExperimentFollowups(schedule, 'invalid')).toEqual([])
+    expect(getUpcomingExperimentFollowups(schedule, 'invalid')).toEqual([])
+    expect(getNextExperimentFollowup(schedule, 'invalid')).toBeNull()
   })
 })
