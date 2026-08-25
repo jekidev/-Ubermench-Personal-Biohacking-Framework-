@@ -25,10 +25,11 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Canonical adapters for external health samples
 - Provider registry for Android Health Connect, Apple Health, Garmin, Oura, WHOOP, Fitbit, Polar and manual/API sources
 - Normalized wearable provenance, quality and confidence metadata
+- Provenance-aware observation quality scoring and conflict resolution for overlapping imported measurements
 - Tauri/native adapter pathways remain available for platform-specific ingestion
 - Portable, versioned biology backup format for user-owned export/import workflows
 - Browser JSON backup export/import with validation and persistence
-- Native Tauri backup export/import through OS file dialogs and the Tauri filesystem plugin
+- Native Tauri backup export/import through the Tauri filesystem plugin
 
 ### Evidence and research integrity
 - Europe PMC search integration
@@ -102,6 +103,19 @@ The backup layer currently provides:
 
 Native desktop backup actions are exposed through `usePersonalBiology()` as `exportBackupToFile()` and `importBackupFromFile()`. Browser builds continue to use the existing JSON string/file-picker flow.
 
+## Data quality and conflict resolution
+
+`app/services/health-data-quality.ts` provides a deterministic quality layer before canonical observations enter downstream state/intelligence workflows.
+
+- Validates numeric values and timestamps
+- Scores provenance, source quality and confidence separately from the raw measurement
+- Flags weak or incomplete provenance instead of silently treating every source as equivalent
+- Groups near-simultaneous observations by subject, metric and unit
+- Selects the highest-quality candidate when imported sources overlap
+- Preserves conflict metadata so downstream audit/explainability can show which records were considered and which one was selected
+
+This layer is intentionally conservative: conflict resolution selects the strongest available record; it does not claim that the selected measurement is biologically true.
+
 ## Replit / Manus deployment bridge
 
 The deployment pattern is based on the working `jekidev/T1` pattern: one canonical GitHub repository, a platform-specific launcher, setup/validation before launch, and Google Drive kept outside GitHub credentials.
@@ -147,7 +161,7 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 
 1. Complete health-provider ingestion beyond canonical adapter/registry contracts, prioritising Android Health Connect and Apple Health native bridges.
 2. Harden credential storage with the Tauri OS keychain rather than browser local storage.
-3. Add explicit data-quality scoring, missingness handling and provenance-aware conflict resolution across imported sources.
+3. Expand data-quality handling with missingness-aware aggregation and source-specific reconciliation policies; the baseline quality scoring and conflict-resolution layer is now implemented.
 4. Expand the closed-loop experiment layer with intervention adherence, adverse-event capture and automatic follow-up scheduling.
 5. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
 6. Add encrypted, versioned local data snapshots and recovery/restore workflows for the broader personal-biology store.
