@@ -29,7 +29,7 @@ export async function encryptBiologyBackup(
   const iv = cryptoApi.getRandomValues(new Uint8Array(IV_BYTES))
   const key = await deriveKey(passphrase, salt)
   const plaintext = new TextEncoder().encode(serializeBiologyBackup(backup))
-  const encrypted = await cryptoApi.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext)
+  const encrypted = await cryptoApi.subtle.encrypt({ name: 'AES-GCM', iv: asArrayBufferView(iv) }, key, asArrayBufferView(plaintext))
 
   return {
     format: 'ubermench-encrypted-biology-backup',
@@ -55,9 +55,9 @@ export async function decryptBiologyBackup(
   let plaintext: ArrayBuffer
   try {
     plaintext = await cryptoApi.subtle.decrypt(
-      { name: 'AES-GCM', iv: base64ToBytes(envelope.iv) },
+      { name: 'AES-GCM', iv: asArrayBufferView(base64ToBytes(envelope.iv)) },
       key,
-      base64ToBytes(envelope.ciphertext),
+      asArrayBufferView(base64ToBytes(envelope.ciphertext)),
     )
   } catch {
     throw new Error('Unable to decrypt biology backup: incorrect passphrase or corrupted data')
@@ -87,13 +87,13 @@ async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKe
   const cryptoApi = getCrypto()
   const material = await cryptoApi.subtle.importKey(
     'raw',
-    new TextEncoder().encode(passphrase),
+    asArrayBufferView(new TextEncoder().encode(passphrase)),
     'PBKDF2',
     false,
     ['deriveKey'],
   )
   return cryptoApi.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: asArrayBufferView(salt), iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
     material,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -126,6 +126,10 @@ function assertPassphrase(passphrase: string): void {
 function getCrypto(): Crypto {
   if (!globalThis.crypto?.subtle) throw new Error('Web Crypto API is unavailable in this runtime')
   return globalThis.crypto
+}
+
+function asArrayBufferView(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  return new Uint8Array(bytes) as Uint8Array<ArrayBuffer>
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
