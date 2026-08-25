@@ -29,7 +29,7 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Normalized wearable provenance, quality and confidence metadata
 - Provenance-aware observation quality scoring and conflict resolution for overlapping imported measurements
 - Source-aware reconciliation policies with configurable provider priorities and duplicate windows
-- Missingness-aware daily/weekly aggregation with quality-weighted summaries and explicit coverage metrics
+- Missingness-aware daily/weekly aggregation with multiplicative quality/confidence weighting and explicit coverage metrics
 - Tauri/native adapter pathways remain available for platform-specific ingestion
 - Portable, versioned biology backup format for user-owned export/import workflows
 - Browser JSON backup export/import with validation and persistence
@@ -129,7 +129,7 @@ Native desktop backup actions are exposed through `usePersonalBiology()` as `exp
 `app/services/health-data-aggregation.ts` adds a missingness-aware aggregation layer:
 
 - Daily and ISO-week buckets
-- Quality/confidence-weighted aggregate values
+- Quality/confidence-weighted aggregate values using `max(0.01, quality × confidence)` as the observation weight
 - Explicit observation counts
 - Coverage, expected-period and missing-period metrics
 - Missing periods are never represented as zero-valued measurements
