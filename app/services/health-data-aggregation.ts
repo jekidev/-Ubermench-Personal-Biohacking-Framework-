@@ -43,6 +43,20 @@ function qualityWeight(observation: CanonicalObservation): number {
   return Math.max(0.01, clamp(observation.quality) * clamp(observation.confidence))
 }
 
+function parseGroupKey(key: string): { start: string; metric: string; unit?: string } {
+  const separator = key.indexOf('|')
+  const secondSeparator = key.indexOf('|', separator + 1)
+  const start = separator === -1 ? key : key.slice(0, separator)
+  const metric = separator === -1
+    ? ''
+    : secondSeparator === -1
+      ? key.slice(separator + 1)
+      : key.slice(separator + 1, secondSeparator)
+  const unit = secondSeparator === -1 ? undefined : key.slice(secondSeparator + 1)
+
+  return { start, metric, ...(unit ? { unit } : {}) }
+}
+
 export function aggregateObservations(
   observations: CanonicalObservation[],
   period: AggregationPeriod = 'day',
@@ -59,7 +73,7 @@ export function aggregateObservations(
 
   return [...groups.entries()]
     .map(([key, group]) => {
-      const [start, metric, unit] = key.split('|')
+      const { start, metric, unit } = parseGroupKey(key)
       const totalWeight = group.reduce((sum, item) => sum + qualityWeight(item), 0)
       const value = group.reduce((sum, item) => sum + item.value * qualityWeight(item), 0) / totalWeight
       return {
