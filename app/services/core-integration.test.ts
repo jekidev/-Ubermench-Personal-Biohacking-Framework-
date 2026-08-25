@@ -15,7 +15,7 @@ describe('core integration', () => {
     const sleep = observationFromSleep({ id: 's1', recordedAt: '2026-08-02T08:00:00Z', durationMinutes: 450, efficiency: 90, hrv: 55, source: 'wearable' }, 'subject-1')
     const merged = mergeObservations([biomarker], sleep)
     expect(merged).toHaveLength(4)
-    expect(merged[0].subjectId).toBe('subject-1')
+    expect(merged[0]?.subjectId).toBe('subject-1')
   })
 
   it('builds a state vector from canonical observations', () => {
@@ -43,7 +43,7 @@ describe('core integration', () => {
       { id: 'o2', subjectId: 'subject-1', observedAt: '2026-08-02T08:00:00Z', metric: 'hrv', value: 60, source: 'wearable', quality: 1, confidence: 0.9, context: { intervention: 'intervention-a', phase: 'intervention' } },
     ]
     const result = runBiohackingLoop({ subjectId: 'subject-1', profile, observations, candidates })
-    expect(result.rankedInterventions[0].id).toBe('i1')
-    expect(result.personalSignals.i1.delta).toBe(10)
+    expect(result.rankedInterventions[0]?.id).toBe('i1')
+    expect(result.personalSignals.i1?.delta).toBe(10)
   })
 })
