@@ -14,7 +14,7 @@ describe('interaction-engine', () => {
       { from: 'm1', to: 's1', mechanism: 'bleeding', severity: 'moderate' },
     ])
     expect(result.score).toBeGreaterThan(0)
-    expect(result.flags[0].severity).toBe('caution')
+    expect(result.flags[0]?.severity).toBe('caution')
     expect(result.highest?.severity).toBe('moderate')
   })
 })
