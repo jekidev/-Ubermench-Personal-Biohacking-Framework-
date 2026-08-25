@@ -27,6 +27,13 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Normalized wearable provenance, quality and confidence metadata
 - Tauri/native adapter pathways remain available for platform-specific ingestion
 
+### Evidence and research integrity
+- Europe PMC search integration
+- Personalised query builder using goals, recent biomarkers and genomic variants
+- Structured research-hit model for later evidence normalization
+- Evidence provenance records with retrieval time, source version and claim fingerprint
+- Evidence supersession tracking so updated claims can replace older evidence without losing provenance
+
 ### AI orchestration
 - Multi-provider LLM layer for OpenRouter, OpenAI and Anthropic
 - OpenRouter free-first routing with automatic provider/model fallback
@@ -34,11 +41,6 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Model/provider/latency/attempt provenance displayed after each run
 - Hugging Face remains available through the dedicated inference/model registry path
 - Explicit researcher, biohacker, clinician, coach, scientist, auditor and safety modes at the orchestration contract level
-
-### Research
-- Europe PMC search integration
-- Personalised query builder using goals, recent biomarkers and genomic variants
-- Structured research-hit model for later evidence normalization
 
 ### Safety
 - Explicit intervention safety screen
