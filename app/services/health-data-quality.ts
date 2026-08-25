@@ -1,4 +1,5 @@
 import type { CanonicalObservation } from '~/types/personal-state'
+import { rankObservationForReconciliation, type ReconciliationPolicy } from './health-provider-reconciliation'
 
 export type ObservationQualityReason =
   | 'invalid-value'
@@ -67,12 +68,15 @@ function conflictKey(observation: CanonicalObservation): string {
   return `${observation.subjectId}|${observation.metric}|${observation.unit ?? ''}|${bucket}`
 }
 
-function rankingScore(observation: CanonicalObservation): number {
+function rankingScore(observation: CanonicalObservation, policy: ReconciliationPolicy): number {
   const quality = scoreObservationQuality(observation).score
-  return quality * 0.5 + clamp(observation.quality) * 0.25 + clamp(observation.confidence) * 0.25
+  return quality * 0.4 + rankObservationForReconciliation(observation, policy) * 0.35 + clamp(observation.quality) * 0.15 + clamp(observation.confidence) * 0.1
 }
 
-export function resolveObservationConflicts(observations: CanonicalObservation[]): ObservationResolution {
+export function resolveObservationConflicts(
+  observations: CanonicalObservation[],
+  policy: ReconciliationPolicy = {},
+): ObservationResolution {
   const groups = new Map<string, CanonicalObservation[]>()
   for (const observation of observations) {
     const key = conflictKey(observation)
@@ -86,7 +90,7 @@ export function resolveObservationConflicts(observations: CanonicalObservation[]
 
   for (const [key, group] of groups) {
     const ranked = [...group].sort((a, b) => {
-      const scoreDifference = rankingScore(b) - rankingScore(a)
+      const scoreDifference = rankingScore(b, policy) - rankingScore(a, policy)
       if (scoreDifference !== 0) return scoreDifference
       return new Date(b.provenance?.importedAt ?? 0).getTime() - new Date(a.provenance?.importedAt ?? 0).getTime()
     })
