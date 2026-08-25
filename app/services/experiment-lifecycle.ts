@@ -21,12 +21,13 @@ export function buildExperimentWindows(spec: ExperimentSpec): ExperimentWindow[]
   const washoutEnd = addDays(baselineEnd, spec.washoutDays)
   const interventionEnd = addDays(washoutEnd, spec.interventionDays)
   const followupEnd = addDays(interventionEnd, spec.followupDays)
-  return [
+  const windows: ExperimentWindow[] = [
     { phase: 'baseline', start: start.toISOString(), end: baselineEnd.toISOString() },
     { phase: 'washout', start: baselineEnd.toISOString(), end: washoutEnd.toISOString() },
     { phase: 'intervention', start: washoutEnd.toISOString(), end: interventionEnd.toISOString() },
     { phase: 'followup', start: interventionEnd.toISOString(), end: followupEnd.toISOString() },
-  ].filter((window) => new Date(window.end) > new Date(window.start))
+  ]
+  return windows.filter((window): window is ExperimentWindow => new Date(window.end) > new Date(window.start))
 }
 
 export function annotateExperimentObservations(observations: CanonicalObservation[], spec: ExperimentSpec): CanonicalObservation[] {
