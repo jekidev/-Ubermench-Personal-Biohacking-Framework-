@@ -3,6 +3,7 @@ import { emptyBiologyProfile, loadBiologyProfile, saveBiologyProfile, clearBiolo
 import { calculateBiomarkerTrend, getBiomarkerNames } from '~/services/biomarker-engine'
 import { screenInteractions } from '~/services/interaction-engine'
 import { createBiologyBackup, parseBiologyBackup, serializeBiologyBackup } from '~/services/biology-backup'
+import { loadBiologyBackupNative, saveBiologyBackupNative } from '~/services/biology-backup-native'
 
 export function usePersonalBiology() {
   const profile = useState<PersonalBiologyProfile>('personal-biology-profile', () => emptyBiologyProfile())
@@ -33,9 +34,20 @@ export function usePersonalBiology() {
     return serializeBiologyBackup(createBiologyBackup(profile.value))
   }
 
+  async function exportBackupToFile() {
+    return saveBiologyBackupNative(createBiologyBackup(profile.value))
+  }
+
   async function importBackup(raw: string) {
     const backup = parseBiologyBackup(raw)
     await persist(backup.profile)
+  }
+
+  async function importBackupFromFile() {
+    const backup = await loadBiologyBackupNative()
+    if (!backup) return false
+    await persist(backup.profile)
+    return true
   }
 
   function trend(name: string) { return calculateBiomarkerTrend(profile.value.biomarkers, name) }
@@ -55,7 +67,9 @@ export function usePersonalBiology() {
     persist,
     addBiomarker,
     exportBackup,
+    exportBackupToFile,
     importBackup,
+    importBackupFromFile,
     trend,
     biomarkerNames,
     interactionFlags,
