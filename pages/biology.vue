@@ -1,6 +1,10 @@
 <script setup lang="ts">
-const { profile, initialize, biomarkerNames, trend, interactionFlags } = usePersonalBiology()
+const { profile, initialize, biomarkerNames, trend, interactionFlags, exportBackup, importBackup } = usePersonalBiology()
 const { selectModel, evidenceQuery } = useBiohackingAI()
+
+const importInput = ref<HTMLInputElement | null>(null)
+const backupMessage = ref('')
+const backupError = ref('')
 
 onMounted(initialize)
 
@@ -13,6 +17,36 @@ const models = computed(() => ({
 const trends = computed(() => biomarkerNames().map((name) => trend(name)))
 const flags = computed(() => interactionFlags())
 const goalQuery = computed(() => evidenceQuery(profile.value.goals[0] ?? 'personal health optimization'))
+
+function downloadBackup() {
+  backupError.value = ''
+  backupMessage.value = ''
+  const blob = new Blob([exportBackup()], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `ubermench-biology-${new Date().toISOString().slice(0, 10)}.json`
+  anchor.click()
+  URL.revokeObjectURL(url)
+  backupMessage.value = 'Biology backup exported.'
+}
+
+async function handleBackupFile(event: Event) {
+  backupError.value = ''
+  backupMessage.value = ''
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  try {
+    await importBackup(await file.text())
+    backupMessage.value = 'Biology backup imported.'
+  } catch (error) {
+    backupError.value = error instanceof Error ? error.message : 'Unable to import biology backup.'
+  } finally {
+    input.value = ''
+  }
+}
 </script>
 
 <template>
@@ -35,6 +69,22 @@ const goalQuery = computed(() => evidenceQuery(profile.value.goals[0] ?? 'person
       <UCard><p class="text-sm font-semibold">Biomedical route</p><p class="mt-2 text-sm text-muted">{{ models.biomedical }}</p></UCard>
       <UCard><p class="text-sm font-semibold">Molecular route</p><p class="mt-2 text-sm text-muted">{{ models.molecular }}</p></UCard>
     </div>
+
+    <UCard>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="font-semibold">Portable biology backup</h2>
+          <p class="mt-1 text-sm text-muted">Export or restore the complete local biology profile as a versioned JSON backup.</p>
+        </div>
+        <div class="flex gap-2">
+          <UButton @click="downloadBackup">Export backup</UButton>
+          <UButton variant="outline" @click="importInput?.click()">Import backup</UButton>
+          <input ref="importInput" class="hidden" type="file" accept="application/json,.json" @change="handleBackupFile">
+        </div>
+      </div>
+      <p v-if="backupMessage" class="mt-3 text-sm text-primary">{{ backupMessage }}</p>
+      <p v-if="backupError" class="mt-3 text-sm text-red-500">{{ backupError }}</p>
+    </UCard>
 
     <UCard>
       <h2 class="font-semibold">Biomarker trends</h2>
