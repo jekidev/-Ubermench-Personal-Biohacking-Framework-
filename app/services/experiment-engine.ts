@@ -1,6 +1,20 @@
 import { personalEffect } from './bayesian-personalization'
 
 export interface NOf1Observation { recordedAt: string; metric: string; value: number }
+export interface NOf1AdherenceEvent {
+  plannedAt: string
+  completedAt?: string
+  completed: boolean
+  dose?: number
+  unit?: string
+  note?: string
+}
+export interface NOf1AdverseEvent {
+  recordedAt: string
+  severity: 'mild' | 'moderate' | 'severe'
+  description: string
+  related?: boolean
+}
 export interface NOf1Experiment {
   id: string
   intervention: string
@@ -9,6 +23,8 @@ export interface NOf1Experiment {
   interventionDays: number
   washoutDays?: number
   observations: NOf1Observation[]
+  adherence?: NOf1AdherenceEvent[]
+  adverseEvents?: NOf1AdverseEvent[]
   status: 'planned' | 'running' | 'complete'
 }
 
@@ -40,10 +56,22 @@ export function summarizeNOf1(experiment: NOf1Experiment, nowInput: Date = new D
   const pooledSd = baselineSd === undefined || interventionSd === undefined ? undefined : Math.sqrt((baselineSd ** 2 + interventionSd ** 2) / 2)
   const standardizedEffect = delta === undefined || pooledSd === undefined || pooledSd === 0 ? undefined : delta / pooledSd
   const posterior = baselineValues.length && interventionValues.length ? personalEffect(baselineValues, interventionValues) : undefined
+  const adherenceEvents = experiment.adherence ?? []
+  const completedAdherence = adherenceEvents.filter((event) => event.completed).length
+  const adherenceRate = adherenceEvents.length ? completedAdherence / adherenceEvents.length : undefined
+  const adverseEvents = experiment.adverseEvents ?? []
+  const relatedAdverseEvents = adverseEvents.filter((event) => event.related !== false)
+
   return {
     baselineMean, interventionMean, baselineSd, interventionSd, delta, standardizedEffect,
     baselineCount: baseline.length, interventionCount: intervention.length, washoutDays, metric: experiment.metric,
     posterior,
+    adherenceCount: adherenceEvents.length,
+    completedAdherence,
+    adherenceRate,
+    adverseEventCount: adverseEvents.length,
+    relatedAdverseEventCount: relatedAdverseEvents.length,
+    severeAdverseEventCount: adverseEvents.filter((event) => event.severity === 'severe').length,
     interpretation: standardizedEffect === undefined ? 'Insufficient data for standardised effect estimation.' : Math.abs(standardizedEffect) < 0.2 ? 'Small signal' : Math.abs(standardizedEffect) < 0.5 ? 'Moderate signal' : 'Large signal',
   }
 }
