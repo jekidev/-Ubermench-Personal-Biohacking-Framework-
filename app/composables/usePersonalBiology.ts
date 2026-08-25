@@ -3,7 +3,9 @@ import { emptyBiologyProfile, loadBiologyProfile, saveBiologyProfile, clearBiolo
 import { calculateBiomarkerTrend, getBiomarkerNames } from '~/services/biomarker-engine'
 import { screenInteractions } from '~/services/interaction-engine'
 import { createBiologyBackup, parseBiologyBackup, serializeBiologyBackup } from '~/services/biology-backup'
+import { encryptBiologyBackup, decryptBiologyBackup, parseEncryptedBiologyBackup, serializeEncryptedBiologyBackup } from '~/services/encrypted-biology-backup'
 import { loadBiologyBackupNative, saveBiologyBackupNative } from '~/services/biology-backup-native'
+import { loadEncryptedBiologyBackupNative, saveEncryptedBiologyBackupNative } from '~/services/encrypted-biology-backup-native'
 
 export function usePersonalBiology() {
   const profile = useState<PersonalBiologyProfile>('personal-biology-profile', () => emptyBiologyProfile())
@@ -50,6 +52,28 @@ export function usePersonalBiology() {
     return true
   }
 
+  async function exportEncryptedBackup(passphrase: string) {
+    const encrypted = await encryptBiologyBackup(createBiologyBackup(profile.value), passphrase)
+    return serializeEncryptedBiologyBackup(encrypted)
+  }
+
+  async function exportEncryptedBackupToFile(passphrase: string) {
+    return saveEncryptedBiologyBackupNative(createBiologyBackup(profile.value), passphrase)
+  }
+
+  async function importEncryptedBackup(raw: string, passphrase: string) {
+    const envelope = parseEncryptedBiologyBackup(raw)
+    const backup = await decryptBiologyBackup(envelope, passphrase)
+    await persist(backup.profile)
+  }
+
+  async function importEncryptedBackupFromFile(passphrase: string) {
+    const backup = await loadEncryptedBiologyBackupNative(passphrase)
+    if (!backup) return false
+    await persist(backup.profile)
+    return true
+  }
+
   function trend(name: string) { return calculateBiomarkerTrend(profile.value.biomarkers, name) }
   function biomarkerNames() { return getBiomarkerNames(profile.value.biomarkers) }
   function interactionFlags() { return screenInteractions(profile.value.medications, profile.value.supplements) }
@@ -70,6 +94,10 @@ export function usePersonalBiology() {
     exportBackupToFile,
     importBackup,
     importBackupFromFile,
+    exportEncryptedBackup,
+    exportEncryptedBackupToFile,
+    importEncryptedBackup,
+    importEncryptedBackupFromFile,
     trend,
     biomarkerNames,
     interactionFlags,
