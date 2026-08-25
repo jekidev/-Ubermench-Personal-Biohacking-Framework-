@@ -26,6 +26,7 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Provider registry for Android Health Connect, Apple Health, Garmin, Oura, WHOOP, Fitbit, Polar and manual/API sources
 - Normalized wearable provenance, quality and confidence metadata
 - Provenance-aware observation quality scoring and conflict resolution for overlapping imported measurements
+- Source-aware reconciliation policies with configurable provider priorities and duplicate windows
 - Missingness-aware daily/weekly aggregation with quality-weighted summaries and explicit coverage metrics
 - Tauri/native adapter pathways remain available for platform-specific ingestion
 - Portable, versioned biology backup format for user-owned export/import workflows
@@ -114,6 +115,14 @@ Native desktop backup actions are exposed through `usePersonalBiology()` as `exp
 - Groups near-simultaneous observations by subject, metric and unit
 - Selects the highest-quality candidate when imported sources overlap
 - Preserves conflict metadata so downstream audit/explainability can show which records were considered and which one was selected
+- Accepts source-aware reconciliation policy overrides when a provider has known measurement characteristics
+
+`app/services/health-provider-reconciliation.ts` defines the provider reconciliation policy used by the quality layer:
+
+- explicit provider/source priorities with conservative defaults
+- configurable duplicate time window
+- deterministic quality/confidence/source ranking
+- explicit policy overrides for future provider-specific calibration
 
 `app/services/health-data-aggregation.ts` adds a missingness-aware aggregation layer:
 
@@ -123,7 +132,7 @@ Native desktop backup actions are exposed through `usePersonalBiology()` as `exp
 - Coverage, expected-period and missing-period metrics
 - Missing periods are never represented as zero-valued measurements
 
-This layer is intentionally conservative: conflict resolution selects the strongest available record and aggregation reports data coverage; neither claims that the selected or aggregated measurement is biologically true.
+These layers are intentionally conservative: conflict resolution selects the strongest available record according to an explicit policy and aggregation reports data coverage; neither claims that the selected or aggregated measurement is biologically true.
 
 ## Replit / Manus deployment bridge
 
@@ -170,7 +179,7 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 
 1. Complete health-provider ingestion beyond canonical adapter/registry contracts, prioritising Android Health Connect and Apple Health native bridges.
 2. Harden credential storage with the Tauri OS keychain rather than browser local storage.
-3. Expand source-specific reconciliation policies and missingness-aware longitudinal analytics; the baseline quality scoring, conflict-resolution and aggregation layers are now implemented.
+3. Expand source-specific reconciliation policies and missingness-aware longitudinal analytics; baseline provenance scoring, conflict resolution, provider-aware reconciliation and aggregation are now implemented.
 4. Expand the closed-loop experiment layer with intervention adherence, adverse-event capture and automatic follow-up scheduling.
 5. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
 6. Add encrypted, versioned local data snapshots and recovery/restore workflows for the broader personal-biology store.
