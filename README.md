@@ -4,14 +4,28 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 
 ## Current architecture
 
-### Core
-- Personal biology profile and local persistence
-- Biomarker trend engine
-- Genomics parsing and phenotype-oriented routing
+### Core data and state
+- Versioned personal biology profile and local persistence
+- Canonical longitudinal observation model for labs, genomics, wearables and training
+- Personal state vector across cardiovascular, metabolic, inflammatory, hormonal, neurological, immune, sleep, stress, fitness, nutrition, cognitive and recovery domains
+- Versioned personal-state store with observation, intervention-event and HumanState history
+- Subject-scoped selectors and latest-state retrieval
 - Digital-twin foundation
+
+### Intelligence and experimentation
+- Biomarker trend and interpretation engine
 - Evidence scoring and intervention ranking
-- N-of-1 experiment analysis with baseline windows and standardised effect size
-- Knowledge-graph foundation
+- Bayesian personal-effect estimation and uncertainty summaries
+- N-of-1 experiment analysis with baseline, washout, intervention and follow-up windows
+- Automated experiment phase annotation on canonical observations
+- Closed-loop runtime: ingest data -> build HumanState -> rank interventions -> estimate personal signals -> persist the resulting state
+- Knowledge-graph foundation and temporal state support
+
+### Health data integration
+- Canonical adapters for external health samples
+- Provider registry for Android Health Connect, Apple Health, Garmin, Oura, WHOOP, Fitbit, Polar and manual/API sources
+- Normalized wearable provenance, quality and confidence metadata
+- Tauri/native adapter pathways remain available for platform-specific ingestion
 
 ### AI orchestration
 - Multi-provider LLM layer for OpenRouter, OpenAI and Anthropic
@@ -28,6 +42,7 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 
 ### Safety
 - Explicit intervention safety screen
+- Medication/supplement interaction graph with aggregate risk scoring
 - CNS-depressant stacking, blood-pressure stacking and duplicate-mechanism checks
 - Severity levels and clinician-review flags
 - Safety rules are conservative and do not constitute proof of safety
@@ -106,7 +121,7 @@ For deployment validation and launch:
 pnpm deployment:bootstrap
 ```
 
-GitHub Actions runs the repository's quality checks on pushes and pull requests to `main`.
+GitHub Actions runs the repository's quality checks on pushes and pull requests to `main`, including JavaScript tests/typecheck/build and the Rust/Tauri validation path.
 
 ## Security note
 
