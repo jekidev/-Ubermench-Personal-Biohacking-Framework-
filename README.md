@@ -27,6 +27,7 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Normalized wearable provenance, quality and confidence metadata
 - Tauri/native adapter pathways remain available for platform-specific ingestion
 - Portable, versioned biology backup format for user-owned export/import workflows
+- Biology UI now exposes JSON backup export/import with validation and persistence
 
 ### Evidence and research integrity
 - Europe PMC search integration
@@ -95,8 +96,9 @@ The backup layer currently provides:
 - explicit backup format/version validation
 - deep-copy semantics so exported data cannot mutate the live profile
 - forward-compatible rejection of unsupported backup versions
+- UI export/import with persistence through the existing local biology store
 
-The next integration step is wiring this service into the Biology UI and Tauri file-dialog flows so a user can export/import their complete profile without depending on a cloud service.
+The remaining portability step is wiring the same validated service into native Tauri file-dialog flows so desktop builds can use OS-native file selection rather than the browser file picker.
 
 ## Replit / Manus deployment bridge
 
@@ -138,6 +140,15 @@ pnpm deployment:bootstrap
 ```
 
 GitHub Actions runs the repository's quality checks on pushes and pull requests to `main`, including JavaScript tests/typecheck/build and the Rust/Tauri validation path.
+
+## Near-term roadmap
+
+1. Native Tauri file-dialog integration for the validated biology backup service.
+2. Complete health-provider ingestion beyond canonical adapter/registry contracts, prioritising Android Health Connect and Apple Health native bridges.
+3. Harden credential storage with the Tauri OS keychain rather than browser local storage.
+4. Add explicit data-quality scoring, missingness handling and provenance-aware conflict resolution across imported sources.
+5. Expand the closed-loop experiment layer with intervention adherence, adverse-event capture and automatic follow-up scheduling.
+6. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
 
 ## Security note
 
