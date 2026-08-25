@@ -15,6 +15,7 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 ### Intelligence and experimentation
 - Biomarker trend and interpretation engine
 - Evidence scoring and intervention ranking
+- Explainable evidence-to-decision traces with deterministic disposition and rationale
 - Bayesian personal-effect estimation and uncertainty summaries
 - N-of-1 experiment analysis with baseline, washout, intervention and follow-up windows
 - Experiment adherence tracking with completion rates and optional dose metadata
@@ -45,6 +46,7 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Structured research-hit model for later evidence normalization
 - Evidence provenance records with retrieval time, source version and claim fingerprint
 - Evidence supersession tracking so updated claims can replace older evidence without losing provenance
+- Explainable decision traces connect evidence strength, personal fit, priority and safety signals without autonomously prescribing treatment
 
 ### AI orchestration
 - Multi-provider LLM layer for OpenRouter, OpenAI and Anthropic
@@ -214,8 +216,9 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 2. Harden credential storage with the Tauri OS keychain rather than browser local storage.
 3. Expand source-specific reconciliation policies and missingness-aware longitudinal analytics; baseline provenance scoring, conflict resolution, provider-aware reconciliation and aggregation are now implemented.
 4. Expand the closed-loop experiment layer with automatic follow-up scheduling and richer intervention-event timelines; deterministic phase-midpoint scheduling and due/upcoming/next selection are now implemented.
-5. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
-6. Integrate encrypted snapshots into the broader recovery UI; encrypted browser/Tauri export/import, strict envelope validation, persistence integration and dashboard controls are now implemented, while OS-keychain-backed key/passphrase handling remains.
+5. Integrate the new explainable evidence-to-decision trace into the primary dashboard and intervention ranking flow, with explicit safety/review gates.
+6. Add richer longitudinal visualisation and temporal evidence-to-state views.
+7. Integrate encrypted snapshots into the broader recovery UI; encrypted browser/Tauri export/import, strict envelope validation, persistence integration and dashboard controls are now implemented, while OS-keychain-backed key/passphrase handling remains.
 
 ## Security note
 
