@@ -21,9 +21,11 @@ function domainValue(domain: StateDomain, observations: CanonicalObservation[]):
   if (!values.length) return undefined
   values.sort((a, b) => new Date(a.observedAt).getTime() - new Date(b.observedAt).getTime())
   const latest = values[values.length - 1]
+  if (!latest) return undefined
   const recent = values.slice(-7)
   const avg = recent.reduce((sum, x) => sum + x.value, 0) / recent.length
-  const previous = values.length > 7 ? values.slice(-14, -7).reduce((sum, x) => sum + x.value, 0) / Math.max(1, values.slice(-14, -7).length) : avg
+  const previousValues = values.length > 7 ? values.slice(-14, -7) : []
+  const previous = previousValues.length ? previousValues.reduce((sum, x) => sum + x.value, 0) / previousValues.length : avg
   return {
     domain,
     value: avg,
