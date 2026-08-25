@@ -5,6 +5,7 @@ export const ENCRYPTED_BIOLOGY_BACKUP_VERSION = 1 as const
 const PBKDF2_ITERATIONS = 210_000
 const SALT_BYTES = 16
 const IV_BYTES = 12
+const GCM_TAG_BYTES = 16
 
 export interface EncryptedBiologyBackup {
   format: 'ubermench-encrypted-biology-backup'
@@ -29,7 +30,11 @@ export async function encryptBiologyBackup(
   const iv = cryptoApi.getRandomValues(new Uint8Array(IV_BYTES))
   const key = await deriveKey(passphrase, salt)
   const plaintext = new TextEncoder().encode(serializeBiologyBackup(backup))
-  const encrypted = await cryptoApi.subtle.encrypt({ name: 'AES-GCM', iv: asArrayBufferView(iv) }, key, asArrayBufferView(plaintext))
+  const encrypted = await cryptoApi.subtle.encrypt(
+    { name: 'AES-GCM', iv: asArrayBufferView(iv) },
+    key,
+    asArrayBufferView(plaintext),
+  )
 
   return {
     format: 'ubermench-encrypted-biology-backup',
@@ -117,6 +122,13 @@ function validateEnvelope(value: unknown): asserts value is EncryptedBiologyBack
       throw new Error(`Encrypted biology backup field is invalid: ${field}`)
     }
   }
+
+  const salt = decodeBase64Field(value.salt, 'salt')
+  const iv = decodeBase64Field(value.iv, 'iv')
+  const ciphertext = decodeBase64Field(value.ciphertext, 'ciphertext')
+  if (salt.byteLength !== SALT_BYTES) throw new Error('Encrypted biology backup salt length is invalid')
+  if (iv.byteLength !== IV_BYTES) throw new Error('Encrypted biology backup IV length is invalid')
+  if (ciphertext.byteLength < GCM_TAG_BYTES) throw new Error('Encrypted biology backup ciphertext is invalid')
 }
 
 function assertPassphrase(passphrase: string): void {
@@ -141,6 +153,17 @@ function bytesToBase64(bytes: Uint8Array): string {
 function base64ToBytes(value: string): Uint8Array {
   const binary = atob(value)
   return Uint8Array.from(binary, character => character.charCodeAt(0))
+}
+
+function decodeBase64Field(value: string, field: string): Uint8Array {
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
+    throw new Error(`Encrypted biology backup field is not valid base64: ${field}`)
+  }
+  try {
+    return base64ToBytes(value)
+  } catch {
+    throw new Error(`Encrypted biology backup field is not valid base64: ${field}`)
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
