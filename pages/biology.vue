@@ -1,10 +1,13 @@
 <script setup lang="ts">
-const { profile, initialize, biomarkerNames, trend, interactionFlags, exportBackup, importBackup } = usePersonalBiology()
+const { profile, initialize, biomarkerNames, trend, interactionFlags, exportBackup, importBackup, exportEncryptedBackup, importEncryptedBackup } = usePersonalBiology()
 const { selectModel, evidenceQuery } = useBiohackingAI()
 
 const importInput = ref<HTMLInputElement | null>(null)
+const encryptedImportInput = ref<HTMLInputElement | null>(null)
 const backupMessage = ref('')
 const backupError = ref('')
+const encryptedPassphrase = ref('')
+const encryptedImportPassphrase = ref('')
 
 onMounted(initialize)
 
@@ -18,9 +21,13 @@ const trends = computed(() => biomarkerNames().map((name) => trend(name)))
 const flags = computed(() => interactionFlags())
 const goalQuery = computed(() => evidenceQuery(profile.value.goals[0] ?? 'personal health optimization'))
 
-function downloadBackup() {
+function resetBackupStatus() {
   backupError.value = ''
   backupMessage.value = ''
+}
+
+function downloadBackup() {
+  resetBackupStatus()
   const blob = new Blob([exportBackup()], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
@@ -31,18 +38,59 @@ function downloadBackup() {
   backupMessage.value = 'Biology backup exported.'
 }
 
+async function downloadEncryptedBackup() {
+  resetBackupStatus()
+  if (encryptedPassphrase.value.length < 12) {
+    backupError.value = 'Use an encrypted-backup passphrase of at least 12 characters.'
+    return
+  }
+  try {
+    const raw = await exportEncryptedBackup(encryptedPassphrase.value)
+    const blob = new Blob([raw], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `ubermench-biology-encrypted-${new Date().toISOString().slice(0, 10)}.json`
+    anchor.click()
+    URL.revokeObjectURL(url)
+    encryptedPassphrase.value = ''
+    backupMessage.value = 'Encrypted biology backup exported. Store the passphrase separately; it cannot be recovered by the app.'
+  } catch (error) {
+    backupError.value = error instanceof Error ? error.message : 'Unable to export encrypted biology backup.'
+  }
+}
+
 async function handleBackupFile(event: Event) {
-  backupError.value = ''
-  backupMessage.value = ''
+  resetBackupStatus()
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
-
   try {
     await importBackup(await file.text())
     backupMessage.value = 'Biology backup imported.'
   } catch (error) {
     backupError.value = error instanceof Error ? error.message : 'Unable to import biology backup.'
+  } finally {
+    input.value = ''
+  }
+}
+
+async function handleEncryptedBackupFile(event: Event) {
+  resetBackupStatus()
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (encryptedImportPassphrase.value.length < 12) {
+    backupError.value = 'Enter the passphrase used to create this encrypted backup.'
+    input.value = ''
+    return
+  }
+  try {
+    await importEncryptedBackup(await file.text(), encryptedImportPassphrase.value)
+    encryptedImportPassphrase.value = ''
+    backupMessage.value = 'Encrypted biology backup decrypted, validated and restored.'
+  } catch (error) {
+    backupError.value = error instanceof Error ? error.message : 'Unable to decrypt encrypted biology backup.'
   } finally {
     input.value = ''
   }
@@ -71,17 +119,28 @@ async function handleBackupFile(event: Event) {
     </div>
 
     <UCard>
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 class="font-semibold">Portable biology backup</h2>
-          <p class="mt-1 text-sm text-muted">Export or restore the complete local biology profile as a versioned JSON backup.</p>
+      <h2 class="font-semibold">Portable biology backup</h2>
+      <p class="mt-1 text-sm text-muted">Export or restore the complete local biology profile as a versioned JSON backup.</p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <UButton @click="downloadBackup">Export backup</UButton>
+        <UButton variant="outline" @click="importInput?.click()">Import backup</UButton>
+        <input ref="importInput" class="hidden" type="file" accept="application/json,.json" @change="handleBackupFile">
+      </div>
+
+      <div class="mt-6 border-t border-default pt-6">
+        <h3 class="font-semibold">Encrypted recovery snapshot</h3>
+        <p class="mt-1 text-sm text-muted">Password-protect the biology snapshot with AES-256-GCM. The app does not store or recover this passphrase.</p>
+        <div class="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+          <UInput v-model="encryptedPassphrase" type="password" autocomplete="new-password" placeholder="Passphrase (12+ characters)" aria-label="Encrypted backup passphrase" />
+          <UButton :disabled="encryptedPassphrase.length < 12" @click="downloadEncryptedBackup">Export encrypted</UButton>
         </div>
-        <div class="flex gap-2">
-          <UButton @click="downloadBackup">Export backup</UButton>
-          <UButton variant="outline" @click="importInput?.click()">Import backup</UButton>
-          <input ref="importInput" class="hidden" type="file" accept="application/json,.json" @change="handleBackupFile">
+        <div class="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+          <UInput v-model="encryptedImportPassphrase" type="password" autocomplete="current-password" placeholder="Backup passphrase" aria-label="Encrypted import passphrase" />
+          <UButton variant="outline" :disabled="encryptedImportPassphrase.length < 12" @click="encryptedImportInput?.click()">Import encrypted</UButton>
+          <input ref="encryptedImportInput" class="hidden" type="file" accept="application/json,.json" @change="handleEncryptedBackupFile">
         </div>
       </div>
+
       <p v-if="backupMessage" class="mt-3 text-sm text-primary">{{ backupMessage }}</p>
       <p v-if="backupError" class="mt-3 text-sm text-red-500">{{ backupError }}</p>
     </UCard>
