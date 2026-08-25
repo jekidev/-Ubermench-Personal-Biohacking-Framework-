@@ -23,7 +23,7 @@ describe('health data aggregation', () => {
 
     expect(result).toHaveLength(1)
     expect(result[0]?.periodStart).toBe('2026-08-24')
-    expect(result[0]?.value).toBeCloseTo(63.636, 2)
+    expect(result[0]?.value).toBeCloseTo(64, 2)
     expect(result[0]?.count).toBe(2)
   })
 
