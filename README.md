@@ -27,7 +27,8 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Normalized wearable provenance, quality and confidence metadata
 - Tauri/native adapter pathways remain available for platform-specific ingestion
 - Portable, versioned biology backup format for user-owned export/import workflows
-- Biology UI now exposes JSON backup export/import with validation and persistence
+- Browser JSON backup export/import with validation and persistence
+- Native Tauri backup export/import through OS file dialogs and the Tauri filesystem plugin
 
 ### Evidence and research integrity
 - Europe PMC search integration
@@ -96,9 +97,10 @@ The backup layer currently provides:
 - explicit backup format/version validation
 - deep-copy semantics so exported data cannot mutate the live profile
 - forward-compatible rejection of unsupported backup versions
-- UI export/import with persistence through the existing local biology store
+- browser export/import with persistence through the existing local biology store
+- native Tauri save/open dialogs backed by the Tauri filesystem plugin
 
-The remaining portability step is wiring the same validated service into native Tauri file-dialog flows so desktop builds can use OS-native file selection rather than the browser file picker.
+Native desktop backup actions are exposed through `usePersonalBiology()` as `exportBackupToFile()` and `importBackupFromFile()`. Browser builds continue to use the existing JSON string/file-picker flow.
 
 ## Replit / Manus deployment bridge
 
@@ -143,12 +145,12 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 
 ## Near-term roadmap
 
-1. Native Tauri file-dialog integration for the validated biology backup service.
-2. Complete health-provider ingestion beyond canonical adapter/registry contracts, prioritising Android Health Connect and Apple Health native bridges.
-3. Harden credential storage with the Tauri OS keychain rather than browser local storage.
-4. Add explicit data-quality scoring, missingness handling and provenance-aware conflict resolution across imported sources.
-5. Expand the closed-loop experiment layer with intervention adherence, adverse-event capture and automatic follow-up scheduling.
-6. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
+1. Complete health-provider ingestion beyond canonical adapter/registry contracts, prioritising Android Health Connect and Apple Health native bridges.
+2. Harden credential storage with the Tauri OS keychain rather than browser local storage.
+3. Add explicit data-quality scoring, missingness handling and provenance-aware conflict resolution across imported sources.
+4. Expand the closed-loop experiment layer with intervention adherence, adverse-event capture and automatic follow-up scheduling.
+5. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
+6. Add encrypted, versioned local data snapshots and recovery/restore workflows for the broader personal-biology store.
 
 ## Security note
 
