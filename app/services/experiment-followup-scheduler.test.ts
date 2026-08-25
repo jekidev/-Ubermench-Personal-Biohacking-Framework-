@@ -26,7 +26,7 @@ describe('experiment follow-up scheduler', () => {
       'exp-1:followup',
     ])
     expect(result[0]?.scheduledAt).toBe('2026-08-03T00:00:00.000Z')
-    expect(result[2]?.scheduledAt).toBe('2026-08-08T00:00:00.000Z')
+    expect(result[2]?.scheduledAt).toBe('2026-08-10T00:00:00.000Z')
   })
 
   it('separates due and upcoming checkpoints deterministically', () => {
