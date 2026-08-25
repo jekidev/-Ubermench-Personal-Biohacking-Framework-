@@ -121,6 +121,7 @@ Native encrypted recovery is exposed through `app/services/encrypted-biology-bac
 - passphrase-based encryption before the file is written
 - decryption and validation before an imported profile is persisted
 - browser-compatible string import/export remains available through the composable
+- Biology Intelligence now exposes encrypted export/import controls directly in the browser dashboard
 
 The encrypted layer is intended for user-controlled local snapshots. It does not replace OS keychain protection for API credentials.
 
@@ -159,7 +160,7 @@ These layers are intentionally conservative: conflict resolution selects the str
 
 ## CI / quality status
 
-Recent strict TypeScript CI failures in the health-data aggregation, provider-reconciliation and encrypted-backup layers have been addressed. The encrypted backup implementation now also validates its serialized binary fields before attempting decryption.
+Recent strict TypeScript CI failures in the health-data aggregation, provider-reconciliation and encrypted-backup layers have been addressed. The encrypted backup implementation now also validates its serialized binary fields before attempting decryption and narrows the validated envelope before use.
 
 The aggregation contract is explicitly documented and covered by tests: quality `1`/`0.5` combined with confidence `1`/`0.5` produces an aggregate of `64` under multiplicative weighting. Strict TypeScript guards are also in place for reconciliation and aggregation selectors.
 
@@ -211,7 +212,7 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 3. Expand source-specific reconciliation policies and missingness-aware longitudinal analytics; baseline provenance scoring, conflict resolution, provider-aware reconciliation and aggregation are now implemented.
 4. Expand the closed-loop experiment layer with automatic follow-up scheduling and richer intervention-event timelines; adherence and adverse-event capture are now implemented.
 5. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
-6. Integrate encrypted snapshots into the broader recovery UI; encrypted browser/Tauri export/import, strict envelope validation and persistence integration are now implemented, while OS-keychain-backed key/passphrase handling remains.
+6. Integrate encrypted snapshots into the broader recovery UI; encrypted browser/Tauri export/import, strict envelope validation, persistence integration and dashboard controls are now implemented, while OS-keychain-backed key/passphrase handling remains.
 
 ## Security note
 
