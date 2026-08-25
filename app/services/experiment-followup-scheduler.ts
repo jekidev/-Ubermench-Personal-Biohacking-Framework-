@@ -10,13 +10,6 @@ export interface ExperimentFollowupCheckpoint {
   intervention: string
 }
 
-const CHECKPOINT_OFFSETS: Record<ExperimentPhase, number> = {
-  baseline: 0.5,
-  washout: 0.5,
-  intervention: 0.5,
-  followup: 0.5,
-}
-
 function midpoint(start: string, end: string): string {
   const from = new Date(start).getTime()
   const to = new Date(end).getTime()
