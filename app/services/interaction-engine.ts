@@ -3,6 +3,7 @@ import type { MedicationRecord, SupplementRecord } from '~/types/biology'
 export interface InteractionFlag { severity: 'info' | 'caution' | 'high'; subject: string; reason: string; evidenceIds?: string[] }
 export interface InteractionNode { id: string; kind: 'drug' | 'supplement' | 'gene' | 'biomarker' | 'condition'; name: string }
 export interface InteractionEdge { from: string; to: string; mechanism: string; severity: 'low' | 'moderate' | 'high'; evidenceIds?: string[] }
+export interface InteractionRisk { score: number; highest?: InteractionEdge; flags: InteractionFlag[] }
 
 const KNOWN_FLAGS: Array<{ a: RegExp; b: RegExp; severity: InteractionFlag['severity']; reason: string }> = [
   { a: /warfarin/i, b: /omega.?3|fish oil/i, severity: 'caution', reason: 'Potential additive bleeding effect; verify dose and clinical context.' },
@@ -35,4 +36,17 @@ export function highestRisk(edges: InteractionEdge[]): InteractionEdge | undefin
 export function riskScore(edges: InteractionEdge[]): number {
   const raw = edges.reduce((sum, edge) => sum + (edge.severity === 'high' ? 0.35 : edge.severity === 'moderate' ? 0.18 : 0.06), 0)
   return Math.min(1, raw)
+}
+
+export function buildInteractionRisk(
+  medications: MedicationRecord[],
+  supplements: SupplementRecord[],
+  nodes: InteractionNode[] = [],
+  edges: InteractionEdge[] = [],
+): InteractionRisk {
+  const flags = screenInteractions(medications, supplements)
+  const activeIds = [...medications.filter((item) => item.active), ...supplements.filter((item) => item.active)].map((item) => item.id)
+  const graphEdges = findInteractions(nodes, edges, activeIds)
+  const directFlagWeight = flags.reduce((sum, flag) => sum + (flag.severity === 'high' ? 0.3 : flag.severity === 'caution' ? 0.15 : 0.03), 0)
+  return { score: Math.min(1, directFlagWeight + riskScore(graphEdges)), highest: highestRisk(graphEdges), flags }
 }
