@@ -83,9 +83,8 @@ export function parseEncryptedBiologyBackup(raw: string): EncryptedBiologyBackup
   } catch {
     throw new Error('Invalid encrypted Ubermench biology backup JSON')
   }
-  if (!isRecord(parsed)) throw new Error('Invalid encrypted Ubermench biology backup')
   validateEnvelope(parsed)
-  return parsed as unknown as EncryptedBiologyBackup
+  return parsed
 }
 
 async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
@@ -117,15 +116,23 @@ function validateEnvelope(value: unknown): asserts value is EncryptedBiologyBack
   if (typeof value.iterations !== 'number' || value.iterations !== PBKDF2_ITERATIONS) {
     throw new Error('Unsupported encrypted biology backup KDF parameters')
   }
-  for (const field of ['exportedAt', 'salt', 'iv', 'ciphertext']) {
-    if (typeof value[field] !== 'string' || value[field].length === 0) {
-      throw new Error(`Encrypted biology backup field is invalid: ${field}`)
-    }
+
+  const exportedAt = value.exportedAt
+  const saltValue = value.salt
+  const ivValue = value.iv
+  const ciphertextValue = value.ciphertext
+  if (
+    typeof exportedAt !== 'string' || exportedAt.length === 0 ||
+    typeof saltValue !== 'string' || saltValue.length === 0 ||
+    typeof ivValue !== 'string' || ivValue.length === 0 ||
+    typeof ciphertextValue !== 'string' || ciphertextValue.length === 0
+  ) {
+    throw new Error('Encrypted biology backup field is invalid')
   }
 
-  const salt = decodeBase64Field(value.salt, 'salt')
-  const iv = decodeBase64Field(value.iv, 'iv')
-  const ciphertext = decodeBase64Field(value.ciphertext, 'ciphertext')
+  const salt = decodeBase64Field(saltValue, 'salt')
+  const iv = decodeBase64Field(ivValue, 'iv')
+  const ciphertext = decodeBase64Field(ciphertextValue, 'ciphertext')
   if (salt.byteLength !== SALT_BYTES) throw new Error('Encrypted biology backup salt length is invalid')
   if (iv.byteLength !== IV_BYTES) throw new Error('Encrypted biology backup IV length is invalid')
   if (ciphertext.byteLength < GCM_TAG_BYTES) throw new Error('Encrypted biology backup ciphertext is invalid')
