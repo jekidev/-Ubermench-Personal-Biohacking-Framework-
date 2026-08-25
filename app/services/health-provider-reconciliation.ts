@@ -70,6 +70,11 @@ export function reconcileObservations(
     }
 
     const current = selected[duplicateIndex]
+    if (!current) {
+      selected.push(observation)
+      continue
+    }
+
     const candidateScore = rankObservationForReconciliation(observation, effective)
     const currentScore = rankObservationForReconciliation(current, effective)
     if (candidateScore > currentScore) selected[duplicateIndex] = observation
