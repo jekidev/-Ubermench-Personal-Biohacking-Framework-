@@ -114,9 +114,16 @@ The backup layer currently provides:
 - wrong-passphrase/corruption errors without exposing plaintext
 - round-trip tests covering encryption, decryption and validation
 
+Native encrypted recovery is now exposed through `app/services/encrypted-biology-backup-native.ts` and `usePersonalBiology()`:
+
+- Tauri save/open dialogs for encrypted JSON snapshots
+- passphrase-based encryption before the file is written
+- decryption and validation before an imported profile is persisted
+- browser-compatible string import/export remains available through the composable
+
 The encrypted layer is intended for user-controlled local snapshots. It does not replace OS keychain protection for API credentials.
 
-Native desktop backup actions are exposed through `usePersonalBiology()` as `exportBackupToFile()` and `importBackupFromFile()`. Browser builds continue to use the existing JSON string/file-picker flow.
+Native desktop backup actions are exposed through `usePersonalBiology()` as `exportBackupToFile()` / `importBackupFromFile()` and `exportEncryptedBackupToFile()` / `importEncryptedBackupFromFile()`. Browser builds use the string/file-picker flow and can use the encrypted counterparts without Tauri.
 
 ## Data quality and conflict resolution
 
@@ -203,7 +210,7 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 3. Expand source-specific reconciliation policies and missingness-aware longitudinal analytics; baseline provenance scoring, conflict resolution, provider-aware reconciliation and aggregation are now implemented.
 4. Expand the closed-loop experiment layer with automatic follow-up scheduling and richer intervention-event timelines; adherence and adverse-event capture are now implemented.
 5. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
-6. Add encrypted snapshot integration to the broader personal-biology store and recovery UI, including Tauri keychain-backed passphrase/key handling.
+6. Integrate encrypted snapshots into the broader recovery UI; encrypted browser/Tauri export/import and persistence integration are now implemented, while OS-keychain-backed key/passphrase handling remains.
 
 ## Security note
 
