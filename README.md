@@ -20,6 +20,9 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Experiment adherence tracking with completion rates and optional dose metadata
 - Adverse-event capture with severity and relatedness fields
 - Automated experiment phase annotation on canonical observations
+- Deterministic experiment follow-up checkpoints at phase midpoints
+- Due/upcoming follow-up filtering with invalid-timestamp hardening and deterministic tie-breaking
+- Next-follow-up selection for dashboard/runtime consumers
 - Closed-loop runtime: ingest data -> build HumanState -> rank interventions -> estimate personal signals -> persist the resulting state
 - Knowledge-graph foundation and temporal state support
 
@@ -160,7 +163,7 @@ These layers are intentionally conservative: conflict resolution selects the str
 
 ## CI / quality status
 
-Recent strict TypeScript CI failures in the health-data aggregation, provider-reconciliation and encrypted-backup layers have been addressed. The encrypted backup implementation now also validates its serialized binary fields before attempting decryption and narrows the validated envelope before use.
+The recent strict TypeScript failures in the health-data aggregation, provider-reconciliation and encrypted-backup layers have been addressed. The experiment scheduler is now also hardened against malformed timestamps and exposes deterministic due/upcoming/next checkpoint selection.
 
 The aggregation contract is explicitly documented and covered by tests: quality `1`/`0.5` combined with confidence `1`/`0.5` produces an aggregate of `64` under multiplicative weighting. Strict TypeScript guards are also in place for reconciliation and aggregation selectors.
 
@@ -210,7 +213,7 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 1. Complete health-provider ingestion beyond canonical adapter/registry contracts, prioritising Android Health Connect and Apple Health native bridges.
 2. Harden credential storage with the Tauri OS keychain rather than browser local storage.
 3. Expand source-specific reconciliation policies and missingness-aware longitudinal analytics; baseline provenance scoring, conflict resolution, provider-aware reconciliation and aggregation are now implemented.
-4. Expand the closed-loop experiment layer with automatic follow-up scheduling and richer intervention-event timelines; adherence and adverse-event capture are now implemented.
+4. Expand the closed-loop experiment layer with automatic follow-up scheduling and richer intervention-event timelines; deterministic phase-midpoint scheduling and due/upcoming/next selection are now implemented.
 5. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
 6. Integrate encrypted snapshots into the broader recovery UI; encrypted browser/Tauri export/import, strict envelope validation, persistence integration and dashboard controls are now implemented, while OS-keychain-backed key/passphrase handling remains.
 
