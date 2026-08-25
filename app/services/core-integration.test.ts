@@ -35,7 +35,9 @@ describe('core integration', () => {
   })
 
   it('runs state -> intervention ranking -> personal signal', () => {
-    const candidate: InterventionCandidate = { id: 'i1', name: 'intervention-a', expectedBenefits: ['target'], risks: [], interactions: [], evidence: [], personalFit: 0.8, priority: 0 }
+    const candidates: InterventionCandidate[] = [
+      { id: 'i1', name: 'intervention-a', expectedBenefits: ['target'], risks: [], interactions: [], evidence: [], personalFit: 0.8, priority: 0 },
+    ]
     const observations = [
       { id: 'o1', subjectId: 'subject-1', observedAt: '2026-08-01T08:00:00Z', metric: 'hrv', value: 50, source: 'wearable', quality: 1, confidence: 0.9, context: { intervention: 'intervention-a', phase: 'baseline' } },
       { id: 'o2', subjectId: 'subject-1', observedAt: '2026-08-02T08:00:00Z', metric: 'hrv', value: 60, source: 'wearable', quality: 1, confidence: 0.9, context: { intervention: 'intervention-a', phase: 'intervention' } },
