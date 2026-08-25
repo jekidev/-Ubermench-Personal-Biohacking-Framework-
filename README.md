@@ -106,6 +106,16 @@ The backup layer currently provides:
 - browser export/import with persistence through the existing local biology store
 - native Tauri save/open dialogs backed by the Tauri filesystem plugin
 
+`app/services/encrypted-biology-backup.ts` adds a password-protected snapshot envelope for local recovery:
+
+- PBKDF2-SHA-256 key derivation with 210,000 iterations
+- AES-256-GCM authenticated encryption with random salt and IV
+- explicit format, cipher and KDF parameter validation
+- wrong-passphrase/corruption errors without exposing plaintext
+- round-trip tests covering encryption, decryption and validation
+
+The encrypted layer is intended for user-controlled local snapshots. It does not replace OS keychain protection for API credentials.
+
 Native desktop backup actions are exposed through `usePersonalBiology()` as `exportBackupToFile()` and `importBackupFromFile()`. Browser builds continue to use the existing JSON string/file-picker flow.
 
 ## Data quality and conflict resolution
@@ -143,7 +153,7 @@ These layers are intentionally conservative: conflict resolution selects the str
 
 The health-data aggregation and provider-reconciliation paths have been hardened after strict TypeScript CI exposed unchecked `string[]` destructuring and indexed-array access. The fixes preserve the existing data semantics while making the implementation compatible with strict type checking.
 
-The Vitest suite previously reached **77/78 files and 211/212 tests passing**, with the only reported failure being an aggregation expectation mismatch in the CI log. The repository's current test contract explicitly expects the documented multiplicative `quality × confidence` weighting (for quality `1` and `0.5`, confidence `1` and `0.5`, the aggregate is `64`), so the implementation and test contract should remain aligned rather than weakening the type-safe production logic to satisfy a stale/inconsistent CI assertion.
+The reported aggregation contract is now explicitly documented and covered by tests: quality `1`/`0.5` combined with confidence `1`/`0.5` produces an aggregate of `64` under multiplicative weighting. Strict TypeScript guards are also in place for reconciliation and aggregation selectors.
 
 ## Replit / Manus deployment bridge
 
@@ -193,8 +203,8 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 3. Expand source-specific reconciliation policies and missingness-aware longitudinal analytics; baseline provenance scoring, conflict resolution, provider-aware reconciliation and aggregation are now implemented.
 4. Expand the closed-loop experiment layer with automatic follow-up scheduling and richer intervention-event timelines; adherence and adverse-event capture are now implemented.
 5. Add richer longitudinal visualisation and explainable evidence-to-decision traces to the primary dashboard.
-6. Add encrypted, versioned local data snapshots and recovery/restore workflows for the broader personal-biology store.
+6. Add encrypted snapshot integration to the broader personal-biology store and recovery UI, including Tauri keychain-backed passphrase/key handling.
 
 ## Security note
 
-Provider keys are currently stored locally in browser storage for the settings UI. This is appropriate for a personal prototype, not a hardened multi-user deployment. A future hardened mode should move secrets to the Tauri OS keychain or a server-side credential proxy.
+Provider keys are currently stored locally in browser storage for the settings UI. This is appropriate for a personal prototype, not a hardened multi-user deployment. A future hardened mode should move secrets to the Tauri OS keychain or a server-side credential proxy. Encrypted biology snapshots protect the snapshot payload but do not by themselves protect provider credentials.
