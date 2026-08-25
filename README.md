@@ -26,6 +26,7 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Provider registry for Android Health Connect, Apple Health, Garmin, Oura, WHOOP, Fitbit, Polar and manual/API sources
 - Normalized wearable provenance, quality and confidence metadata
 - Tauri/native adapter pathways remain available for platform-specific ingestion
+- Portable, versioned biology backup format for user-owned export/import workflows
 
 ### Evidence and research integrity
 - Europe PMC search integration
@@ -83,6 +84,19 @@ Core areas:
 - Geroscience research watchlist
 - Reproducible N-of-1 tracking
 - Safety flags and clinician-review handoffs
+
+## Data portability
+
+`app/services/biology-backup.ts` defines a versioned `ubermench-biology-backup` envelope around the canonical `PersonalBiologyProfile`.
+
+The backup layer currently provides:
+
+- deterministic JSON serialization
+- explicit backup format/version validation
+- deep-copy semantics so exported data cannot mutate the live profile
+- forward-compatible rejection of unsupported backup versions
+
+The next integration step is wiring this service into the Biology UI and Tauri file-dialog flows so a user can export/import their complete profile without depending on a cloud service.
 
 ## Replit / Manus deployment bridge
 
