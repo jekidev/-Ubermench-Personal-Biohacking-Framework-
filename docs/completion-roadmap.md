@@ -16,6 +16,15 @@ This document tracks the gap between the current research-grade framework founda
 - Tauri/Nuxt desktop shell and deployment bootstrap
 - Portable, versioned biology backup envelope
 
+## Supported health-provider scope
+
+The product deliberately supports **two health integrations only**:
+
+1. **Android Health Connect** — native Android/Tauri adapter path.
+2. **Garmin** — authenticated Garmin integration path.
+
+Apple Health, Oura, WHOOP, Fitbit and Polar are intentionally excluded from the product contract. They should not be added back as provider IDs, reconciliation priorities or canonical external-health sample sources unless the product scope is explicitly changed.
+
 ## Remaining implementation priorities
 
 ### P0 — data ownership and correctness
@@ -35,12 +44,12 @@ This document tracks the gap between the current research-grade framework founda
 
 ### P1 — real health-data ingestion
 
-1. Implement the Health Connect native adapter path on Android.
-2. Implement Apple Health native ingestion for the macOS/iOS-compatible Tauri strategy where platform APIs permit it.
-3. Promote Garmin/Oura/WHOOP/Fitbit/Polar from registry contracts to authenticated import adapters.
-4. Add deduplication using provider + source record ID + timestamp + measurement identity.
-5. Add sync cursors, retry/backoff and partial-failure reporting.
-6. Preserve source payload hashes for reproducibility without storing unnecessary raw payloads.
+1. Implement the Android Health Connect native adapter path on Android.
+2. Implement the authenticated Garmin import adapter.
+3. Add deduplication using provider + source record ID + timestamp + measurement identity.
+4. Add sync cursors, retry/backoff and partial-failure reporting.
+5. Preserve source payload hashes for reproducibility without storing unnecessary raw payloads.
+6. Add integration tests for both providers and explicit rejection tests for unsupported providers.
 
 ### P1 — evidence engine maturity
 
