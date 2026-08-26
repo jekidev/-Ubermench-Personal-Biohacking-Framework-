@@ -68,8 +68,10 @@ export async function syncHealthProvider(
     return { provider: adapter.provider, state: 'error', observations: [], error: 'Invalid sync window' }
   }
 
+  let connected = false
   try {
     await adapter.connect()
+    connected = true
     const raw = await adapter.readObservations(from, to)
     return {
       provider: adapter.provider,
@@ -83,6 +85,14 @@ export async function syncHealthProvider(
       state: 'error',
       observations: [],
       error: error instanceof Error ? error.message : String(error),
+    }
+  } finally {
+    if (connected) {
+      try {
+        await adapter.disconnect()
+      } catch {
+        // Disconnect failures must not replace the primary sync result.
+      }
     }
   }
 }
