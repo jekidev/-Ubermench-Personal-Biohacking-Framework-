@@ -9,15 +9,8 @@ export type ReconciliationPolicy = {
 
 export const DEFAULT_RECONCILIATION_POLICY: Required<ReconciliationPolicy> = {
   sourcePriority: {
-    'apple-health': 1,
     'health-connect': 1,
     garmin: 0.95,
-    oura: 0.95,
-    whoop: 0.95,
-    fitbit: 0.9,
-    polar: 0.9,
-    manual: 0.5,
-    api: 0.5,
   },
   duplicateWindowMs: 60_000,
 }
