@@ -6,7 +6,7 @@ export type ExternalHealthSample = {
   value: number
   unit?: string
   recordedAt: string
-  source: 'apple-health' | 'health-connect' | 'garmin' | 'oura' | 'whoop' | 'fitbit' | 'polar' | 'withings' | 'manual' | 'api'
+  source: 'health-connect' | 'garmin'
   quality?: number
   confidence?: number
   metadata?: Record<string, string | number | boolean | null>
