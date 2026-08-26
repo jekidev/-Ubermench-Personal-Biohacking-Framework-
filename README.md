@@ -29,7 +29,8 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 
 ### Health data integration
 - Canonical adapters for external health samples
-- Provider registry for Android Health Connect, Apple Health, Garmin, Oura, WHOOP, Fitbit, Polar and manual/API sources
+- Supported provider scope is intentionally limited to **Garmin + Android Health Connect**
+- No Oura, WHOOP or Apple Health integration is part of the product scope
 - Normalized wearable provenance, quality and confidence metadata
 - Provenance-aware observation quality scoring and conflict resolution for overlapping imported measurements
 - Source-aware reconciliation policies with configurable provider priorities and duplicate windows
@@ -212,7 +213,7 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 
 ## Near-term roadmap
 
-1. Complete health-provider ingestion beyond canonical adapter/registry contracts, prioritising Android Health Connect and Apple Health native bridges.
+1. Complete health-provider ingestion for **Android Health Connect and Garmin only**, including the production native Tauri/Android bridge and Garmin connection lifecycle.
 2. Harden credential storage with the Tauri OS keychain rather than browser local storage.
 3. Expand source-specific reconciliation policies and missingness-aware longitudinal analytics; baseline provenance scoring, conflict resolution, provider-aware reconciliation and aggregation are now implemented.
 4. Expand the closed-loop experiment layer with automatic follow-up scheduling and richer intervention-event timelines; deterministic phase-midpoint scheduling and due/upcoming/next selection are now implemented.
