@@ -17,9 +17,9 @@ const observation = (id: string, source: string, quality: number, confidence: nu
 })
 
 describe('health provider reconciliation', () => {
-  it('prefers a stronger provider when measurements overlap', () => {
+  it('prefers Android Health Connect when measurements overlap at equal quality', () => {
     const result = reconcileObservations([
-      observation('manual-1', 'manual', 1, 1),
+      observation('garmin-1', 'garmin', 0.8, 0.8),
       observation('hc-1', 'health-connect', 0.8, 0.8),
     ])
 
@@ -30,18 +30,18 @@ describe('health provider reconciliation', () => {
   it('keeps separate observations outside the duplicate window', () => {
     const result = reconcileObservations([
       observation('a', 'health-connect', 1, 1),
-      observation('b', 'health-connect', 1, 1, '2026-08-25T10:02:01.000Z'),
+      observation('b', 'garmin', 1, 1, '2026-08-25T10:02:01.000Z'),
     ])
 
     expect(result.map((item) => item.id)).toEqual(['a', 'b'])
   })
 
-  it('allows source priorities to be overridden explicitly', () => {
+  it('allows Garmin to be given an explicit source-priority override', () => {
     const result = reconcileObservations([
-      observation('oura', 'oura', 0.7, 0.7),
-      observation('manual', 'manual', 1, 1),
-    ], { sourcePriority: { manual: 2 } })
+      observation('hc', 'health-connect', 0.7, 0.7),
+      observation('garmin', 'garmin', 1, 1),
+    ], { sourcePriority: { garmin: 2 } })
 
-    expect(result[0]?.id).toBe('manual')
+    expect(result[0]?.id).toBe('garmin')
   })
 })
