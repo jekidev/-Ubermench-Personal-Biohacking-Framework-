@@ -1,22 +1,32 @@
-export type HealthProviderId = 'health-connect' | 'apple-health' | 'garmin' | 'oura' | 'whoop' | 'fitbit' | 'polar' | 'manual'
+export type HealthProviderId = 'health-connect' | 'garmin'
 
 export interface HealthProviderCapability {
   id: HealthProviderId
   name: string
-  platform: 'android' | 'ios' | 'web' | 'desktop'
+  platform: 'android' | 'web' | 'desktop'
   supports: Array<'sleep' | 'heart-rate' | 'hrv' | 'training' | 'steps' | 'temperature' | 'respiratory-rate'>
   requiresNativeAdapter: boolean
 }
 
+/**
+ * Supported health integrations are deliberately kept small.
+ * Product scope: Garmin + Android Health Connect only.
+ */
 export const HEALTH_PROVIDER_REGISTRY: HealthProviderCapability[] = [
-  { id: 'health-connect', name: 'Android Health Connect', platform: 'android', supports: ['sleep', 'heart-rate', 'hrv', 'training', 'steps', 'temperature', 'respiratory-rate'], requiresNativeAdapter: true },
-  { id: 'apple-health', name: 'Apple Health', platform: 'ios', supports: ['sleep', 'heart-rate', 'hrv', 'training', 'steps', 'temperature', 'respiratory-rate'], requiresNativeAdapter: true },
-  { id: 'garmin', name: 'Garmin', platform: 'web', supports: ['sleep', 'heart-rate', 'hrv', 'training', 'steps'], requiresNativeAdapter: false },
-  { id: 'oura', name: 'Oura', platform: 'web', supports: ['sleep', 'heart-rate', 'hrv', 'temperature'], requiresNativeAdapter: false },
-  { id: 'whoop', name: 'WHOOP', platform: 'web', supports: ['sleep', 'heart-rate', 'hrv', 'training', 'respiratory-rate'], requiresNativeAdapter: false },
-  { id: 'fitbit', name: 'Fitbit', platform: 'web', supports: ['sleep', 'heart-rate', 'steps', 'training'], requiresNativeAdapter: false },
-  { id: 'polar', name: 'Polar', platform: 'web', supports: ['heart-rate', 'hrv', 'training'], requiresNativeAdapter: false },
-  { id: 'manual', name: 'Manual import', platform: 'web', supports: ['sleep', 'heart-rate', 'hrv', 'training', 'steps', 'temperature', 'respiratory-rate'], requiresNativeAdapter: false },
+  {
+    id: 'health-connect',
+    name: 'Android Health Connect',
+    platform: 'android',
+    supports: ['sleep', 'heart-rate', 'hrv', 'training', 'steps', 'temperature', 'respiratory-rate'],
+    requiresNativeAdapter: true,
+  },
+  {
+    id: 'garmin',
+    name: 'Garmin',
+    platform: 'web',
+    supports: ['sleep', 'heart-rate', 'hrv', 'training', 'steps'],
+    requiresNativeAdapter: false,
+  },
 ]
 
 export function getHealthProvider(id: HealthProviderId) {
