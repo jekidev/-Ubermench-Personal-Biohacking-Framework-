@@ -33,11 +33,12 @@ describe('health provider ingestion', () => {
     expect(called).toBe(false)
   })
 
-  it('returns normalized observations and provider errors deterministically', async () => {
+  it('disconnects after successful sync and preserves the primary result if disconnect fails', async () => {
+    let disconnected = false
     const adapter: HealthProviderAdapter = {
-      provider: 'health-connect',
+      provider: 'garmin',
       connect: async () => {},
-      disconnect: async () => {},
+      disconnect: async () => { disconnected = true; throw new Error('disconnect failed') },
       readObservations: async () => [
         { metric: 'steps', value: 1000, observedAt: '2026-08-24T10:00:00Z', quality: 0.9, confidence: 0.95 },
       ],
@@ -45,14 +46,19 @@ describe('health provider ingestion', () => {
 
     const result = await syncHealthProvider(adapter, '2026-08-24T00:00:00Z', '2026-08-25T00:00:00Z')
     expect(result.state).toBe('connected')
-    expect(result.observations[0]?.provider).toBe('health-connect')
-    expect(result.observations[0]?.quality).toBe(0.9)
+    expect(result.observations[0]?.provider).toBe('garmin')
+    expect(disconnected).toBe(true)
+  })
 
-    const failing: HealthProviderAdapter = {
-      ...adapter,
+  it('returns provider errors deterministically', async () => {
+    const adapter: HealthProviderAdapter = {
+      provider: 'health-connect',
       connect: async () => { throw new Error('permission denied') },
+      disconnect: async () => {},
+      readObservations: async () => [],
     }
-    const failed = await syncHealthProvider(failing, '2026-08-24T00:00:00Z', '2026-08-25T00:00:00Z')
+
+    const failed = await syncHealthProvider(adapter, '2026-08-24T00:00:00Z', '2026-08-25T00:00:00Z')
     expect(failed.state).toBe('error')
     expect(failed.error).toBe('permission denied')
   })
