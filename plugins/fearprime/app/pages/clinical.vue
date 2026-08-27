@@ -1,24 +1,12 @@
 <script setup lang="ts">
-const { appendEvent } = useFearprimeStore();
+const { saveClinicalAssessment } = useFearprimeStore();
 const instrument = ref<"PCL5" | "CAPS5" | "PHQ9" | "GAD7" | "ISI">("PCL5");
 const score = ref<number | undefined>();
 const saved = ref(false);
 
 async function save() {
   if (score.value === undefined) return;
-  await appendEvent({
-    id: crypto.randomUUID(),
-    type: "clinical_assessment",
-    timestamp: new Date().toISOString(),
-    payload: {
-      instrument: instrument.value,
-      instrumentVersion: "unspecified",
-      totalScore: score.value,
-      completedBy: "patient",
-      source: "manual"
-    },
-    schemaVersion: "2.0.0"
-  });
+  await saveClinicalAssessment({ instrument: instrument.value, instrumentVersion: "unspecified", totalScore: score.value, completedBy: "patient", source: "manual" });
   saved.value = true;
   window.setTimeout(() => (saved.value = false), 1800);
   score.value = undefined;
@@ -28,11 +16,11 @@ async function save() {
 <template>
   <div class="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6">
     <div>
-      <p class="text-sm text-muted">Fearprime / Clinical</p>
+      <p class="text-sm text-muted">Fearprime / Klinisk</p>
       <h1 class="text-2xl font-semibold">Kliniske outcomes</h1>
-      <p class="mt-1 text-sm text-muted">Fearprime gemmer scoredata, ikke den fulde ordlyd af standardiserede spørgeskemaer.</p>
+      <p class="mt-1 text-sm text-muted">Gem scoredata fra et gennemført standardiseret instrument. Fearprime gemmer ikke den fulde spørgeskematekst.</p>
     </div>
-
+    <UAlert color="info" variant="subtle" title="Fortolkning" description="En score er et outcome-mål. Den bruges sammen med funktion, søvn og learning-data og bør ikke stå alene." />
     <UCard>
       <div class="grid gap-5 md:grid-cols-2">
         <UFormField label="Instrument">
@@ -45,12 +33,12 @@ async function save() {
           ]" class="w-full" />
         </UFormField>
         <UFormField label="Samlet score" required>
-          <UInput v-model.number="score" type="number" min="0" placeholder="Indtast score fra gennemført instrument" class="w-full" />
+          <UInput v-model.number="score" type="number" min="0" placeholder="Score fra gennemført instrument" class="w-full" />
         </UFormField>
       </div>
       <div class="mt-6 flex items-center justify-between border-t border-default pt-4">
         <span v-if="saved" class="text-sm text-success">Klinisk score gemt lokalt</span>
-        <span v-else class="text-xs text-muted">Kliniske outcomes prioriteres over wearable-only signaler.</span>
+        <span v-else class="text-xs text-muted">Klinisk outcome → separat fra mekanistisk learning-test.</span>
         <UButton :disabled="score === undefined" icon="i-lucide-clipboard-check" @click="save">Gem outcome</UButton>
       </div>
     </UCard>
