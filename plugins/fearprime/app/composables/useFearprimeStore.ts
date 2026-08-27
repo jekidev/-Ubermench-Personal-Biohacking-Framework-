@@ -21,7 +21,7 @@ const MemoryTargetSchema = z.object({
 
 const EventSchema = z.object({
   id: z.string(),
-  type: z.enum(["memory_target", "prediction_lock", "learning_event", "follow_up", "daily_state"]),
+  type: z.enum(["memory_target", "prediction_lock", "learning_event", "follow_up", "daily_state", "clinical_assessment", "sleep_record", "physiology", "adverse_event"]),
   timestamp: z.string(),
   payload: z.record(z.string(), z.unknown()),
   schemaVersion: z.string()
@@ -30,23 +30,10 @@ const EventSchema = z.object({
 const LearningInputSchema = z.object({
   memoryId: z.string().min(1),
   eventType: z.enum([
-    "acquisition",
-    "retrieval",
-    "extinction",
-    "safety_discrimination",
-    "counterconditioning",
-    "imagery_rescripting",
-    "interoceptive",
-    "generalisation_stimulus",
-    "generalisation_context",
-    "retention_24h",
-    "retention_7d",
-    "naturalistic_trigger",
-    "spontaneous_recovery",
-    "renewal",
-    "reinstatement",
-    "neutral_learning_control",
-    "real_world_transfer"
+    "acquisition", "retrieval", "extinction", "safety_discrimination", "counterconditioning",
+    "imagery_rescripting", "interoceptive", "generalisation_stimulus", "generalisation_context",
+    "retention_24h", "retention_7d", "naturalistic_trigger", "spontaneous_recovery", "renewal",
+    "reinstatement", "neutral_learning_control", "real_world_transfer"
   ]),
   context: z.string().optional(),
   stimulus: z.string().optional(),
@@ -139,57 +126,22 @@ export function useFearprimeStore() {
   }
 
   async function createMemoryTarget(input: Omit<MemoryTarget, "id" | "createdAt">) {
-    const target = MemoryTargetSchema.parse({
-      ...input,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString()
-    });
-
+    const target = MemoryTargetSchema.parse({ ...input, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
     const targets = await listMemoryTargets();
     const next = [...targets, target];
-
     if (!isTauri.value) browserSet(MEMORY_KEY, next);
-    else {
-      const store = await getStore();
-      await store.set(MEMORY_KEY, next);
-      await store.save();
-    }
-
-    await appendEvent({
-      id: crypto.randomUUID(),
-      type: "memory_target",
-      timestamp: target.createdAt,
-      payload: target,
-      schemaVersion: SCHEMA_VERSION
-    });
-
+    else { const store = await getStore(); await store.set(MEMORY_KEY, next); await store.save(); }
+    await appendEvent({ id: crypto.randomUUID(), type: "memory_target", timestamp: target.createdAt, payload: target, schemaVersion: SCHEMA_VERSION });
     return target;
   }
 
   async function lockPrediction(input: Omit<Prediction, "lockedAt" | "predictionHash" | "schemaVersion">) {
     const lockedAt = new Date().toISOString();
     const canonical = JSON.stringify({ ...input, lockedAt });
-    const bytes = new TextEncoder().encode(canonical);
-    const digest = await crypto.subtle.digest("SHA-256", bytes);
-    const predictionHash = Array.from(new Uint8Array(digest))
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
-
-    const prediction = PredictionSchema.parse({
-      ...input,
-      lockedAt,
-      predictionHash,
-      schemaVersion: SCHEMA_VERSION
-    });
-
-    await appendEvent({
-      id: crypto.randomUUID(),
-      type: "prediction_lock",
-      timestamp: lockedAt,
-      payload: prediction,
-      schemaVersion: SCHEMA_VERSION
-    });
-
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
+    const predictionHash = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    const prediction = PredictionSchema.parse({ ...input, lockedAt, predictionHash, schemaVersion: SCHEMA_VERSION });
+    await appendEvent({ id: crypto.randomUUID(), type: "prediction_lock", timestamp: lockedAt, payload: prediction, schemaVersion: SCHEMA_VERSION });
     return prediction;
   }
 
@@ -197,16 +149,11 @@ export function useFearprimeStore() {
     const parsed = LearningInputSchema.parse(input);
     const validatedPrediction = PredictionSchema.parse(prediction);
     const timestamp = new Date().toISOString();
-
     const threatChange = parsed.threatPost - parsed.threatPre;
     const safetyGain = parsed.safetyPost - parsed.safetyPre;
     const actualProbability = parsed.actualOutcomeProbability
       ?? (parsed.actualOutcome === "threat_occurred" ? 100 : parsed.actualOutcome === "threat_absent" ? 0 : undefined);
-
-    const predictionError = actualProbability === undefined
-      ? undefined
-      : Math.abs(validatedPrediction.expectedProbability - actualProbability);
-
+    const predictionError = actualProbability === undefined ? undefined : Math.abs(validatedPrediction.expectedProbability - actualProbability);
     const learningQuality = {
       activation: "pass",
       predictionError: predictionError === undefined ? "unclear" : predictionError >= 20 ? "pass" : "unclear",
@@ -215,45 +162,23 @@ export function useFearprimeStore() {
       stability: "pass",
       overall: predictionError !== undefined && predictionError >= 20 && safetyGain > 0 ? "high_quality" : "acceptable"
     } as const;
-
     const saved = await appendEvent({
-      id: crypto.randomUUID(),
-      type: "learning_event",
-      timestamp,
-      payload: {
-        ...parsed,
-        prediction: validatedPrediction,
-        derived: { threatChange, safetyGain, predictionError },
-        learningQuality
-      },
+      id: crypto.randomUUID(), type: "learning_event", timestamp,
+      payload: { ...parsed, prediction: validatedPrediction, derived: { threatChange, safetyGain, predictionError }, learningQuality },
       schemaVersion: SCHEMA_VERSION
     });
-
-    await appendEvent({
-      id: crypto.randomUUID(),
-      type: "follow_up",
-      timestamp: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      payload: { sourceEventId: saved.id, timepoint: "24h", status: "pending" },
-      schemaVersion: SCHEMA_VERSION
-    });
-
-    await appendEvent({
-      id: crypto.randomUUID(),
-      type: "follow_up",
-      timestamp: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      payload: { sourceEventId: saved.id, timepoint: "7d", status: "pending" },
-      schemaVersion: SCHEMA_VERSION
-    });
-
+    await appendEvent({ id: crypto.randomUUID(), type: "follow_up", timestamp: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), payload: { sourceEventId: saved.id, timepoint: "24h", status: "pending" }, schemaVersion: SCHEMA_VERSION });
+    await appendEvent({ id: crypto.randomUUID(), type: "follow_up", timestamp: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), payload: { sourceEventId: saved.id, timepoint: "7d", status: "pending" }, schemaVersion: SCHEMA_VERSION });
     return saved;
   }
 
   async function listPendingFollowUps() {
     const events = await loadEvents();
+    const completedIds = new Set(events.filter((event) => event.type === "follow_up" && (event.payload as Record<string, unknown>).status === "completed" && typeof (event.payload as Record<string, unknown>).followUpId === "string").map((event) => String((event.payload as Record<string, unknown>).followUpId)));
     return events
       .filter((event) => event.type === "follow_up")
       .map((event) => ({ id: event.id, timestamp: event.timestamp, ...(event.payload as Record<string, unknown>) }))
-      .filter((followUp) => followUp.status === "pending")
+      .filter((followUp) => followUp.status === "pending" && !completedIds.has(String(followUp.id)))
       .sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
   }
 
@@ -261,30 +186,18 @@ export function useFearprimeStore() {
     const parsed = FollowUpInputSchema.parse(input);
     const events = await loadEvents();
     const source = events.find((event) => event.id === parsed.followUpId);
-
     await appendEvent({
-      id: crypto.randomUUID(),
-      type: "follow_up",
-      timestamp: new Date().toISOString(),
+      id: crypto.randomUUID(), type: "follow_up", timestamp: new Date().toISOString(),
       payload: {
         ...parsed,
         sourceEventId: source?.payload && "sourceEventId" in source.payload ? source.payload.sourceEventId : undefined,
+        followUpId: parsed.followUpId,
         status: "completed"
       },
       schemaVersion: SCHEMA_VERSION
     });
-
     return parsed;
   }
 
-  return {
-    loadEvents,
-    appendEvent,
-    listMemoryTargets,
-    createMemoryTarget,
-    lockPrediction,
-    createLearningEvent,
-    listPendingFollowUps,
-    completeFollowUp
-  };
+  return { loadEvents, appendEvent, listMemoryTargets, createMemoryTarget, lockPrediction, createLearningEvent, listPendingFollowUps, completeFollowUp };
 }
