@@ -59,7 +59,7 @@ function assessment(
     rationale,
     observedSignals,
     evaluatedAt: new Date().toISOString(),
-    engineVersion: "2.0.1"
+    engineVersion: "2.0.2"
   };
 }
 
@@ -135,7 +135,7 @@ export function scorePhenotype(events: LearningEventForPhenotype[]): PhenotypeAs
     ...renewal.map((followUp) => followUp.renewal ?? 0),
     ...reinstatement.map((followUp) => followUp.reinstatement ?? 0)
   ];
-  const f6Positive = relapseSignals.filter((value) > 0).length;
+  const f6Positive = relapseSignals.filter((value) => value > 0).length;
   const f6Confidence = relapseSignals.length >= 2 ? f6Positive / relapseSignals.length : 0;
   const f6Status: PhenotypeStatus = relapseSignals.length < 2
     ? "insufficient_data"
@@ -154,7 +154,7 @@ export function scorePhenotype(events: LearningEventForPhenotype[]): PhenotypeAs
       f3Confidence,
       acquisitionEvents.length,
       confounded,
-      [`Gennemsnitlig acquisition strength: ${(meanAcquisitionStrength * 100).toFixed(1)}%. Højre F3-confidence betyder svagere observeret sikkerhedslæring.`],
+      [`Gennemsnitlig acquisition strength: ${(meanAcquisitionStrength * 100).toFixed(1)}%. Højere F3-confidence betyder svagere observeret sikkerhedslæring.`],
       ["pre/post threat expectancy", "pre/post safety expectancy"]
     ),
     assessment(
