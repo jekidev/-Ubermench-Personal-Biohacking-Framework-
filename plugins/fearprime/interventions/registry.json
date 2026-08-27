@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "2.0.0",
+  "lastReviewed": "2026-08-27",
+  "principle": "Interventioner er hypotesedrevne objekter. Fearprime anbefaler ikke autonomt medicinvalg.",
+  "clinicalCore": [
+    {"id":"pe","name":"Prolonged Exposure","type":"psychotherapy","role":"clinical","targetPhases":["F1","F2","F3","F4","F5","F6","F10"],"evidenceTier":"E3","ptsdSpecificity":"strong","clinicianReviewRequired":true},
+    {"id":"cpt","name":"Cognitive Processing Therapy","type":"psychotherapy","role":"clinical","targetPhases":["F2","F3","F5","F9","F13"],"evidenceTier":"E3","ptsdSpecificity":"strong","clinicianReviewRequired":true},
+    {"id":"emdr","name":"EMDR","type":"psychotherapy","role":"clinical","targetPhases":["F2","F4","F10","F14"],"evidenceTier":"E3","ptsdSpecificity":"strong","clinicianReviewRequired":true},
+    {"id":"cbt_i","name":"CBT-I","type":"sleep","role":"adjunct","targetPhases":["F15","F4","F6"],"evidenceTier":"E2","ptsdSpecificity":"moderate","clinicianReviewRequired":false},
+    {"id":"irt","name":"Imagery Rehearsal Therapy","type":"sleep","role":"adjunct","targetPhases":["F15"],"evidenceTier":"E2","ptsdSpecificity":"moderate","clinicianReviewRequired":true},
+    {"id":"exercise","name":"Aerobic exercise","type":"exercise","role":"adjunct","targetPhases":["F3","F4","F8","F15"],"evidenceTier":"E2","ptsdSpecificity":"limited","clinicianReviewRequired":false}
+  ],
+  "clinicalPharmacologyReference": [
+    {"id":"sertraline","name":"Sertraline","type":"drug","role":"clinical","targetPhases":["F11"],"evidenceTier":"E3","ptsdSpecificity":"strong","clinicianReviewRequired":true},
+    {"id":"paroxetine","name":"Paroxetine","type":"drug","role":"clinical","targetPhases":["F11"],"evidenceTier":"E3","ptsdSpecificity":"strong","clinicianReviewRequired":true},
+    {"id":"venlafaxine","name":"Venlafaxine","type":"drug","role":"clinical","targetPhases":["F11"],"evidenceTier":"E3","ptsdSpecificity":"strong","clinicianReviewRequired":true},
+    {"id":"prazosin","name":"Prazosin","type":"drug","role":"conditional","targetPhases":["F15"],"evidenceTier":"E2","ptsdSpecificity":"moderate","scope":"nightmares_specific","clinicianReviewRequired":true}
+  ],
+  "clinicianLedResearch": [
+    {"id":"moclobemide","name":"Moclobemide","type":"drug","role":"chronic_state","targetPhases":["F11"],"evidenceTier":"E2","ptsdSpecificity":"limited","primaryEndpoint":"F11.chronic_state","clinicianReviewRequired":true},
+    {"id":"memantine","name":"Memantine","type":"drug","role":"learning_augmentation","targetPhases":["F3"],"evidenceTier":"E1","ptsdSpecificity":"limited","primaryEndpoint":"F3.acquisition","clinicianReviewRequired":true},
+    {"id":"sodium_butyrate","name":"Sodium butyrate","type":"drug_or_nutritional_research","role":"learning_augmentation","targetPhases":["F4"],"evidenceTier":"E1","ptsdSpecificity":"none","primaryEndpoint":"F4.retention_7d","clinicianReviewRequired":true},
+    {"id":"l_dopa","name":"L-DOPA / levodopa","type":"drug","role":"learning_augmentation","targetPhases":["F4","F5","F6"],"evidenceTier":"E2","ptsdSpecificity":"limited","primaryEndpoint":"F6.reinstatement","clinicianReviewRequired":true},
+    {"id":"dcs","name":"D-cycloserine","type":"drug","role":"learning_augmentation","targetPhases":["F3","F4"],"evidenceTier":"E2","ptsdSpecificity":"limited","primaryEndpoint":"F3.acquisition","clinicianReviewRequired":true},
+    {"id":"oxytocin","name":"Oxytocin","type":"drug","role":"learning_augmentation","targetPhases":["F2","F3","F10","F13"],"evidenceTier":"E1","ptsdSpecificity":"limited","clinicianReviewRequired":true},
+    {"id":"pentoxifylline","name":"Pentoxifylline","type":"drug","role":"systems_biology","targetPhases":["F12"],"evidenceTier":"E1","ptsdSpecificity":"none","primaryEndpoint":"F12.inflammatory_state","clinicianReviewRequired":true},
+    {"id":"lithium","name":"Lithium salts","type":"drug","role":"chronic_state","targetPhases":["F11"],"evidenceTier":"E1","ptsdSpecificity":"very_limited","clinicianReviewRequired":true},
+    {"id":"lithium_orotate","name":"Lithium orotate","type":"supplement","role":"exploratory","targetPhases":["F11"],"evidenceTier":"E0","ptsdSpecificity":"none","clinicianReviewRequired":true}
+  ],
+  "researchLibrary": [
+    {"id":"glucocorticoid_modulation","name":"Glucocorticoid modulation","targetPhases":["F4","F5"],"active":false},
+    {"id":"losartan_raas","name":"Losartan / RAAS pathway","targetPhases":["F2","F4","F5"],"active":false},
+    {"id":"ecb_faah","name":"Endocannabinoid / FAAH approaches","targetPhases":["F4","F6"],"active":false},
+    {"id":"npy","name":"Neuropeptide Y","targetPhases":["F6","F11"],"active":false},
+    {"id":"nps","name":"Neuropeptide S","targetPhases":["F2","F6"],"active":false},
+    {"id":"trkb_bdnf","name":"TrkB/BDNF pathway","targetPhases":["F4"],"active":false},
+    {"id":"estradiol","name":"Estradiol-related extinction research","targetPhases":["F4","F6"],"active":false},
+    {"id":"rtms","name":"rTMS","targetPhases":["F16"],"active":false},
+    {"id":"tes","name":"tES/tDCS","targetPhases":["F16"],"active":false},
+    {"id":"mdma_assisted","name":"MDMA-assisted therapy research","targetPhases":["F13","F14"],"active":false}
+  ],
+  "removed": [
+    {"id":"kanna","name":"Kanna/Sceletium","reason":"fjernet fra aktiv protokol"},
+    {"id":"selegiline","name":"Selegiline","reason":"fjernet fra aktiv protokol"},
+    {"id":"bnc210","name":"BNC210","reason":"ikke aktiv kandidat i den nuværende protokol"}
+  ]
+}
