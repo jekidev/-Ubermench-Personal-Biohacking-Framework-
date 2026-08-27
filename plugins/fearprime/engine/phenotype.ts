@@ -59,7 +59,7 @@ function assessment(
     rationale,
     observedSignals,
     evaluatedAt: new Date().toISOString(),
-    engineVersion: "2.0.0"
+    engineVersion: "2.0.1"
   };
 }
 
@@ -80,14 +80,25 @@ export function scorePhenotype(events: LearningEventForPhenotype[]): PhenotypeAs
   }
 
   const acquisitionEvents = valid.filter((event) => !event.eventType || ["acquisition", "extinction", "safety_discrimination", "counterconditioning"].includes(event.eventType));
-  const acquisitionSignals = acquisitionEvents.map((event) => {
-    const threatDelta = typeof event.threatPre === "number" && typeof event.threatPost === "number" ? event.threatPre - event.threatPost : undefined;
-    const safetyDelta = typeof event.safetyPre === "number" && typeof event.safetyPost === "number" ? event.safetyPost - event.safetyPre : undefined;
-    return (threatDelta ?? 0) + (safetyDelta ?? 0);
-  });
-  const positiveAcquisition = acquisitionSignals.filter((signal) => signal > 0).length;
-  const f3Confidence = acquisitionEvents.length >= 2 ? positiveAcquisition / acquisitionEvents.length : 0;
-  const f3Status: PhenotypeStatus = acquisitionEvents.length < 2 ? "insufficient_data" : f3Confidence >= 0.6 ? "probable" : f3Confidence >= 0.3 ? "possible" : "resolved";
+  const acquisitionStrengths = acquisitionEvents.map((event) => {
+    const threatDelta = typeof event.threatPre === "number" && typeof event.threatPost === "number"
+      ? clamp((event.threatPre - event.threatPost) / 100)
+      : undefined;
+    const safetyDelta = typeof event.safetyPre === "number" && typeof event.safetyPost === "number"
+      ? clamp((event.safetyPost - event.safetyPre) / 100)
+      : undefined;
+
+    if (threatDelta === undefined && safetyDelta === undefined) return undefined;
+    if (threatDelta === undefined) return safetyDelta;
+    if (safetyDelta === undefined) return threatDelta;
+    return (threatDelta + safetyDelta) / 2;
+  }).filter((value): value is number => value !== undefined);
+
+  const meanAcquisitionStrength = mean(acquisitionStrengths) ?? 0;
+  const f3Confidence = acquisitionStrengths.length >= 2 ? clamp(1 - meanAcquisitionStrength) : 0;
+  const f3Status: PhenotypeStatus = acquisitionStrengths.length < 2
+    ? "insufficient_data"
+    : f3Confidence >= 0.6 ? "probable" : f3Confidence >= 0.3 ? "possible" : "resolved";
 
   const allFollowUps = valid.flatMap((event) => event.followUps ?? []);
   const follow24 = allFollowUps.filter((followUp) => followUp.timepoint === "24h");
@@ -103,15 +114,15 @@ export function scorePhenotype(events: LearningEventForPhenotype[]): PhenotypeAs
     : f4Confidence >= 0.6 ? "probable" : f4Confidence >= 0.3 ? "possible" : "resolved";
 
   const stimulusCandidates = valid7.filter((followUp) => typeof followUp.sameContext === "number" && typeof followUp.similarStimulus === "number");
-  const stimulusGaps = stimulusCandidates.map((followUp) => (followUp.sameContext ?? 0) - (followUp.similarStimulus ?? 0));
+  const stimulusGaps = stimulusCandidates.map((followUp) => Math.max(0, (followUp.sameContext ?? 0) - (followUp.similarStimulus ?? 0)));
   const contextCandidates = valid7.filter((followUp) => typeof followUp.sameContext === "number" && typeof followUp.newContext === "number");
-  const contextGaps = contextCandidates.map((followUp) => (followUp.sameContext ?? 0) - (followUp.newContext ?? 0));
+  const contextGaps = contextCandidates.map((followUp) => Math.max(0, (followUp.sameContext ?? 0) - (followUp.newContext ?? 0)));
 
   const meaningfulStimulusGap = stimulusGaps.filter((gap) => gap >= 20).length;
   const meaningfulContextGap = contextGaps.filter((gap) => gap >= 20).length;
   const f5CandidateCount = stimulusGaps.length + contextGaps.length;
   const f5Poor = meaningfulStimulusGap + meaningfulContextGap;
-  const f5Confidence = f5CandidateCount ? f5Poor / f5CandidateCount : 0;
+  const f5Confidence = f5CandidateCount >= 2 ? f5Poor / f5CandidateCount : 0;
   const f5Status: PhenotypeStatus = f5CandidateCount < 2
     ? "insufficient_data"
     : f5Confidence >= 0.6 ? "probable" : f5Confidence >= 0.3 ? "possible" : "resolved";
@@ -124,14 +135,14 @@ export function scorePhenotype(events: LearningEventForPhenotype[]): PhenotypeAs
     ...renewal.map((followUp) => followUp.renewal ?? 0),
     ...reinstatement.map((followUp) => followUp.reinstatement ?? 0)
   ];
-  const f6Positive = relapseSignals.filter((value) => value > 0).length;
+  const f6Positive = relapseSignals.filter((value) > 0).length;
   const f6Confidence = relapseSignals.length >= 2 ? f6Positive / relapseSignals.length : 0;
   const f6Status: PhenotypeStatus = relapseSignals.length < 2
     ? "insufficient_data"
     : f6Confidence >= 0.6 ? "probable" : f6Confidence >= 0.3 ? "possible" : "resolved";
 
   const retentionRationale = retention7Values.length
-    ? [`${poorRetention7}/${retention7Values.length} ukonfunderede 7d same-context observationer ligger under den definerede testmarkør.`]
+    ? [`${poorRetention7}/${retention7Values.length} ukonfunderede 7d same-context observationer ligger under 50/100 som intern research-markør.`]
     : ["Der mangler tilstrækkelige 7d same-context observationer."];
   if (follow24.length && !follow7.length) retentionRationale.push("24h-data alene bruges ikke til at konkludere en F4-bottleneck.");
   if (confounded > 0) retentionRationale.push(`${confounded} event(s) har confound-markering og vægtes ikke i 7d-hovedsignalet.`);
@@ -143,7 +154,7 @@ export function scorePhenotype(events: LearningEventForPhenotype[]): PhenotypeAs
       f3Confidence,
       acquisitionEvents.length,
       confounded,
-      [`${positiveAcquisition}/${acquisitionEvents.length} valide acquisition-events viser samlet positiv safety-learning-signal.`],
+      [`Gennemsnitlig acquisition strength: ${(meanAcquisitionStrength * 100).toFixed(1)}%. Højre F3-confidence betyder svagere observeret sikkerhedslæring.`],
       ["pre/post threat expectancy", "pre/post safety expectancy"]
     ),
     assessment(
