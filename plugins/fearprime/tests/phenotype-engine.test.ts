@@ -25,7 +25,25 @@ describe("Fearprime PTSD phenotype engine", () => {
     expect(signals.find((signal) => signal.phenotype === "F4")?.status).toBe("insufficient_data");
   });
 
-  it("recognises repeated poor 7d same-context retention as a possible F4 bottleneck", () => {
+  it("marks poor acquisition as a possible/probable F3 bottleneck", () => {
+    const signals = scorePhenotype([
+      extinctionEvent({ threatPre: 80, threatPost: 82, safetyPre: 20, safetyPost: 18 }),
+      extinctionEvent({ threatPre: 75, threatPost: 80, safetyPre: 25, safetyPost: 20 })
+    ]);
+
+    expect(signals.find((signal) => signal.phenotype === "F3")?.status).toBe("probable");
+  });
+
+  it("does not classify strong acquisition as an F3 bottleneck", () => {
+    const signals = scorePhenotype([
+      extinctionEvent(),
+      extinctionEvent()
+    ]);
+
+    expect(signals.find((signal) => signal.phenotype === "F3")?.status).toBe("resolved");
+  });
+
+  it("recognises repeated poor 7d same-context retention as F4", () => {
     const signals = scorePhenotype([
       extinctionEvent({ followUps: [{ timepoint: "7d", sameContext: 35, sleepQuality: 8 }] }),
       extinctionEvent({ followUps: [{ timepoint: "7d", sameContext: 40, sleepQuality: 8 }] })
