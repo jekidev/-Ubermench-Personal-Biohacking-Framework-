@@ -1,4 +1,4 @@
--- Fearprime v0.1 domain schema
+-- Fearprime v2.0 PTSD domain schema
 -- Raw observations are preserved; derived metrics should be recomputable.
 
 CREATE TABLE IF NOT EXISTS patients (
@@ -117,6 +117,7 @@ CREATE TABLE IF NOT EXISTS learning_events (
   pre_state JSONB,
   post_state JSONB,
   actual_outcome TEXT,
+  actual_outcome_probability SMALLINT CHECK (actual_outcome_probability BETWEEN 0 AND 100),
   learning_quality JSONB,
   data_quality JSONB,
   status TEXT NOT NULL DEFAULT 'draft'
@@ -127,7 +128,21 @@ CREATE TABLE IF NOT EXISTS followups (
   source_event_id TEXT NOT NULL REFERENCES learning_events(id),
   timepoint TEXT NOT NULL,
   timestamp TIMESTAMPTZ NOT NULL,
-  data JSONB NOT NULL DEFAULT '{}'::jsonb
+  data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  status TEXT NOT NULL DEFAULT 'pending',
+  correction_of TEXT REFERENCES followups(id)
+);
+
+CREATE TABLE IF NOT EXISTS clinical_assessments (
+  id TEXT PRIMARY KEY,
+  patient_id TEXT NOT NULL REFERENCES patients(id),
+  instrument TEXT NOT NULL,
+  instrument_version TEXT NOT NULL,
+  timestamp TIMESTAMPTZ NOT NULL,
+  total_score DOUBLE PRECISION,
+  subscores JSONB,
+  completed_by TEXT NOT NULL,
+  source TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS daily_states (
@@ -135,7 +150,8 @@ CREATE TABLE IF NOT EXISTS daily_states (
   patient_id TEXT NOT NULL REFERENCES patients(id),
   timestamp TIMESTAMPTZ NOT NULL,
   period TEXT NOT NULL,
-  data JSONB NOT NULL DEFAULT '{}'::jsonb
+  data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  confounded BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS sleep_records (
@@ -157,6 +173,14 @@ CREATE TABLE IF NOT EXISTS physiology_records (
   artifact_flag BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+CREATE TABLE IF NOT EXISTS intrusion_events (
+  id TEXT PRIMARY KEY,
+  patient_id TEXT NOT NULL REFERENCES patients(id),
+  memory_id TEXT REFERENCES memory_targets(id),
+  timestamp TIMESTAMPTZ NOT NULL,
+  data JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
 CREATE TABLE IF NOT EXISTS adverse_events (
   id TEXT PRIMARY KEY,
   patient_id TEXT NOT NULL REFERENCES patients(id),
@@ -167,6 +191,35 @@ CREATE TABLE IF NOT EXISTS adverse_events (
   suspected_relationship TEXT NOT NULL,
   action TEXT NOT NULL,
   clinician_notified BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS clinician_decisions (
+  id TEXT PRIMARY KEY,
+  patient_id TEXT NOT NULL REFERENCES patients(id),
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  decision TEXT NOT NULL,
+  rationale TEXT,
+  clinician_id TEXT NOT NULL,
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  review_date TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS evidence_records (
+  id TEXT PRIMARY KEY,
+  intervention_id TEXT REFERENCES interventions(id),
+  citation TEXT NOT NULL,
+  publication_date DATE,
+  study_type TEXT NOT NULL,
+  population TEXT,
+  sample_size INTEGER,
+  primary_endpoint TEXT,
+  result TEXT,
+  limitations TEXT,
+  ptsd_specific BOOLEAN NOT NULL DEFAULT FALSE,
+  mechanistic BOOLEAN NOT NULL DEFAULT FALSE,
+  evidence_tier TEXT NOT NULL,
+  reviewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS audit_events (
@@ -181,14 +234,11 @@ CREATE TABLE IF NOT EXISTS audit_events (
   current_hash TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_learning_events_experiment_time
-  ON learning_events(experiment_id, timestamp_start);
-
-CREATE INDEX IF NOT EXISTS idx_followups_source_time
-  ON followups(source_event_id, timestamp);
-
-CREATE INDEX IF NOT EXISTS idx_daily_states_patient_time
-  ON daily_states(patient_id, timestamp);
-
-CREATE INDEX IF NOT EXISTS idx_physiology_patient_time
-  ON physiology_records(patient_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_learning_events_experiment_time ON learning_events(experiment_id, timestamp_start);
+CREATE INDEX IF NOT EXISTS idx_followups_source_time ON followups(source_event_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_daily_states_patient_time ON daily_states(patient_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_sleep_records_patient_date ON sleep_records(patient_id, date);
+CREATE INDEX IF NOT EXISTS idx_physiology_patient_time ON physiology_records(patient_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_clinical_patient_time ON clinical_assessments(patient_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_intrusions_patient_time ON intrusion_events(patient_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_adverse_patient_time ON adverse_events(patient_id, timestamp);
