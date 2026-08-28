@@ -45,7 +45,7 @@ describe('rankInterventions', () => {
 
     const result = rankInterventions(candidates)
     expect(result[0]?.id).toBe('strong')
-    expect(candidates[0].priority).toBe(50)
-    expect(candidates[1].priority).toBe(50)
+    expect(candidates[0]!.priority).toBe(50)
+    expect(candidates[1]!.priority).toBe(50)
   })
 })
