@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { HealthSyncOrchestrator } from './health-sync-orchestrator'
+import type { HealthProviderSyncResult, HealthSyncOrchestrator } from './health-sync-orchestrator'
 import { syncAndPersistHealth } from './health-sync-persistence'
 import { PERSONAL_STATE_STORAGE_KEY } from './personal-state-store'
 
@@ -15,41 +15,43 @@ function storage(): Storage {
   }
 }
 
-function orchestrator() {
+function orchestrator(): Pick<HealthSyncOrchestrator, 'syncAvailable'> {
+  const results: HealthProviderSyncResult[] = [
+    {
+      provider: 'garmin',
+      state: 'connected',
+      samples: [],
+      observations: [
+        {
+          id: 'obs-1',
+          subjectId: 'subject-1',
+          metric: 'heart_rate',
+          value: 60,
+          unit: 'bpm',
+          observedAt: '2026-08-26T10:00:00.000Z',
+        },
+      ],
+    },
+    {
+      provider: 'android-health-connect',
+      state: 'connected',
+      samples: [],
+      observations: [
+        {
+          id: 'obs-2',
+          subjectId: 'subject-1',
+          metric: 'steps',
+          value: 5000,
+          unit: 'count',
+          observedAt: '2026-08-26T11:00:00.000Z',
+        },
+      ],
+    },
+  ]
+
   return {
-    syncAvailable: vi.fn(async () => [
-      {
-        provider: 'garmin' as const,
-        state: 'connected' as const,
-        samples: [],
-        observations: [
-          {
-            id: 'obs-1',
-            subjectId: 'subject-1',
-            metric: 'heart_rate',
-            value: 60,
-            unit: 'bpm',
-            observedAt: '2026-08-26T10:00:00.000Z',
-          },
-        ],
-      },
-      {
-        provider: 'android-health-connect' as const,
-        state: 'connected' as const,
-        samples: [],
-        observations: [
-          {
-            id: 'obs-2',
-            subjectId: 'subject-1',
-            metric: 'steps',
-            value: 5000,
-            unit: 'count',
-            observedAt: '2026-08-26T11:00:00.000Z',
-          },
-        ],
-      },
-    ]),
-  } satisfies Pick<HealthSyncOrchestrator, 'syncAvailable'>
+    syncAvailable: vi.fn(async () => results),
+  }
 }
 
 describe('health sync persistence', () => {
