@@ -41,6 +41,20 @@ export class HealthSyncOrchestrator {
   }
 
   async syncProvider(provider: HealthProviderId, from?: string, to?: string): Promise<HealthProviderSyncResult> {
+    const currentState = this.manager.getState(provider)
+    const state = currentState.status === 'connected'
+      ? currentState
+      : await this.manager.connect(provider)
+
+    if (state.status !== 'connected') {
+      return {
+        provider,
+        state,
+        samples: [],
+        observations: [],
+      }
+    }
+
     const result = await this.manager.sync(provider, from, to)
     const supported = filterSupportedProviderSamples(result.samples)
     const observations = normalizeHealthSamples(supported, this.options.subjectId)
