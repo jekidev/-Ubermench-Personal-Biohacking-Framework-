@@ -13,6 +13,8 @@ export interface PersistedHealthSyncResult {
   store: PersonalStateStore
 }
 
+type HealthSyncSource = Pick<HealthSyncOrchestrator, 'syncAvailable'>
+
 /**
  * Persist the canonical output of a provider sync without allowing raw provider
  * records to bypass the canonical observation boundary.
@@ -21,7 +23,7 @@ export interface PersistedHealthSyncResult {
  * canonical observation id.
  */
 export async function syncAndPersistHealth(
-  orchestrator: HealthSyncOrchestrator,
+  orchestrator: HealthSyncSource,
   storage: Pick<Storage, 'getItem' | 'setItem'>,
   from?: string,
   to?: string,
