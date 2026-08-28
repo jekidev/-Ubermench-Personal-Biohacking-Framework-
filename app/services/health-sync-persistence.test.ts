@@ -19,7 +19,7 @@ function orchestrator(): Pick<HealthSyncOrchestrator, 'syncAvailable'> {
   const results: HealthProviderSyncResult[] = [
     {
       provider: 'garmin',
-      state: 'connected',
+      state: { provider: 'garmin', status: 'connected' },
       samples: [],
       observations: [
         {
@@ -29,12 +29,15 @@ function orchestrator(): Pick<HealthSyncOrchestrator, 'syncAvailable'> {
           value: 60,
           unit: 'bpm',
           observedAt: '2026-08-26T10:00:00.000Z',
+          source: 'garmin',
+          quality: 'good',
+          confidence: 1,
         },
       ],
     },
     {
-      provider: 'android-health-connect',
-      state: 'connected',
+      provider: 'health-connect',
+      state: { provider: 'health-connect', status: 'connected' },
       samples: [],
       observations: [
         {
@@ -44,6 +47,9 @@ function orchestrator(): Pick<HealthSyncOrchestrator, 'syncAvailable'> {
           value: 5000,
           unit: 'count',
           observedAt: '2026-08-26T11:00:00.000Z',
+          source: 'health-connect',
+          quality: 'good',
+          confidence: 1,
         },
       ],
     },
