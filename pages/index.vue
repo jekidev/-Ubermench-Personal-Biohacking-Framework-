@@ -11,13 +11,23 @@
       </div>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-4">
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <UCard v-for="card in cards" :key="card.title">
         <div class="text-sm text-zinc-500">{{ card.title }}</div>
         <div class="mt-2 text-2xl font-semibold">{{ card.value }}</div>
         <div class="mt-1 text-xs text-zinc-500">{{ card.note }}</div>
       </UCard>
     </div>
+
+    <UCard>
+      <template #header><div class="font-medium">Personal data coverage</div></template>
+      <div class="grid gap-3 sm:grid-cols-3 text-sm">
+        <div><span class="text-zinc-500">Biomarkers:</span> {{ profile.biomarkers.length }}</div>
+        <div><span class="text-zinc-500">Genetic variants:</span> {{ profile.variants.length }}</div>
+        <div><span class="text-zinc-500">Sleep / training:</span> {{ profile.sleep.length }} / {{ profile.training.length }}</div>
+      </div>
+      <p class="mt-3 text-xs text-zinc-500">Profile state is loaded from the local-first biology store.</p>
+    </UCard>
 
     <UCard>
       <template #header><div class="font-medium">AI console</div></template>
@@ -53,19 +63,27 @@
 </template>
 
 <script setup lang="ts">
+import { assessLongevity } from '~/services/longevity-engine'
+
 const llm = useLLM()
 const ai = useBiohackingAI()
+const biology = usePersonalBiology()
+const profile = biology.profile
 const prompt = ref('')
 const loading = ref(false)
 const error = ref('')
 const lastRun = ref<Awaited<ReturnType<typeof ai.ask>> | null>(null)
+
+await biology.initialize()
+
 const enabledProviders = computed(() => llm.settings.value.providers.filter((p) => p.enabled).length)
-const cards = [
+const assessment = computed(() => assessLongevity(profile.value))
+const cards = computed(() => [
   { title: 'Plugins', value: 'Fearprime + Longevity', note: 'Modular domain architecture' },
-  { title: 'Data model', value: 'Local-first', note: 'Health and DNA remain local by default' },
-  { title: 'AI', value: 'Multi-provider', note: 'OpenRouter, OpenAI, Anthropic and HF routing' },
-  { title: 'Desktop', value: 'Tauri 2', note: 'Native shell boundary ready' },
-]
+  { title: 'Biology', value: String(profile.value.biomarkers.length), note: 'Biomarker records loaded locally' },
+  { title: 'Longevity', value: `${assessment.value.score}/100`, note: 'Reference-bound screening only' },
+  { title: 'AI', value: `${enabledProviders.value} providers`, note: 'Multi-provider orchestration' },
+])
 
 async function runAI() {
   error.value = ''
