@@ -25,6 +25,11 @@
         <UInput v-model="googleClientSecret" placeholder="GOOGLE_CLIENT_SECRET (optional)" type="password" />
         <UInput v-model="driveFolderId" placeholder="Drive folder ID for RAG sync (optional)" class="md:col-span-2" />
       </div>
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <input ref="googleJsonInput" type="file" accept="application/json,.json" class="hidden" @change="onGoogleJsonSelected" />
+        <UButton variant="outline" @click="googleJsonInput?.click()">Import client JSON</UButton>
+        <span class="text-xs text-zinc-500">Upload the OAuth JSON from Google Cloud (never commit it to git).</span>
+      </div>
       <div class="mt-4 flex flex-wrap gap-2">
         <UButton :loading="google.busy.value" @click="saveGoogleConfig">Save Google config</UButton>
         <UButton :loading="google.busy.value" @click="connectGoogle(['google-drive', 'gmail'])">Connect Drive + Gmail</UButton>
@@ -113,6 +118,7 @@ const isAndroidBrowserRef = computed(() => isAndroidBrowser())
 
 const { catalog, statuses, busy, error, refresh, toggle, saveCredential, isEnabled } = useConnectors()
 const google = useGoogleOAuth()
+const googleJsonInput = ref<HTMLInputElement>()
 const credentialDrafts = reactive<Record<string, string>>({})
 const googleClientId = ref('')
 const googleClientSecret = ref('')
@@ -151,6 +157,21 @@ async function saveGoogleConfig() {
   if (googleClientSecret.value.trim()) await google.saveClientSecret(googleClientSecret.value.trim())
   if (driveFolderId.value.trim()) await google.saveDriveFolderId(driveFolderId.value.trim())
   await refresh()
+}
+
+async function onGoogleJsonSelected(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try {
+    const parsed = await google.importClientJson(await file.text())
+    googleClientId.value = parsed.clientId
+    googleClientSecret.value = parsed.clientSecret ?? ''
+    await refresh()
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Failed to import Google client JSON'
+  } finally {
+    if (googleJsonInput.value) googleJsonInput.value.value = ''
+  }
 }
 
 async function connectGoogle(connectorIds: Array<'google-drive' | 'gmail'>) {

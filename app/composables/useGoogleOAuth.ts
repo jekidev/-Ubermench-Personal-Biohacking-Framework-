@@ -85,6 +85,14 @@ export function useGoogleOAuth() {
     return (await getSecret(GOOGLE_SECRET_KEYS.clientId)) ?? ''
   }
 
+  async function importClientJson(raw: string) {
+    const { parseGoogleClientSecretJson } = await import('../../plugins/connectors/oauth/google-client-json')
+    const parsed = parseGoogleClientSecretJson(raw)
+    await saveClientId(parsed.clientId)
+    if (parsed.clientSecret) await saveClientSecret(parsed.clientSecret)
+    return parsed
+  }
+
   return {
     busy,
     error,
@@ -96,5 +104,6 @@ export function useGoogleOAuth() {
     startOAuth,
     handleCallback,
     loadClientId,
+    importClientJson,
   }
 }
