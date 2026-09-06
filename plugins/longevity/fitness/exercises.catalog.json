@@ -1,0 +1,787 @@
+{
+  "schemaVersion": 1,
+  "source": "https://github.com/hasaneyldrm/exercises-dataset",
+  "license": "MIT metadata only \u2014 no Gym visual media",
+  "count": 32,
+  "exercises": [
+    {
+      "id": "0025",
+      "name": "barbell bench press",
+      "category": "chest",
+      "bodyPart": "chest",
+      "equipment": "barbell",
+      "target": "pectorals",
+      "muscleGroup": "triceps",
+      "secondaryMuscles": [
+        "triceps",
+        "shoulders"
+      ],
+      "instructionsEn": "Lie flat on a bench with your feet flat on the ground and your back pressed against the bench. Grasp the barbell with an overhand grip slightly wider than shoulder-width apart. Lift the barbell off the rack and hold it directly above your chest with your arms fully extended. Lower the barbell slowly towards your chest, keeping your elbows tucked in. Pause for a moment when the barbell touches your chest. Push the barbell back up to the starting position by extending your arms. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Lie flat on a bench with your feet flat on the ground and your back pressed against the bench.",
+        "Grasp the barbell with an overhand grip slightly wider than shoulder-width apart.",
+        "Lift the barbell off the rack and hold it directly above your chest with your arms fully extended.",
+        "Lower the barbell slowly towards your chest, keeping your elbows tucked in.",
+        "Pause for a moment when the barbell touches your chest.",
+        "Push the barbell back up to the starting position by extending your arms.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0043",
+      "name": "barbell full squat",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "barbell",
+      "target": "glutes",
+      "muscleGroup": "quadriceps",
+      "secondaryMuscles": [
+        "quadriceps",
+        "hamstrings",
+        "calves",
+        "core"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart, toes slightly turned out. Hold the barbell across your upper back, resting it on your traps or rear delts. Engage your core and keep your chest up as you begin to lower your body down. Bend at the knees and hips, pushing your hips back and down as if sitting into a chair. Lower yourself until your thighs are parallel to the ground or slightly below. Keep your knees in line with your toes and your weight in your heels. Drive through your heels to stand back up, extending your hips and knees. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart, toes slightly turned out.",
+        "Hold the barbell across your upper back, resting it on your traps or rear delts.",
+        "Engage your core and keep your chest up as you begin to lower your body down.",
+        "Bend at the knees and hips, pushing your hips back and down as if sitting into a chair.",
+        "Lower yourself until your thighs are parallel to the ground or slightly below.",
+        "Keep your knees in line with your toes and your weight in your heels.",
+        "Drive through your heels to stand back up, extending your hips and knees.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0032",
+      "name": "barbell deadlift",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "barbell",
+      "target": "glutes",
+      "muscleGroup": "hamstrings",
+      "secondaryMuscles": [
+        "hamstrings",
+        "lower back"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart and the barbell on the ground in front of you. Bend your knees and hinge at the hips to lower your torso and grip the barbell with an overhand grip, hands slightly wider than shoulder-width apart. Keep your back straight and chest lifted as you drive through your heels to lift the barbell off the ground, extending your hips and knees. As you stand up straight, squeeze your glutes and keep your core engaged. Lower the barbell back down to the ground by bending at the hips and knees, keeping your back straight. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart and the barbell on the ground in front of you.",
+        "Bend your knees and hinge at the hips to lower your torso and grip the barbell with an overhand grip, hands slightly wider than shoulder-width apart.",
+        "Keep your back straight and chest lifted as you drive through your heels to lift the barbell off the ground, extending your hips and knees.",
+        "As you stand up straight, squeeze your glutes and keep your core engaged.",
+        "Lower the barbell back down to the ground by bending at the hips and knees, keeping your back straight.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0652",
+      "name": "pull-up",
+      "category": "back",
+      "bodyPart": "back",
+      "equipment": "body weight",
+      "target": "lats",
+      "muscleGroup": "biceps",
+      "secondaryMuscles": [
+        "biceps",
+        "forearms"
+      ],
+      "instructionsEn": "Hang from a pull-up bar with your palms facing away from you and your arms fully extended. Engage your core and squeeze your shoulder blades together. Pull your body up towards the bar by bending your elbows and bringing your chest towards the bar. Pause at the top of the movement, then slowly lower your body back down to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Hang from a pull-up bar with your palms facing away from you and your arms fully extended.",
+        "Engage your core and squeeze your shoulder blades together.",
+        "Pull your body up towards the bar by bending your elbows and bringing your chest towards the bar.",
+        "Pause at the top of the movement, then slowly lower your body back down to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0662",
+      "name": "push-up",
+      "category": "chest",
+      "bodyPart": "chest",
+      "equipment": "body weight",
+      "target": "pectorals",
+      "muscleGroup": "triceps",
+      "secondaryMuscles": [
+        "triceps",
+        "deltoids",
+        "core"
+      ],
+      "instructionsEn": "Start in a high plank position with your hands slightly wider than shoulder-width apart and your feet together. Engage your core and lower your body towards the ground by bending your elbows, keeping your body in a straight line. Pause for a moment when your chest is just above the ground, then push yourself back up to the starting position by straightening your arms. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Start in a high plank position with your hands slightly wider than shoulder-width apart and your feet together.",
+        "Engage your core and lower your body towards the ground by bending your elbows, keeping your body in a straight line.",
+        "Pause for a moment when your chest is just above the ground, then push yourself back up to the starting position by straightening your arms.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "3665",
+      "name": "power point plank",
+      "category": "waist",
+      "bodyPart": "waist",
+      "equipment": "body weight",
+      "target": "abs",
+      "muscleGroup": "shoulders",
+      "secondaryMuscles": [
+        "shoulders",
+        "triceps",
+        "glutes"
+      ],
+      "instructionsEn": "Start in a high plank position with your hands directly under your shoulders and your body in a straight line from head to toe. Engage your core and squeeze your glutes to maintain a stable position. Lower your body down onto your forearms, one arm at a time, maintaining a straight line from head to toe. Hold this position for the desired amount of time, keeping your core and glutes engaged. To return to the starting position, push through your forearms and lift your body back up into a high plank position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Start in a high plank position with your hands directly under your shoulders and your body in a straight line from head to toe.",
+        "Engage your core and squeeze your glutes to maintain a stable position.",
+        "Lower your body down onto your forearms, one arm at a time, maintaining a straight line from head to toe.",
+        "Hold this position for the desired amount of time, keeping your core and glutes engaged.",
+        "To return to the starting position, push through your forearms and lift your body back up into a high plank position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0334",
+      "name": "dumbbell lateral raise",
+      "category": "shoulders",
+      "bodyPart": "shoulders",
+      "equipment": "dumbbell",
+      "target": "delts",
+      "muscleGroup": "traps",
+      "secondaryMuscles": [
+        "traps"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart and hold a dumbbell in each hand, palms facing your body. Keep your back straight and engage your core. Raise your arms out to the sides until they are parallel to the floor, keeping a slight bend in your elbows. Pause for a moment at the top, then slowly lower your arms back down to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart and hold a dumbbell in each hand, palms facing your body.",
+        "Keep your back straight and engage your core.",
+        "Raise your arms out to the sides until they are parallel to the floor, keeping a slight bend in your elbows.",
+        "Pause for a moment at the top, then slowly lower your arms back down to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0027",
+      "name": "barbell bent over row",
+      "category": "back",
+      "bodyPart": "back",
+      "equipment": "barbell",
+      "target": "upper back",
+      "muscleGroup": "biceps",
+      "secondaryMuscles": [
+        "biceps",
+        "forearms"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart and knees slightly bent. Bend forward at the hips while keeping your back straight and chest up. Grasp the barbell with an overhand grip, hands slightly wider than shoulder-width apart. Pull the barbell towards your lower chest by retracting your shoulder blades and squeezing your back muscles. Pause for a moment at the top, then slowly lower the barbell back to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart and knees slightly bent.",
+        "Bend forward at the hips while keeping your back straight and chest up.",
+        "Grasp the barbell with an overhand grip, hands slightly wider than shoulder-width apart.",
+        "Pull the barbell towards your lower chest by retracting your shoulder blades and squeezing your back muscles.",
+        "Pause for a moment at the top, then slowly lower the barbell back to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "1012",
+      "name": "band twisting overhead press",
+      "category": "shoulders",
+      "bodyPart": "shoulders",
+      "equipment": "band",
+      "target": "delts",
+      "muscleGroup": "triceps",
+      "secondaryMuscles": [
+        "triceps",
+        "upper back"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart and place the band under your feet. Hold the band handles at shoulder height with your palms facing forward. Engage your core and press the band overhead, fully extending your arms. As you press, twist your torso to one side, keeping your hips stable. Pause for a moment at the top, then return to the starting position. Repeat the press and twist on the opposite side. Continue alternating sides for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart and place the band under your feet.",
+        "Hold the band handles at shoulder height with your palms facing forward.",
+        "Engage your core and press the band overhead, fully extending your arms.",
+        "As you press, twist your torso to one side, keeping your hips stable.",
+        "Pause for a moment at the top, then return to the starting position.",
+        "Repeat the press and twist on the opposite side.",
+        "Continue alternating sides for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "1460",
+      "name": "walking lunge",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "body weight",
+      "target": "glutes",
+      "muscleGroup": "quadriceps",
+      "secondaryMuscles": [
+        "quadriceps",
+        "hamstrings",
+        "calves"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart. Take a step forward with your right leg, lowering your body into a lunge position. Keep your torso upright and your front knee aligned with your ankle. Push off with your right foot and bring your left foot forward, stepping into a lunge position with your left leg. Continue alternating legs and walking forward, maintaining a controlled and steady pace. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart.",
+        "Take a step forward with your right leg, lowering your body into a lunge position.",
+        "Keep your torso upright and your front knee aligned with your ankle.",
+        "Push off with your right foot and bring your left foot forward, stepping into a lunge position with your left leg.",
+        "Continue alternating legs and walking forward, maintaining a controlled and steady pace.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0085",
+      "name": "barbell romanian deadlift",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "barbell",
+      "target": "glutes",
+      "muscleGroup": "hamstrings",
+      "secondaryMuscles": [
+        "hamstrings",
+        "lower back"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart and your toes pointing forward. Hold the barbell with an overhand grip, hands slightly wider than shoulder-width apart. Bend at the hips, keeping your back straight and your knees slightly bent. Lower the barbell towards the ground, keeping it close to your body. Feel the stretch in your hamstrings as you lower the barbell. Once you feel a stretch in your hamstrings, push your hips forward and stand up straight. Squeeze your glutes at the top of the movement. Lower the barbell back down to the starting position and repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart and your toes pointing forward.",
+        "Hold the barbell with an overhand grip, hands slightly wider than shoulder-width apart.",
+        "Bend at the hips, keeping your back straight and your knees slightly bent.",
+        "Lower the barbell towards the ground, keeping it close to your body.",
+        "Feel the stretch in your hamstrings as you lower the barbell.",
+        "Once you feel a stretch in your hamstrings, push your hips forward and stand up straight.",
+        "Squeeze your glutes at the top of the movement.",
+        "Lower the barbell back down to the starting position and repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "3236",
+      "name": "resistance band hip thrusts on knees (female)",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "resistance band",
+      "target": "glutes",
+      "muscleGroup": "hamstrings",
+      "secondaryMuscles": [
+        "hamstrings",
+        "quadriceps"
+      ],
+      "instructionsEn": "Start by kneeling on the ground with your knees hip-width apart and your feet flexed. Wrap the resistance band around your thighs, just above your knees. Place your hands on your hips or extend them out in front of you for balance. Engage your glutes and core muscles. Push your hips forward and squeeze your glutes as you lift your knees off the ground, extending your hips until your thighs are parallel to the ground. Hold the position for a moment, then slowly lower your knees back down to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Start by kneeling on the ground with your knees hip-width apart and your feet flexed.",
+        "Wrap the resistance band around your thighs, just above your knees.",
+        "Place your hands on your hips or extend them out in front of you for balance.",
+        "Engage your glutes and core muscles.",
+        "Push your hips forward and squeeze your glutes as you lift your knees off the ground, extending your hips until your thighs are parallel to the ground.",
+        "Hold the position for a moment, then slowly lower your knees back down to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "2133",
+      "name": "farmers walk",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "dumbbell",
+      "target": "quads",
+      "muscleGroup": "calves",
+      "secondaryMuscles": [
+        "calves",
+        "forearms",
+        "core"
+      ],
+      "instructionsEn": "Stand up straight with a dumbbell in each hand, palms facing your sides. Keep your back straight and your shoulders back. Take small, controlled steps forward, maintaining an upright posture. Continue walking for the desired distance or time. To finish, stop walking and carefully lower the dumbbells to your sides.",
+      "stepsEn": [
+        "Stand up straight with a dumbbell in each hand, palms facing your sides.",
+        "Keep your back straight and your shoulders back.",
+        "Take small, controlled steps forward, maintaining an upright posture.",
+        "Continue walking for the desired distance or time.",
+        "To finish, stop walking and carefully lower the dumbbells to your sides."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0499",
+      "name": "inverted row",
+      "category": "back",
+      "bodyPart": "back",
+      "equipment": "body weight",
+      "target": "upper back",
+      "muscleGroup": "biceps",
+      "secondaryMuscles": [
+        "biceps",
+        "forearms"
+      ],
+      "instructionsEn": "Set up a bar at waist height or use a suspension trainer. Stand facing the bar or suspension trainer, with your feet shoulder-width apart. Grab the bar or handles with an overhand grip, slightly wider than shoulder-width apart. Lean back, keeping your body straight and your heels on the ground. Pull your chest towards the bar or handles, squeezing your shoulder blades together. Pause for a moment at the top, then slowly lower yourself back to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Set up a bar at waist height or use a suspension trainer.",
+        "Stand facing the bar or suspension trainer, with your feet shoulder-width apart.",
+        "Grab the bar or handles with an overhand grip, slightly wider than shoulder-width apart.",
+        "Lean back, keeping your body straight and your heels on the ground.",
+        "Pull your chest towards the bar or handles, squeezing your shoulder blades together.",
+        "Pause for a moment at the top, then slowly lower yourself back to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "1326",
+      "name": "chin-up",
+      "category": "back",
+      "bodyPart": "back",
+      "equipment": "body weight",
+      "target": "lats",
+      "muscleGroup": "biceps",
+      "secondaryMuscles": [
+        "biceps",
+        "forearms"
+      ],
+      "instructionsEn": "Hang from a pull-up bar with your palms facing towards you and your hands shoulder-width apart. Engage your core and pull your body up towards the bar, leading with your chest. Continue pulling until your chin is above the bar. Pause for a moment at the top, then slowly lower your body back down to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Hang from a pull-up bar with your palms facing towards you and your hands shoulder-width apart.",
+        "Engage your core and pull your body up towards the bar, leading with your chest.",
+        "Continue pulling until your chin is above the bar.",
+        "Pause for a moment at the top, then slowly lower your body back down to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0276",
+      "name": "dead bug",
+      "category": "waist",
+      "bodyPart": "waist",
+      "equipment": "body weight",
+      "target": "abs",
+      "muscleGroup": "hip flexors",
+      "secondaryMuscles": [
+        "hip flexors",
+        "lower back"
+      ],
+      "instructionsEn": "Lie flat on your back with your arms extended towards the ceiling. Bend your knees and lift your legs off the ground, creating a 90-degree angle at your hips and knees. Engage your core and lower back to press your lower back into the ground. Slowly lower your right arm and left leg towards the ground, keeping them straight and hovering just above the floor. Pause for a moment, then return to the starting position. Repeat the movement with your left arm and right leg. Continue alternating sides for the desired number of repetitions.",
+      "stepsEn": [
+        "Lie flat on your back with your arms extended towards the ceiling.",
+        "Bend your knees and lift your legs off the ground, creating a 90-degree angle at your hips and knees.",
+        "Engage your core and lower back to press your lower back into the ground.",
+        "Slowly lower your right arm and left leg towards the ground, keeping them straight and hovering just above the floor.",
+        "Pause for a moment, then return to the starting position.",
+        "Repeat the movement with your left arm and right leg.",
+        "Continue alternating sides for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "3561",
+      "name": "glute bridge march",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "body weight",
+      "target": "glutes",
+      "muscleGroup": "hamstrings",
+      "secondaryMuscles": [
+        "hamstrings",
+        "quadriceps"
+      ],
+      "instructionsEn": "Lie flat on your back with your knees bent and feet flat on the ground. Engage your glutes and lift your hips off the ground, forming a straight line from your knees to your shoulders. While keeping your hips lifted, lift one foot off the ground and bring your knee towards your chest. Lower your foot back to the ground and repeat the movement with the other leg. Continue alternating legs in a marching motion while maintaining the bridge position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Lie flat on your back with your knees bent and feet flat on the ground.",
+        "Engage your glutes and lift your hips off the ground, forming a straight line from your knees to your shoulders.",
+        "While keeping your hips lifted, lift one foot off the ground and bring your knee towards your chest.",
+        "Lower your foot back to the ground and repeat the movement with the other leg.",
+        "Continue alternating legs in a marching motion while maintaining the bridge position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "1383",
+      "name": "hack calf raise",
+      "category": "lower legs",
+      "bodyPart": "lower legs",
+      "equipment": "sled machine",
+      "target": "calves",
+      "muscleGroup": "hamstrings",
+      "secondaryMuscles": [
+        "hamstrings",
+        "glutes"
+      ],
+      "instructionsEn": "Adjust the sled machine to a comfortable weight. Stand on the sled machine with your toes on the platform and your heels hanging off. Hold onto the handles for stability. Raise your heels as high as possible by pushing through the balls of your feet. Pause for a moment at the top, then slowly lower your heels back down to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Adjust the sled machine to a comfortable weight.",
+        "Stand on the sled machine with your toes on the platform and your heels hanging off.",
+        "Hold onto the handles for stability.",
+        "Raise your heels as high as possible by pushing through the balls of your feet.",
+        "Pause for a moment at the top, then slowly lower your heels back down to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0549",
+      "name": "kettlebell swing",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "kettlebell",
+      "target": "glutes",
+      "muscleGroup": "hamstrings",
+      "secondaryMuscles": [
+        "hamstrings",
+        "core"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart, toes pointed slightly outward. Hold the kettlebell with both hands in front of your body, arms extended. Bend your knees slightly and hinge at the hips, pushing your butt back. Swing the kettlebell back between your legs, keeping your arms straight and maintaining a flat back. Drive your hips forward and swing the kettlebell up to shoulder height, using the momentum generated by your hips. Allow the kettlebell to swing back down between your legs and repeat the movement for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart, toes pointed slightly outward.",
+        "Hold the kettlebell with both hands in front of your body, arms extended.",
+        "Bend your knees slightly and hinge at the hips, pushing your butt back.",
+        "Swing the kettlebell back between your legs, keeping your arms straight and maintaining a flat back.",
+        "Drive your hips forward and swing the kettlebell up to shoulder height, using the momentum generated by your hips.",
+        "Allow the kettlebell to swing back down between your legs and repeat the movement for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "1760",
+      "name": "dumbbell goblet squat",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "dumbbell",
+      "target": "quads",
+      "muscleGroup": "glutes",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings",
+        "calves"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart, holding a dumbbell vertically against your chest with both hands. Keeping your chest up and core engaged, lower your body down into a squat position by pushing your hips back and bending your knees. Continue lowering until your thighs are parallel to the ground, or as low as you can comfortably go. Pause for a moment at the bottom, then push through your heels to return to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart, holding a dumbbell vertically against your chest with both hands.",
+        "Keeping your chest up and core engaged, lower your body down into a squat position by pushing your hips back and bending your knees.",
+        "Continue lowering until your thighs are parallel to the ground, or as low as you can comfortably go.",
+        "Pause for a moment at the bottom, then push through your heels to return to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0293",
+      "name": "dumbbell bent over row",
+      "category": "back",
+      "bodyPart": "back",
+      "equipment": "dumbbell",
+      "target": "upper back",
+      "muscleGroup": "biceps",
+      "secondaryMuscles": [
+        "biceps",
+        "forearms"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart, knees slightly bent, and hold a dumbbell in each hand with your palms facing your body. Bend forward at the hips, keeping your back straight and your core engaged. Let your arms hang straight down towards the floor, with your elbows slightly bent. Pull the dumbbells up towards your chest, squeezing your shoulder blades together. Pause for a moment at the top, then slowly lower the dumbbells back down to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart, knees slightly bent, and hold a dumbbell in each hand with your palms facing your body.",
+        "Bend forward at the hips, keeping your back straight and your core engaged.",
+        "Let your arms hang straight down towards the floor, with your elbows slightly bent.",
+        "Pull the dumbbells up towards your chest, squeezing your shoulder blades together.",
+        "Pause for a moment at the top, then slowly lower the dumbbells back down to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0630",
+      "name": "mountain climber",
+      "category": "cardio",
+      "bodyPart": "cardio",
+      "equipment": "body weight",
+      "target": "cardiovascular system",
+      "muscleGroup": "core",
+      "secondaryMuscles": [
+        "core",
+        "shoulders",
+        "triceps"
+      ],
+      "instructionsEn": "Start in a high plank position with your hands directly under your shoulders and your body in a straight line. Engage your core and bring your right knee towards your chest, then quickly switch and bring your left knee towards your chest. Continue alternating legs in a running motion, keeping your hips low and your core engaged. Maintain a steady pace and breathe evenly throughout the exercise. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Start in a high plank position with your hands directly under your shoulders and your body in a straight line.",
+        "Engage your core and bring your right knee towards your chest, then quickly switch and bring your left knee towards your chest.",
+        "Continue alternating legs in a running motion, keeping your hips low and your core engaged.",
+        "Maintain a steady pace and breathe evenly throughout the exercise.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "1160",
+      "name": "burpee",
+      "category": "cardio",
+      "bodyPart": "cardio",
+      "equipment": "body weight",
+      "target": "cardiovascular system",
+      "muscleGroup": "quadriceps",
+      "secondaryMuscles": [
+        "quadriceps",
+        "hamstrings",
+        "calves",
+        "shoulders",
+        "chest"
+      ],
+      "instructionsEn": "Start in a standing position with your feet shoulder-width apart. Lower your body into a squat position by bending your knees and placing your hands on the floor in front of you. Kick your feet back into a push-up position. Perform a push-up, keeping your body in a straight line. Jump your feet back into the squat position. Jump up explosively, reaching your arms overhead. Land softly and immediately lower back into a squat position to begin the next repetition.",
+      "stepsEn": [
+        "Start in a standing position with your feet shoulder-width apart.",
+        "Lower your body into a squat position by bending your knees and placing your hands on the floor in front of you.",
+        "Kick your feet back into a push-up position.",
+        "Perform a push-up, keeping your body in a straight line.",
+        "Jump your feet back into the squat position.",
+        "Jump up explosively, reaching your arms overhead.",
+        "Land softly and immediately lower back into a squat position to begin the next repetition."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0972",
+      "name": "band bicycle crunch",
+      "category": "waist",
+      "bodyPart": "waist",
+      "equipment": "band",
+      "target": "abs",
+      "muscleGroup": "hip flexors",
+      "secondaryMuscles": [
+        "hip flexors",
+        "obliques"
+      ],
+      "instructionsEn": "Lie flat on your back with your hands behind your head and your knees bent. Lift your feet off the ground and bring your right knee towards your chest while simultaneously twisting your torso to bring your left elbow towards your right knee. Straighten your right leg while bringing your left knee towards your chest and twisting your torso to bring your right elbow towards your left knee. Continue alternating the twisting motion, as if you are pedaling a bicycle, while keeping your core engaged throughout the movement. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Lie flat on your back with your hands behind your head and your knees bent.",
+        "Lift your feet off the ground and bring your right knee towards your chest while simultaneously twisting your torso to bring your left elbow towards your right knee.",
+        "Straighten your right leg while bringing your left knee towards your chest and twisting your torso to bring your right elbow towards your left knee.",
+        "Continue alternating the twisting motion, as if you are pedaling a bicycle, while keeping your core engaged throughout the movement.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "1775",
+      "name": "side plank hip adduction",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "body weight",
+      "target": "adductors",
+      "muscleGroup": "obliques",
+      "secondaryMuscles": [
+        "obliques",
+        "glutes"
+      ],
+      "instructionsEn": "Start by lying on your side with your legs extended and stacked on top of each other. Prop yourself up on your forearm, keeping your elbow directly below your shoulder. Engage your core and lift your hips off the ground, creating a straight line from your head to your feet. While maintaining the side plank position, lift your top leg towards the ceiling, keeping it straight. Slowly lower your leg back down to the starting position. Repeat for the desired number of repetitions, then switch sides.",
+      "stepsEn": [
+        "Start by lying on your side with your legs extended and stacked on top of each other.",
+        "Prop yourself up on your forearm, keeping your elbow directly below your shoulder.",
+        "Engage your core and lift your hips off the ground, creating a straight line from your head to your feet.",
+        "While maintaining the side plank position, lift your top leg towards the ceiling, keeping it straight.",
+        "Slowly lower your leg back down to the starting position.",
+        "Repeat for the desired number of repetitions, then switch sides."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0673",
+      "name": "reverse grip machine lat pulldown",
+      "category": "back",
+      "bodyPart": "back",
+      "equipment": "leverage machine",
+      "target": "lats",
+      "muscleGroup": "biceps",
+      "secondaryMuscles": [
+        "biceps",
+        "forearms"
+      ],
+      "instructionsEn": "Adjust the seat height and position yourself on the machine with your knees under the pads and your feet flat on the ground. Grasp the handles with an underhand grip, slightly wider than shoulder-width apart. Sit upright with your chest out and shoulders back, maintaining a slight arch in your lower back. Pull the handles down towards your chest, squeezing your shoulder blades together. Pause for a moment at the bottom of the movement, then slowly release the handles back to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Adjust the seat height and position yourself on the machine with your knees under the pads and your feet flat on the ground.",
+        "Grasp the handles with an underhand grip, slightly wider than shoulder-width apart.",
+        "Sit upright with your chest out and shoulders back, maintaining a slight arch in your lower back.",
+        "Pull the handles down towards your chest, squeezing your shoulder blades together.",
+        "Pause for a moment at the bottom of the movement, then slowly release the handles back to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0861",
+      "name": "cable seated row",
+      "category": "back",
+      "bodyPart": "back",
+      "equipment": "cable",
+      "target": "upper back",
+      "muscleGroup": "biceps",
+      "secondaryMuscles": [
+        "biceps",
+        "forearms"
+      ],
+      "instructionsEn": "Sit on the cable row machine with your feet flat on the footrests and your knees slightly bent. Grasp the handles with an overhand grip, keeping your back straight and your shoulders relaxed. Pull the handles towards your body, squeezing your shoulder blades together. Pause for a moment at the peak of the movement, then slowly release the handles back to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Sit on the cable row machine with your feet flat on the footrests and your knees slightly bent.",
+        "Grasp the handles with an overhand grip, keeping your back straight and your shoulders relaxed.",
+        "Pull the handles towards your body, squeezing your shoulder blades together.",
+        "Pause for a moment at the peak of the movement, then slowly release the handles back to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0760",
+      "name": "smith leg press",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "smith machine",
+      "target": "glutes",
+      "muscleGroup": "quadriceps",
+      "secondaryMuscles": [
+        "quadriceps",
+        "hamstrings",
+        "calves"
+      ],
+      "instructionsEn": "Adjust the seat and footplate of the smith machine to a comfortable position. Sit on the machine with your back against the backrest and your feet shoulder-width apart on the footplate. Grasp the handles or sides of the machine for stability. Push the footplate away from you by extending your legs, keeping your back against the backrest. Pause for a moment at the fully extended position. Slowly bend your knees and lower the footplate back towards you, returning to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Adjust the seat and footplate of the smith machine to a comfortable position.",
+        "Sit on the machine with your back against the backrest and your feet shoulder-width apart on the footplate.",
+        "Grasp the handles or sides of the machine for stability.",
+        "Push the footplate away from you by extending your legs, keeping your back against the backrest.",
+        "Pause for a moment at the fully extended position.",
+        "Slowly bend your knees and lower the footplate back towards you, returning to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "1008",
+      "name": "band step-up",
+      "category": "upper legs",
+      "bodyPart": "upper legs",
+      "equipment": "band",
+      "target": "glutes",
+      "muscleGroup": "quadriceps",
+      "secondaryMuscles": [
+        "quadriceps",
+        "hamstrings",
+        "calves"
+      ],
+      "instructionsEn": "Place a band around your thighs, just above your knees. Stand facing a step or platform with your feet hip-width apart. Step up onto the platform with your right foot, pushing through your heel. Extend your left leg behind you, keeping it straight. Lower your left foot back down to the ground. Repeat with your left foot stepping up onto the platform. Continue alternating legs for the desired number of repetitions.",
+      "stepsEn": [
+        "Place a band around your thighs, just above your knees.",
+        "Stand facing a step or platform with your feet hip-width apart.",
+        "Step up onto the platform with your right foot, pushing through your heel.",
+        "Extend your left leg behind you, keeping it straight.",
+        "Lower your left foot back down to the ground.",
+        "Repeat with your left foot stepping up onto the platform.",
+        "Continue alternating legs for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0447",
+      "name": "ez barbell curl",
+      "category": "upper arms",
+      "bodyPart": "upper arms",
+      "equipment": "ez barbell",
+      "target": "biceps",
+      "muscleGroup": "forearms",
+      "secondaryMuscles": [
+        "forearms"
+      ],
+      "instructionsEn": "Stand up straight with your feet shoulder-width apart and hold the ez barbell with an underhand grip, palms facing up. Keep your elbows close to your torso and your upper arms stationary throughout the movement. Exhale as you curl the barbell up towards your shoulders, contracting your biceps. Pause for a moment at the top, then inhale as you slowly lower the barbell back down to the starting position. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand up straight with your feet shoulder-width apart and hold the ez barbell with an underhand grip, palms facing up.",
+        "Keep your elbows close to your torso and your upper arms stationary throughout the movement.",
+        "Exhale as you curl the barbell up towards your shoulders, contracting your biceps.",
+        "Pause for a moment at the top, then inhale as you slowly lower the barbell back down to the starting position.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "1755",
+      "name": "weighted tricep dips",
+      "category": "upper arms",
+      "bodyPart": "upper arms",
+      "equipment": "weighted",
+      "target": "triceps",
+      "muscleGroup": "chest",
+      "secondaryMuscles": [
+        "chest",
+        "shoulders"
+      ],
+      "instructionsEn": "Sit on the edge of a bench or chair with your hands gripping the edge next to your hips. Slide your butt off the front of the bench with your legs extended in front of you. Keep your back close to the bench and your elbows slightly bent. Lower your body by bending your elbows until your upper arms are parallel to the floor. Push yourself back up to the starting position by straightening your arms. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Sit on the edge of a bench or chair with your hands gripping the edge next to your hips.",
+        "Slide your butt off the front of the bench with your legs extended in front of you.",
+        "Keep your back close to the bench and your elbows slightly bent.",
+        "Lower your body by bending your elbows until your upper arms are parallel to the floor.",
+        "Push yourself back up to the starting position by straightening your arms.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    },
+    {
+      "id": "0997",
+      "name": "band shoulder press",
+      "category": "shoulders",
+      "bodyPart": "shoulders",
+      "equipment": "band",
+      "target": "delts",
+      "muscleGroup": "triceps",
+      "secondaryMuscles": [
+        "triceps",
+        "upper back"
+      ],
+      "instructionsEn": "Stand with your feet shoulder-width apart and place the band under your feet. Hold the band with your palms facing forward and raise your hands to shoulder height, elbows bent. Press the band overhead, fully extending your arms. Pause for a moment at the top, then slowly lower the band back to shoulder height. Repeat for the desired number of repetitions.",
+      "stepsEn": [
+        "Stand with your feet shoulder-width apart and place the band under your feet.",
+        "Hold the band with your palms facing forward and raise your hands to shoulder height, elbows bent.",
+        "Press the band overhead, fully extending your arms.",
+        "Pause for a moment at the top, then slowly lower the band back to shoulder height.",
+        "Repeat for the desired number of repetitions."
+      ],
+      "source": "hasaneyldrm/exercises-dataset",
+      "attribution": "Exercise metadata MIT; media not vendored (Gym visual)."
+    }
+  ]
+}

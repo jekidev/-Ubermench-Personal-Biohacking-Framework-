@@ -21,4 +21,11 @@ describe('research adapters', () => {
     expect(() => pubmedAdapter.buildRequest({ query: '   ', provider: 'pubmed' })).toThrow('cannot be empty')
     expect(getResearchAdapter('crossref')).toBe(crossrefAdapter)
   })
+
+  it('routes paper-search through MCP without Sci-Hub', () => {
+    const request = getResearchAdapter('paper-search').buildRequest({ query: 'rapamycin mTOR', provider: 'paper-search' })
+    expect(request.url).toBe('mcp://paper-search/search_papers')
+    expect(request.sciHubEnabled).toBe(false)
+    expect(request.sources).toContain('europepmc')
+  })
 })

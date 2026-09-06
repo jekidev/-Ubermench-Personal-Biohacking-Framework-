@@ -14,6 +14,10 @@ export type ConnectorId =
   | 'supabase'
   | 'convex'
   | 'vercel'
+  | 'paper-search'
+  | 'paper-qa'
+  | 'local-deep-research'
+  | 'pdf-inspector'
 
 export type ConnectorCategory = 'communication' | 'storage' | 'research' | 'ai' | 'devtools' | 'health' | 'payments'
 export type ConnectorTransport = 'mcp-stdio' | 'api' | 'oauth' | 'hybrid'

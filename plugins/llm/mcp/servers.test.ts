@@ -11,5 +11,7 @@ describe('mcp server registry', () => {
   it('links MCP servers to connector ids', () => {
     expect(getMcpServer('github')?.connectorId).toBe('github')
     expect(getMcpServer('huggingface')?.connectorId).toBe('huggingface')
+    expect(getMcpServer('paper-search')?.executable).toBe('uvx')
+    expect(getMcpServer('local-deep-research')?.connectorId).toBe('local-deep-research')
   })
 })

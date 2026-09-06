@@ -69,6 +69,33 @@ export const MCP_SERVER_REGISTRY: McpServerRegistryEntry[] = [
     auth: 'env',
     envKeys: ['HF_TOKEN', 'HUGGINGFACE_TOKEN'],
   },
+  {
+    serverId: 'paper-search',
+    connectorId: 'paper-search',
+    executable: 'uvx',
+    allowedArgs: ['paper-search-mcp'],
+    description: 'Open-access paper search. Sci-Hub tools stay disabled.',
+    enabledByDefault: false,
+    auth: 'env',
+    envKeys: ['PAPER_SEARCH_MCP_UNPAYWALL_EMAIL', 'PAPER_SEARCH_MCP_SEMANTIC_SCHOLAR_API_KEY'],
+  },
+  {
+    serverId: 'paper-qa',
+    connectorId: 'paper-qa',
+    executable: 'paperqa',
+    description: 'Local PaperQA2 sidecar for cited PDF answers',
+    enabledByDefault: false,
+    auth: 'none',
+  },
+  {
+    serverId: 'local-deep-research',
+    connectorId: 'local-deep-research',
+    executable: 'ldr-mcp',
+    description: 'Local Deep Research MCP sidecar for cited research summaries',
+    enabledByDefault: false,
+    auth: 'env',
+    envKeys: ['LDR_LLM_PROVIDER', 'LDR_LLM_OLLAMA_URL'],
+  },
 ]
 
 export function getMcpServer(serverId: string): McpServerRegistryEntry | undefined {

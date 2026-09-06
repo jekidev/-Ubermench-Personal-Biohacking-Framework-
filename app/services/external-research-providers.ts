@@ -1,4 +1,4 @@
-export type ResearchProviderId = 'europe-pmc' | 'agent-reach' | 'local-deep-research' | 'paper-qa'
+export type ResearchProviderId = 'europe-pmc' | 'agent-reach' | 'local-deep-research' | 'paper-qa' | 'paper-search'
 
 export interface ResearchProviderCapability {
   id: ResearchProviderId
@@ -14,6 +14,7 @@ export const RESEARCH_PROVIDER_REGISTRY: ResearchProviderCapability[] = [
   { id: 'agent-reach', name: 'Agent-Reach', enabled: false, requiresLocalRuntime: true, supportsCitations: true, supportsPrivateDocuments: false },
   { id: 'local-deep-research', name: 'Local Deep Research', enabled: false, requiresLocalRuntime: true, supportsCitations: true, supportsPrivateDocuments: true },
   { id: 'paper-qa', name: 'PaperQA', enabled: false, requiresLocalRuntime: true, supportsCitations: true, supportsPrivateDocuments: true },
+  { id: 'paper-search', name: 'Paper Search MCP', enabled: false, requiresLocalRuntime: true, supportsCitations: true, supportsPrivateDocuments: false },
 ]
 
 export function getResearchProvider(id: ResearchProviderId) {
