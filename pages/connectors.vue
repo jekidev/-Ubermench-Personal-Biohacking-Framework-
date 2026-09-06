@@ -109,6 +109,7 @@
 
 <script setup lang="ts">
 import { defaultGoogleRedirectUri } from '../../plugins/connectors/oauth/google-oauth'
+import { loadGoogleCredentials } from '../../plugins/connectors/oauth/google-token-store'
 import { listGmailMessages, type GmailMessageSummary } from '../../plugins/connectors/adapters/gmail-adapter'
 import { syncDrivePdfsToRag } from '../../plugins/connectors/drive-rag-sync'
 import type { ConnectorConnectionStatus, ConnectorId } from '../../plugins/connectors/types'
@@ -132,6 +133,8 @@ const gmailMessages = ref<GmailMessageSummary[]>([])
 
 onMounted(async () => {
   googleClientId.value = await google.loadClientId()
+  const creds = await loadGoogleCredentials()
+  googleClientSecret.value = creds.clientSecret ?? ''
   await google.refreshStatus()
   await refresh()
 })

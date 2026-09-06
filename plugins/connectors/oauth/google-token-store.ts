@@ -8,6 +8,19 @@ import {
   type GoogleTokenResponse,
 } from '../oauth/google-oauth'
 
+function envGoogleCredentials(): Pick<GoogleCredentials, 'clientId' | 'clientSecret'> {
+  if (!import.meta.client) return { clientId: '' }
+  try {
+    const config = useRuntimeConfig()
+    return {
+      clientId: String(config.public.googleClientId || ''),
+      clientSecret: config.public.googleClientSecret ? String(config.public.googleClientSecret) : undefined,
+    }
+  } catch {
+    return { clientId: '' }
+  }
+}
+
 export type GoogleCredentials = {
   clientId: string
   clientSecret?: string
@@ -18,6 +31,7 @@ export type GoogleCredentials = {
 }
 
 export async function loadGoogleCredentials(): Promise<GoogleCredentials> {
+  const env = envGoogleCredentials()
   const [clientId, clientSecret, accessToken, refreshToken, expiresAt, driveFolderId] = await Promise.all([
     getSecret(GOOGLE_SECRET_KEYS.clientId),
     getSecret(GOOGLE_SECRET_KEYS.clientSecret),
@@ -27,8 +41,8 @@ export async function loadGoogleCredentials(): Promise<GoogleCredentials> {
     getSecret(GOOGLE_SECRET_KEYS.driveFolderId),
   ])
   return {
-    clientId: clientId ?? '',
-    clientSecret,
+    clientId: clientId ?? env.clientId ?? '',
+    clientSecret: clientSecret ?? env.clientSecret,
     accessToken,
     refreshToken,
     expiresAt,
