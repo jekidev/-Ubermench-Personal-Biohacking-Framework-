@@ -10,7 +10,12 @@ export function extractPdfTextBlocks(bytes: Uint8Array): PdfTextBlock[] {
   const streamPattern = /stream\r?\n([\s\S]*?)\r?\nendstream/g
   let match = streamPattern.exec(raw)
   while (match) {
-    const chunk = match[1]
+    const streamBody = match[1]
+    if (!streamBody) {
+      match = streamPattern.exec(raw)
+      continue
+    }
+    const chunk = streamBody
       .replace(/\(([^()\\]*)\)/g, '$1')
       .replace(/\\n/g, '\n')
       .replace(/\\r/g, '\r')
