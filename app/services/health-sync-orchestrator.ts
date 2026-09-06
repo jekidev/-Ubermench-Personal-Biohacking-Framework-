@@ -2,6 +2,7 @@ import type { CanonicalObservation } from '~/types/personal-state'
 import type { ExternalHealthSample } from './health-data-adapters'
 import { normalizeHealthSamples } from './health-data-adapters'
 import { filterSupportedProviderSamples } from './health-provider-capabilities'
+import { reconcileObservations } from './health-provider-reconciliation'
 import { type HealthConnectionState, type HealthProviderAdapter } from './health-provider-lifecycle'
 import { HealthProviderManager, type HealthPlatform } from './health-provider-manager'
 import type { HealthProviderId } from './health-provider-registry'
@@ -57,7 +58,7 @@ export class HealthSyncOrchestrator {
 
     const result = await this.manager.sync(provider, from, to)
     const supported = filterSupportedProviderSamples(result.samples)
-    const observations = normalizeHealthSamples(supported, this.options.subjectId)
+    const observations = reconcileObservations(normalizeHealthSamples(supported, this.options.subjectId))
 
     return {
       provider,

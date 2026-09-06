@@ -29,7 +29,15 @@ function timestamp(observation: CanonicalObservation): number {
   return new Date(observation.observedAt).getTime()
 }
 
+function exactDuplicate(a: CanonicalObservation, b: CanonicalObservation): boolean {
+  return Boolean(a.sourceRecordId && b.sourceRecordId)
+    && a.sourceRecordId === b.sourceRecordId
+    && a.subjectId === b.subjectId
+    && a.metric === b.metric
+}
+
 function comparable(a: CanonicalObservation, b: CanonicalObservation, windowMs: number): boolean {
+  if (exactDuplicate(a, b)) return true
   return a.subjectId === b.subjectId
     && a.metric === b.metric
     && (a.unit ?? '') === (b.unit ?? '')

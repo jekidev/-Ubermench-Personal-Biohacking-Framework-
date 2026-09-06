@@ -76,6 +76,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Schema inventory
+        run: node scripts/schema-inventory.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
