@@ -69,6 +69,40 @@ export const MCP_SERVER_REGISTRY: McpServerRegistryEntry[] = [
     auth: 'env',
     envKeys: ['HF_TOKEN', 'HUGGINGFACE_TOKEN'],
   },
+  {
+    serverId: 'filesystem',
+    executable: 'npx',
+    allowedArgs: ['-y', '@modelcontextprotocol/server-filesystem'],
+    description: 'Local filesystem MCP (install only; spawn still needs approval)',
+    enabledByDefault: false,
+    auth: 'approval',
+  },
+  {
+    serverId: 'memory',
+    executable: 'npx',
+    allowedArgs: ['-y', '@modelcontextprotocol/server-memory'],
+    description: 'Knowledge-graph memory MCP server',
+    enabledByDefault: false,
+    auth: 'none',
+  },
+  {
+    serverId: 'fetch',
+    executable: 'npx',
+    allowedArgs: ['-y', '@modelcontextprotocol/server-fetch'],
+    description: 'HTTP fetch MCP server for public URLs',
+    enabledByDefault: false,
+    auth: 'approval',
+  },
+  {
+    serverId: 'notion',
+    connectorId: 'notion',
+    executable: 'npx',
+    allowedArgs: ['-y', '@notionhq/notion-mcp-server'],
+    description: 'Notion pages and databases via MCP',
+    enabledByDefault: false,
+    auth: 'env',
+    envKeys: ['NOTION_API_KEY'],
+  },
 ]
 
 export function getMcpServer(serverId: string): McpServerRegistryEntry | undefined {

@@ -17,6 +17,7 @@ describe('connector registry', () => {
     const ids = CONNECTOR_REGISTRY.map((entry) => entry.id)
     expect(ids).toContain('gmail')
     expect(ids).toContain('google-drive')
+    expect(ids).toContain('google-calendar')
     expect(ids).toContain('huggingface')
     expect(ids).toContain('discord')
   })

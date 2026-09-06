@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <div>
       <h1 class="text-2xl font-semibold">Settings</h1>
-      <p class="text-zinc-500">Provider configuration is persistent metadata; API keys use the Tauri Stronghold vault on desktop and an in-memory fallback in browser preview.</p>
+      <p class="text-zinc-500">Provider configuration is persistent metadata; API keys use the Tauri Stronghold vault on desktop and a browser secret store in preview. Google OAuth and MCP installs live on <NuxtLink to="/connectors" class="underline underline-offset-4">Connectors</NuxtLink>.</p>
     </div>
 
     <UCard>

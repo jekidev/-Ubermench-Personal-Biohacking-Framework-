@@ -54,4 +54,6 @@ export interface ConnectorStatusSnapshot {
   capabilities: string[]
   cursorParity: boolean
   implementationStatus: ConnectorImplementationStatus
+  lastSyncAt?: string
+  oauthScopes?: string[]
 }

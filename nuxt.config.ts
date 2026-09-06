@@ -4,6 +4,12 @@ export default defineNuxtConfig({
   modules: ['@nuxt/ui'],
   devtools: { enabled: true },
   typescript: { strict: true, typeCheck: true },
+  runtimeConfig: {
+    public: {
+      googleClientId: '',
+      googleClientSecret: '',
+    },
+  },
   app: {
     head: {
       title: 'Ubermench',

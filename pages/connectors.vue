@@ -3,23 +3,135 @@
     <div class="flex items-end justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold">Connectors</h1>
-        <p class="text-zinc-500">Cursor-style integrations for Gmail, Drive, Hugging Face, GitHub, and more. Credentials live in the secret vault.</p>
+        <p class="text-zinc-500">Cursor-style Google OAuth, Drive / Gmail / Calendar tools, and a local MCP install catalog. Credentials stay in the secret vault.</p>
       </div>
-      <UButton :loading="busy" @click="refresh">Refresh</UButton>
+      <UButton :loading="busy" @click="refreshAll">Refresh</UButton>
     </div>
 
     <UAlert v-if="error" title="Connector error" :description="error" color="error" variant="subtle" />
+    <UAlert v-if="google.error.value" title="Google OAuth" :description="google.error.value" color="warning" variant="subtle" />
+    <UAlert v-if="mcp.error.value" title="MCP install" :description="mcp.error.value" color="warning" variant="subtle" />
 
     <UCard>
-      <template #header><div class="font-medium">What is missing vs Cursor?</div></template>
-      <ul class="list-disc space-y-2 pl-5 text-sm text-zinc-400">
-        <li><strong class="text-zinc-200">OAuth browser flows</strong> — Gmail, Drive, Calendar need redirect UI (scaffolded only).</li>
-        <li><strong class="text-zinc-200">Full MCP protocol client</strong> — today we spawn stdio processes; no tool discovery or SSE transport.</li>
-        <li><strong class="text-zinc-200">Connector marketplace</strong> — static registry, no install/uninstall.</li>
-        <li><strong class="text-zinc-200">Per-connector permissions</strong> — global approval gate, not scoped ACLs.</li>
-        <li><strong class="text-zinc-200">Vector RAG from Drive</strong> — env vars exist in deployment bootstrap; sync adapter not wired.</li>
-        <li><strong class="text-zinc-200">Token refresh</strong> — OAuth refresh logic not implemented for Garmin/Drive.</li>
-      </ul>
+      <template #header><div class="font-medium">Google Workspace (one OAuth client)</div></template>
+      <p class="text-sm text-zinc-400">
+        Drive, Gmail, and Calendar share one Google client and token. Paste a client ID or import the client JSON later — no Cloud Console steps are required in this app.
+      </p>
+      <div class="mt-4 grid gap-3 md:grid-cols-2">
+        <UInput v-model="googleClientId" placeholder="NUXT_PUBLIC_GOOGLE_CLIENT_ID" />
+        <UInput v-model="googleClientSecret" placeholder="Client secret (optional for PKCE)" type="password" />
+        <UInput v-model="driveFolderId" placeholder="Drive folder ID for RAG sync (optional)" class="md:col-span-2" />
+      </div>
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <input ref="googleJsonInput" type="file" accept="application/json,.json" class="hidden" @change="onGoogleJsonSelected" />
+        <UButton variant="outline" @click="googleJsonInput?.click()">Import client JSON</UButton>
+        <UButton :loading="google.busy.value" @click="saveGoogleConfig">Save Google config</UButton>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <UButton :loading="google.busy.value" @click="connectGoogle(['google-drive'])">Connect Drive</UButton>
+        <UButton :loading="google.busy.value" @click="connectGoogle(['gmail'])">Connect Gmail</UButton>
+        <UButton :loading="google.busy.value" @click="connectGoogle(['google-calendar'])">Connect Calendar</UButton>
+        <UButton variant="outline" :loading="google.busy.value" @click="connectGoogle(['google-drive', 'gmail', 'google-calendar'])">Connect all three</UButton>
+        <UButton color="neutral" variant="outline" @click="google.disconnect()">Disconnect Google</UButton>
+      </div>
+      <p class="mt-3 text-xs text-zinc-500">
+        Redirect URI used at runtime: <code>{{ redirectUri }}</code>
+      </p>
+      <p class="mt-1 text-xs text-zinc-500">
+        Token: {{ google.connected.value ? 'present' : 'not connected' }}
+        · Drive {{ google.services.value['google-drive'] ? 'on' : 'off' }}
+        · Gmail {{ google.services.value.gmail ? 'on' : 'off' }}
+        · Calendar {{ google.services.value['google-calendar'] ? 'on' : 'off' }}
+      </p>
+      <div class="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
+        <span v-for="scope in listedScopes" :key="scope">{{ scope }}</span>
+      </div>
+    </UCard>
+
+    <div class="grid gap-4 lg:grid-cols-3">
+      <UCard>
+        <template #header><div class="font-medium">Google Drive</div></template>
+        <p class="text-sm text-zinc-400">Search files or sync PDFs into local RAG.</p>
+        <p v-if="statusFor('google-drive')?.lastSyncAt" class="mt-2 text-xs text-zinc-500">Last sync {{ statusFor('google-drive')?.lastSyncAt }}</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <UInput v-model="driveQuery" placeholder="Search Drive" class="flex-1" />
+          <UButton size="sm" :loading="driveBusy" @click="runDriveSearch">Search</UButton>
+          <UButton size="sm" variant="outline" :loading="driveSyncBusy" @click="runDriveSync">Sync PDFs</UButton>
+        </div>
+        <p v-if="driveSyncSummary" class="mt-2 text-sm text-zinc-400">{{ driveSyncSummary }}</p>
+        <ul v-if="driveFiles.length" class="mt-3 space-y-1 text-sm text-zinc-300">
+          <li v-for="file in driveFiles" :key="file.id">{{ file.name }} · {{ file.mimeType }}</li>
+        </ul>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Gmail</div></template>
+        <p class="text-sm text-zinc-400">Search is read-only. Sending stays behind the agent approval gate.</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <UInput v-model="gmailQuery" placeholder="Search mail" class="flex-1" />
+          <UButton size="sm" :loading="gmailBusy" @click="loadGmail">Search</UButton>
+        </div>
+        <ul v-if="gmailMessages.length" class="mt-3 space-y-2 text-sm">
+          <li v-for="message in gmailMessages" :key="message.id" class="rounded border border-zinc-800 p-3">
+            <div class="font-medium">{{ message.subject }}</div>
+            <div class="text-xs text-zinc-500">{{ message.from }}</div>
+            <div class="mt-1 text-zinc-400">{{ message.snippet }}</div>
+          </li>
+        </ul>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Google Calendar</div></template>
+        <p class="text-sm text-zinc-400">List upcoming events after Calendar is connected.</p>
+        <UButton size="sm" class="mt-3" :loading="calendarBusy" @click="loadCalendar">Load events</UButton>
+        <ul v-if="calendarEvents.length" class="mt-3 space-y-2 text-sm">
+          <li v-for="event in calendarEvents" :key="event.id" class="rounded border border-zinc-800 p-3">
+            <div class="font-medium">{{ event.summary }}</div>
+            <div class="text-xs text-zinc-500">{{ event.start }} → {{ event.end }}</div>
+          </li>
+        </ul>
+      </UCard>
+    </div>
+
+    <UCard>
+      <template #header><div class="font-medium">MCP catalog (local install)</div></template>
+      <p class="text-sm text-zinc-400">
+        The agent can propose <code>mcp.install</code>, but catalog installs stay allowlisted and custom servers require an explicit confirm. Env key names are stored — never secret values.
+      </p>
+      <div class="mt-4 space-y-3">
+        <div v-for="server in mcp.catalog.value" :key="server.serverId" class="flex flex-wrap items-center justify-between gap-3 rounded border border-zinc-800 p-3">
+          <div>
+            <div class="font-medium">{{ server.serverId }}</div>
+            <p class="text-xs text-zinc-500">{{ server.description }}</p>
+            <p class="text-xs text-zinc-500">{{ server.executable }} {{ server.args.join(' ') }}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <UBadge :color="server.installed ? (server.enabled ? 'success' : 'neutral') : 'warning'" variant="subtle">
+              {{ server.installed ? (server.enabled ? 'installed' : 'disabled') : 'catalog' }}
+            </UBadge>
+            <UButton v-if="!server.installed" size="sm" :loading="mcp.busy.value" @click="mcp.install(server.serverId)">Install</UButton>
+            <UButton v-else size="sm" variant="outline" @click="mcp.setEnabled(server.serverId, !server.enabled)">
+              {{ server.enabled ? 'Disable' : 'Enable' }}
+            </UButton>
+            <UButton v-if="server.installed" size="sm" color="neutral" variant="ghost" @click="mcp.uninstall(server.serverId)">Uninstall</UButton>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 space-y-3 border-t border-zinc-800 pt-4">
+        <div class="font-medium">Custom MCP (explicit confirm)</div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <UInput v-model="customServerId" placeholder="server-id" />
+          <USelect v-model="customExecutable" :items="customExecutables" value-key="value" label-key="label" />
+          <UInput v-model="customArgs" placeholder="args, comma-separated (e.g. -y, package)" class="md:col-span-2" />
+          <UInput v-model="customEnvKeys" placeholder="ENV_KEY_NAMES only" class="md:col-span-2" />
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+          <input v-model="customConfirmed" type="checkbox" />
+          I confirm this custom stdio server should be installed locally
+        </label>
+        <UButton :disabled="!customConfirmed" :loading="mcp.busy.value" @click="installCustom">Install custom server</UButton>
+      </div>
     </UCard>
 
     <div class="grid gap-4 lg:grid-cols-2">
@@ -50,14 +162,17 @@
             />
             Enabled
           </label>
-          <p class="text-xs text-zinc-500">Implementation: {{ connector.status }} · Cursor parity: {{ connector.cursorParity ? 'yes' : 'no' }}</p>
-          <div v-if="connector.auth.envKeys?.length" class="space-y-2">
+          <p class="text-xs text-zinc-500">
+            Implementation: {{ connector.status }}
+            · Cursor parity: {{ connector.cursorParity ? 'yes' : 'no' }}
+            <span v-if="statusFor(connector.id)?.lastSyncAt"> · Last sync {{ statusFor(connector.id)?.lastSyncAt }}</span>
+          </p>
+          <div v-if="connector.auth.envKeys?.length && !isGoogleConnector(connector.id)" class="space-y-2">
             <div v-for="key in connector.auth.envKeys" :key="key" class="flex gap-2">
               <UInput v-model="credentialDrafts[key]" :placeholder="key" type="password" class="flex-1" />
               <UButton size="sm" @click="saveKey(key)">Save</UButton>
             </div>
           </div>
-          <p v-if="connector.auth.type === 'oauth'" class="text-xs text-amber-400">OAuth flow UI pending — store tokens manually in vault for now.</p>
         </div>
       </UCard>
     </div>
@@ -65,15 +180,66 @@
 </template>
 
 <script setup lang="ts">
+import { defaultGoogleRedirectUri, GOOGLE_COMBINED_SCOPES, type GoogleConnectorId } from '~/plugins/connectors/oauth/google-oauth'
+import { loadGoogleCredentials } from '~/plugins/connectors/oauth/google-token-store'
+import { listGmailMessages, type GmailMessageSummary } from '~/plugins/connectors/adapters/gmail-adapter'
+import { searchDriveFiles, type DriveFile } from '~/plugins/connectors/adapters/google-drive-adapter'
+import { listCalendarEvents, type CalendarEvent } from '~/plugins/connectors/adapters/google-calendar-adapter'
+import { syncDrivePdfsToRag } from '~/plugins/connectors/drive-rag-sync'
 import type { ConnectorConnectionStatus, ConnectorId } from '~/plugins/connectors/types'
 
 const { catalog, statuses, busy, error, refresh, toggle, saveCredential, isEnabled } = useConnectors()
+const google = useGoogleOAuth()
+const mcp = useMcpInstall()
+const googleJsonInput = ref<HTMLInputElement>()
 const credentialDrafts = reactive<Record<string, string>>({})
+const googleClientId = ref('')
+const googleClientSecret = ref('')
+const driveFolderId = ref('')
+const redirectUri = defaultGoogleRedirectUri()
+const listedScopes = GOOGLE_COMBINED_SCOPES.filter((scope) => scope.startsWith('https://'))
+const driveQuery = ref('')
+const driveBusy = ref(false)
+const driveSyncBusy = ref(false)
+const driveSyncSummary = ref('')
+const driveFiles = ref<DriveFile[]>([])
+const gmailQuery = ref('')
+const gmailBusy = ref(false)
+const gmailMessages = ref<GmailMessageSummary[]>([])
+const calendarBusy = ref(false)
+const calendarEvents = ref<CalendarEvent[]>([])
+const customServerId = ref('')
+const customExecutable = ref('npx')
+const customArgs = ref('-y, @modelcontextprotocol/server-memory')
+const customEnvKeys = ref('')
+const customConfirmed = ref(false)
+const customExecutables = [
+  { label: 'npx', value: 'npx' },
+  { label: 'node', value: 'node' },
+]
 
-onMounted(() => refresh())
+onMounted(async () => {
+  googleClientId.value = await google.loadClientId()
+  const creds = await loadGoogleCredentials()
+  googleClientSecret.value = creds.clientSecret ?? ''
+  driveFolderId.value = creds.driveFolderId ?? ''
+  await google.refreshStatus()
+  mcp.refresh()
+  await refresh()
+})
+
+async function refreshAll() {
+  await google.refreshStatus()
+  mcp.refresh()
+  await refresh()
+}
 
 function statusFor(id: ConnectorId) {
   return statuses.value.find((item) => item.id === id)
+}
+
+function isGoogleConnector(id: ConnectorId) {
+  return id === 'gmail' || id === 'google-drive' || id === 'google-calendar'
 }
 
 function statusColor(status?: ConnectorConnectionStatus) {
@@ -82,6 +248,94 @@ function statusColor(status?: ConnectorConnectionStatus) {
   if (status === 'missing-credentials') return 'warning'
   if (status === 'disabled') return 'neutral'
   return 'error'
+}
+
+async function saveGoogleConfig() {
+  if (googleClientId.value.trim()) await google.saveClientId(googleClientId.value.trim())
+  if (googleClientSecret.value.trim()) await google.saveClientSecret(googleClientSecret.value.trim())
+  if (driveFolderId.value.trim()) await google.saveDriveFolderId(driveFolderId.value.trim())
+  await refresh()
+}
+
+async function onGoogleJsonSelected(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try {
+    const parsed = await google.importClientJson(await file.text())
+    googleClientId.value = parsed.clientId
+    googleClientSecret.value = parsed.clientSecret ?? ''
+    await refresh()
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Failed to import Google client JSON'
+  } finally {
+    if (googleJsonInput.value) googleJsonInput.value.value = ''
+  }
+}
+
+async function connectGoogle(connectorIds: GoogleConnectorId[]) {
+  await saveGoogleConfig()
+  await google.startOAuth(connectorIds)
+}
+
+async function runDriveSearch() {
+  driveBusy.value = true
+  try {
+    driveFiles.value = await searchDriveFiles(driveQuery.value || 'pdf', 12)
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Drive search failed'
+  } finally {
+    driveBusy.value = false
+  }
+}
+
+async function runDriveSync() {
+  driveSyncBusy.value = true
+  driveSyncSummary.value = ''
+  try {
+    const result = await syncDrivePdfsToRag({ folderId: driveFolderId.value || undefined })
+    driveSyncSummary.value = `Indexed ${result.indexed} PDFs, skipped ${result.skipped}.`
+    await refresh()
+  } catch (cause) {
+    driveSyncSummary.value = cause instanceof Error ? cause.message : 'Drive sync failed'
+  } finally {
+    driveSyncBusy.value = false
+  }
+}
+
+async function loadGmail() {
+  gmailBusy.value = true
+  try {
+    gmailMessages.value = await listGmailMessages(8)
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Gmail load failed'
+  } finally {
+    gmailBusy.value = false
+  }
+}
+
+async function loadCalendar() {
+  calendarBusy.value = true
+  try {
+    calendarEvents.value = await listCalendarEvents({
+      timeMin: new Date().toISOString(),
+      limit: 8,
+    })
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Calendar load failed'
+  } finally {
+    calendarBusy.value = false
+  }
+}
+
+async function installCustom() {
+  await mcp.installCustom({
+    serverId: customServerId.value.trim(),
+    executable: customExecutable.value,
+    args: customArgs.value.split(',').map((item) => item.trim()).filter(Boolean),
+    envKeys: customEnvKeys.value.split(',').map((item) => item.trim()).filter(Boolean),
+    userConfirmed: customConfirmed.value,
+  })
+  customConfirmed.value = false
 }
 
 async function saveKey(key: string) {

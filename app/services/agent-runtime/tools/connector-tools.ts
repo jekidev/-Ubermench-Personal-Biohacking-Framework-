@@ -1,6 +1,8 @@
 import type { AgentTool } from '../types'
 import { listConnectorStatuses } from '../../../../plugins/connectors/connector-runtime'
 import { CONNECTOR_REGISTRY, getConnector } from '../../../../plugins/connectors/registry'
+import { syncDrivePdfsToRag } from '../../../../plugins/connectors/drive-rag-sync'
+import { isGoogleServiceConnected } from '../../../../plugins/connectors/oauth/google-token-store'
 import type { ConnectorId } from '../../../../plugins/connectors/types'
 
 export function createConnectorTools(): AgentTool[] {
@@ -54,6 +56,21 @@ export function createConnectorTools(): AgentTool[] {
           oauthScopes: connector.auth.oauthScopes ?? [],
           mcpServerId: connector.mcpServerId,
         }))
+      },
+    },
+    {
+      name: 'connector.drive.sync',
+      description: 'Sync new Google Drive PDFs into the local document RAG index.',
+      risk: 'medium',
+      requiresApproval: true,
+      async execute(args) {
+        if (!(await isGoogleServiceConnected('google-drive'))) {
+          throw new Error('google-drive is not connected. Connect it on the Connectors page.')
+        }
+        return syncDrivePdfsToRag({
+          folderId: typeof args.folderId === 'string' ? args.folderId : undefined,
+          limit: typeof args.limit === 'number' ? args.limit : undefined,
+        })
       },
     },
   ]

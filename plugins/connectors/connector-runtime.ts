@@ -2,6 +2,9 @@ import { getSecret } from '../../app/services/secret-vault'
 import { getMcpServer } from '../llm/mcp/servers'
 import { CONNECTOR_REGISTRY, getConnector } from './registry'
 import { isConnectorEnabled, loadConnectorSettings } from './connector-store'
+import { isGoogleServiceConnected } from './oauth/google-token-store'
+import { isGoogleConnectorId, type GoogleConnectorId } from './oauth/google-oauth'
+import { loadConnectorSyncMeta } from './sync-meta'
 import type { ConnectorConnectionStatus, ConnectorId, ConnectorStatusSnapshot } from './types'
 
 async function resolveConfiguredKeys(envKeys: string[] = []): Promise<{ present: string[]; missing: string[] }> {
@@ -21,16 +24,22 @@ export async function getConnectorStatus(id: ConnectorId): Promise<ConnectorStat
 
   const enabled = isConnectorEnabled(id)
   const { missing } = await resolveConfiguredKeys(connector.auth.envKeys)
+  const lastSyncAt = loadConnectorSyncMeta().lastSyncAt[id]
 
   let status: ConnectorConnectionStatus = 'disabled'
   if (!enabled) status = 'disabled'
   else if (connector.status === 'planned') status = 'unavailable'
+  else if (isGoogleConnectorId(connector.id)) {
+    status = (await isGoogleServiceConnected(connector.id as GoogleConnectorId))
+      ? 'connected'
+      : 'missing-credentials'
+  }
   else if (connector.auth.type === 'oauth') status = missing.length ? 'missing-credentials' : 'configured'
   else if (connector.auth.type === 'none') status = 'connected'
   else if (missing.length === 0) status = connector.status === 'live' ? 'connected' : 'configured'
   else status = 'missing-credentials'
 
-  if (connector.mcpServerId && !getMcpServer(connector.mcpServerId)) {
+  if (connector.mcpServerId && !getMcpServer(connector.mcpServerId) && connector.auth.type !== 'oauth') {
     status = 'unavailable'
   }
 
@@ -44,6 +53,8 @@ export async function getConnectorStatus(id: ConnectorId): Promise<ConnectorStat
     capabilities: connector.capabilities,
     cursorParity: connector.cursorParity,
     implementationStatus: connector.status,
+    lastSyncAt,
+    oauthScopes: connector.auth.oauthScopes,
   }
 }
 

@@ -9,37 +9,29 @@ CONNECTOR_REGISTRY (plugins/connectors/registry.ts)
   ↓
 connector-store (enabled/disabled in localStorage)
   ↓
-connector-runtime (credential check via secret vault)
+Google OAuth PKCE (one client, Drive + Gmail + Calendar)
   ↓
-MCP_SERVER_REGISTRY (stdio spawn for live connectors)
+MCP_SERVER_REGISTRY + local install store (mcp.install)
   ↓
-Agent tools: connector.list | connector.status | connector.catalog
-              mcp.stdio:<serverId>
+Agent tools: connector.* | calendar.* | gmail.* | drive.* | mcp.*
 ```
 
 ## Live vs scaffold
 
 | Connector | Status | What's wired |
 |-----------|--------|--------------|
+| Gmail, Drive, Calendar | live | Shared Google OAuth PKCE, adapters, agent tools |
 | Discord | live | MCP stdio + agent tool |
 | Hugging Face | live | Inference engine + MCP registry entry |
-| GitHub, Slack, Tavily, Context7 | scaffold | MCP registry + vault keys; needs credentials |
-| Gmail, Google Drive, Calendar | scaffold | OAuth UI not built; manual token storage only |
-| Notion, Sentry, Stripe, Supabase, Convex, Vercel | planned | Registry metadata only |
+| GitHub, Slack, Tavily, Context7, Notion, filesystem, memory, fetch | catalog | Install via `mcp.install`; secrets stay in vault |
+| Sentry, Stripe, Supabase, Convex, Vercel | planned | Registry metadata only |
 
-## Missing vs Cursor
+## Agent tools
 
-1. OAuth redirect flows (Gmail, Drive, Calendar)
-2. Full MCP protocol client (tool discovery, SSE/HTTP transport)
-3. Connector marketplace / dynamic install
-4. Per-connector scoped permissions
-5. Google Drive → RAG sync adapter
-6. OAuth token refresh
-7. Connector health dashboard (only LLM provider health exists today)
+- `connector.list` / `connector.status` / `connector.catalog` / `connector.google.status`
+- `calendar.list` / `calendar.create` / `calendar.suggest`
+- `gmail.search` / `gmail.draft` / `gmail.send` (send = high-risk approval)
+- `drive.search` / `drive.sync` / `connector.drive.sync`
+- `mcp.catalog` / `mcp.status` / `mcp.install` / `mcp.uninstall`
 
-## Adding a connector
-
-1. Add entry to `plugins/connectors/registry.ts`
-2. If MCP-based, add to `plugins/llm/mcp/servers.ts`
-3. Store credentials via secret vault (`pages/connectors.vue` or Settings)
-4. Optional: add domain-specific adapter under `plugins/connectors/adapters/`
+Install persists command, args, and env *key names* only. Custom servers require `userConfirmed: true`.
