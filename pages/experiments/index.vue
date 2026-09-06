@@ -6,6 +6,7 @@ import type { ConfounderCategory } from '~/services/experiment-confounders'
 const { experiments, templates, initialize, createExperiment, summarize, recordAdherence, recordConfounder } = useExperiments()
 const selectedDesign = ref<ExperimentDesign>('single-subject-crossover')
 const message = ref('')
+const selectedExperimentId = ref('')
 const confounderCategory = ref<ConfounderCategory>('sleep')
 const confounderDescription = ref('')
 const confounderSeverity = ref<0 | 1 | 2 | 3>(1)
@@ -27,7 +28,8 @@ onMounted(initialize)
 async function startExperiment() {
   message.value = ''
   try {
-    await createExperiment(draft.value, selectedDesign.value)
+    const created = await createExperiment(draft.value, selectedDesign.value)
+    selectedExperimentId.value = created.id
     message.value = 'Experiment protocol created and stored locally.'
   } catch (error) {
     message.value = error instanceof Error ? error.message : 'Unable to create experiment.'
