@@ -7,6 +7,13 @@ describe('safety engine', () => {
     expect(highestSafetySeverity(flags)).toBe('orange')
   })
 
+  it('flags duplicate supplement ingredients', () => {
+    const flags = screenInterventionSafety('Vitamin D3', [], [
+      { id: '1', name: 'Cholecalciferol', active: true, dose: '2000 IU' },
+    ])
+    expect(flags.some((flag) => flag.code === 'DUPLICATE_INGREDIENT')).toBe(true)
+  })
+
   it('returns a non-approval signal when no rule triggers', () => {
     const flags = screenInterventionSafety('creatine', [])
     expect(flags[0]?.code).toBe('NO_KNOWN_RULE_TRIGGERED')

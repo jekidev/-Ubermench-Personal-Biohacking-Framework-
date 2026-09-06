@@ -4,6 +4,7 @@ import { HealthSyncOrchestrator } from './health-sync-orchestrator'
 import { GarminOAuthAdapter } from './health-adapters/garmin-oauth-adapter'
 import { HealthConnectAdapter } from './health-adapters/health-connect-adapter'
 import { withHealthSyncRetry } from './health-sync-retry'
+import { syncAndPersistHealth } from './health-sync-persistence'
 
 export function createHealthSyncOrchestrator(subjectId = 'self'): HealthSyncOrchestrator {
   const platform = import.meta.client && /Android/i.test(navigator.userAgent) ? 'android' : 'web'
@@ -25,4 +26,12 @@ export async function syncHealthProvider(provider: HealthProviderId, subjectId =
   } catch (error) {
     return { samples: [], error: error instanceof Error ? error.message : String(error) }
   }
+}
+
+export async function syncAndPersistAllHealth(subjectId = 'self') {
+  const orchestrator = createHealthSyncOrchestrator(subjectId)
+  if (!import.meta.client) {
+    return { results: [], observations: [], store: null }
+  }
+  return syncAndPersistHealth(orchestrator, window.localStorage)
 }

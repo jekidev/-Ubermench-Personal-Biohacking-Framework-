@@ -1,5 +1,6 @@
 import type { MedicationRecord, SupplementRecord } from '~/types/biology'
 import { checkPharmacologyInteractions } from './pharmacology-engine'
+import { detectDuplicateIngredients } from './ingredient-normalizer'
 
 export type SafetySeverity = 'green' | 'yellow' | 'orange' | 'red'
 
@@ -67,6 +68,17 @@ export function screenInterventionSafety(
   })
   if (duplicateMechanism) {
     flags.push({ severity: 'yellow', code: 'DUPLICATE_MECHANISM', title: 'Possible duplicate mechanism', detail: 'The proposed intervention may duplicate an active pharmacologic mechanism.', requiresReview: true })
+  }
+
+  const duplicateIngredients = detectDuplicateIngredients([...all, intervention])
+  for (const ingredient of duplicateIngredients) {
+    flags.push({
+      severity: 'yellow',
+      code: 'DUPLICATE_INGREDIENT',
+      title: 'Duplicate ingredient detected',
+      detail: `Multiple active entries appear to provide the same ingredient (${ingredient}). Review cumulative dose.`,
+      requiresReview: true,
+    })
   }
 
   const pharmacology = checkPharmacologyInteractions([...all, intervention])

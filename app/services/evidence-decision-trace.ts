@@ -1,5 +1,10 @@
 import type { EvidenceItem, InterventionCandidate } from '~/types/biology'
-import { scoreEvidence } from './evidence-engine'
+import {
+  aggregateHumanOutcomeEvidence,
+  aggregateMechanisticPlausibility,
+  combinedEvidenceScore,
+  scoreEvidence,
+} from './evidence-engine'
 
 export type DecisionTraceDisposition = 'consider' | 'review' | 'defer'
 
@@ -10,6 +15,8 @@ export interface EvidenceDecisionTrace {
   priority: number
   personalFit: number
   evidenceScore: number
+  humanOutcomeScore: number
+  mechanisticPlausibilityScore: number
   evidenceCount: number
   strongestEvidenceId?: string
   riskCount: number
@@ -30,9 +37,9 @@ function strongestEvidence(items: EvidenceItem[]): EvidenceItem | undefined {
  * This is decision support only: it does not prescribe treatment.
  */
 export function buildEvidenceDecisionTrace(candidate: InterventionCandidate): EvidenceDecisionTrace {
-  const evidenceScore = candidate.evidence.length
-    ? candidate.evidence.reduce((sum, item) => sum + scoreEvidence(item), 0) / candidate.evidence.length
-    : 0
+  const humanOutcomeScore = aggregateHumanOutcomeEvidence(candidate.evidence)
+  const mechanisticPlausibilityScore = aggregateMechanisticPlausibility(candidate.evidence)
+  const evidenceScore = combinedEvidenceScore(candidate.evidence)
   const personalFit = clamp01(candidate.personalFit)
   const priority = clamp01(candidate.priority)
   const riskCount = candidate.risks.length
@@ -40,7 +47,8 @@ export function buildEvidenceDecisionTrace(candidate: InterventionCandidate): Ev
   const strongest = strongestEvidence(candidate.evidence)
 
   const rationale: string[] = [
-    `Evidence score: ${evidenceScore.toFixed(2)} across ${candidate.evidence.length} source(s).`,
+    `Human outcome score: ${humanOutcomeScore.toFixed(2)}; mechanistic plausibility: ${mechanisticPlausibilityScore.toFixed(2)}.`,
+    `Combined evidence score: ${evidenceScore.toFixed(2)} across ${candidate.evidence.length} source(s).`,
     `Personal fit: ${personalFit.toFixed(2)}; priority: ${priority.toFixed(2)}.`,
   ]
 
@@ -61,6 +69,8 @@ export function buildEvidenceDecisionTrace(candidate: InterventionCandidate): Ev
     priority,
     personalFit,
     evidenceScore,
+    humanOutcomeScore,
+    mechanisticPlausibilityScore,
     evidenceCount: candidate.evidence.length,
     strongestEvidenceId: strongest?.id,
     riskCount,

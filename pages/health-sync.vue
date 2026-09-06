@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { createHealthSyncOrchestrator } from '~/services/health-sync-runtime'
+import { createHealthSyncOrchestrator, syncAndPersistAllHealth } from '~/services/health-sync-runtime'
 
 const garminStatus = ref('')
 const healthConnectStatus = ref('')
+const persistedCount = ref(0)
 
 async function connectAndSync(provider: 'garmin' | 'health-connect') {
   const orchestrator = createHealthSyncOrchestrator()
@@ -11,6 +12,11 @@ async function connectAndSync(provider: 'garmin' | 'health-connect') {
   if (provider === 'garmin') garminStatus.value = message
   else healthConnectStatus.value = message
 }
+
+async function syncAllPersisted() {
+  const result = await syncAndPersistAllHealth()
+  persistedCount.value = result.observations.length
+}
 </script>
 
 <template>
@@ -18,7 +24,7 @@ async function connectAndSync(provider: 'garmin' | 'health-connect') {
     <div>
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Health sync</p>
       <h1 class="mt-2 text-3xl font-semibold">Garmin & Health Connect</h1>
-      <p class="mt-2 text-muted">Supported providers only. Connect via OAuth (Garmin) or Android Health Connect before syncing.</p>
+      <p class="mt-2 text-muted">Supported providers only. Sync reconciles duplicates and can persist canonical observations locally.</p>
     </div>
     <div class="grid gap-4 md:grid-cols-2">
       <UCard>
@@ -32,5 +38,10 @@ async function connectAndSync(provider: 'garmin' | 'health-connect') {
         <p v-if="healthConnectStatus" class="mt-3 text-sm text-muted">{{ healthConnectStatus }}</p>
       </UCard>
     </div>
+    <UCard>
+      <h2 class="font-semibold">Persist reconciled observations</h2>
+      <UButton class="mt-4" @click="syncAllPersisted">Sync all providers & persist</UButton>
+      <p v-if="persistedCount" class="mt-3 text-sm text-muted">Last sync wrote {{ persistedCount }} canonical observation(s).</p>
+    </UCard>
   </div>
 </template>
