@@ -55,10 +55,11 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 
 - Submodule: `tools/starchive`
 - App page: `/starchive`
-- CLI: `npm run starchive`
+- Agent catalog: `app/data/starchive/catalog.json`
+- CLI: `npm run starchive -- --snapshot`
 - Docs: `docs/starchive.md`
 
-Credentials come from `GITHUB_USERNAME` / `GITHUB_TOKEN` or the secret vault. Tokens are never committed.
+Cursor agents should read the committed catalog. Credentials come from `GITHUB_USERNAME` / `GITHUB_TOKEN` or the secret vault. Tokens are never committed. The default user is `jekidev`.
 
 ### AI orchestration
 - Multi-provider LLM layer for OpenRouter, OpenAI and Anthropic

@@ -5,6 +5,7 @@ import {
   buildStarredReposCsv,
   createStarchiveClient,
   mapGithubStarredRepo,
+  parseStarchiveSnapshot,
   parseGithubLinkNext,
   parseListReposHtml,
   parseStarListsHtml,
@@ -23,9 +24,21 @@ const sampleRepo = {
 }
 
 describe('starchive', () => {
-  it('rejects missing credentials', () => {
-    expect(() => createStarchiveClient({ username: ' ', token: 'token' })).toThrow('GitHub username is required')
-    expect(() => createStarchiveClient({ username: 'jekidev', token: '' })).toThrow('GitHub token is required')
+  it('rejects a missing username and allows a public fetch without a token', () => {
+    expect(() => createStarchiveClient({ username: ' ' })).toThrow('GitHub username is required')
+    expect(() => createStarchiveClient({ username: 'jekidev' })).not.toThrow()
+  })
+
+  it('parses a committed agent snapshot', () => {
+    const snapshot = parseStarchiveSnapshot({
+      username: 'jekidev',
+      exportedAt: '2026-09-06T22:00:00.000Z',
+      repos: [sampleRepo],
+      lists: [],
+    })
+    expect(snapshot.repos).toHaveLength(1)
+    expect(snapshot.exportedAt).toBe('2026-09-06T22:00:00.000Z')
+    expect(() => parseStarchiveSnapshot({})).toThrow('repos and lists')
   })
 
   it('parses GitHub pagination links', () => {

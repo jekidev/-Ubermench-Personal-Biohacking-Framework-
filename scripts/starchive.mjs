@@ -7,34 +7,27 @@ import { tmpdir } from 'node:os'
 import { mkdtempSync } from 'node:fs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const outputDir = join(root, '.runtime', 'starchive')
+const runtimeDir = join(root, '.runtime', 'starchive')
+const snapshotDir = join(root, 'app', 'data', 'starchive')
 const upstreamDir = join(root, 'tools', 'starchive')
-
-function requireValue(value, label) {
-  const trimmed = typeof value === 'string' ? value.trim() : ''
-  if (!trimmed) throw new Error(`${label} is required`)
-  return trimmed
-}
+const DEFAULT_USERNAME = 'jekidev'
 
 function parseArgs(argv) {
   const flags = new Set(argv.filter((arg) => arg.startsWith('--')))
   return {
     upstream: flags.has('--upstream'),
+    snapshot: flags.has('--snapshot'),
     help: flags.has('--help') || flags.has('-h'),
   }
 }
 
 async function resolveIdentity() {
   const username = process.env.GITHUB_USERNAME?.trim()
+    || await runCommand('gh', ['api', 'user', '--jq', '.login']).catch(() => '')
+    || DEFAULT_USERNAME
   const token = process.env.GITHUB_TOKEN?.trim() || process.env.GH_TOKEN?.trim()
-  if (username && token) return { username, token }
-
-  const ghUser = await runCommand('gh', ['api', 'user', '--jq', '.login']).catch(() => '')
-  const ghToken = await runCommand('gh', ['auth', 'token']).catch(() => '')
-  return {
-    username: requireValue(username || ghUser, 'GITHUB_USERNAME (or an authenticated gh CLI user)'),
-    token: requireValue(token || ghToken, 'GITHUB_TOKEN (or an authenticated gh CLI token)'),
-  }
+    || await runCommand('gh', ['auth', 'token']).catch(() => '')
+  return { username, token: token || undefined }
 }
 
 function runCommand(command, args, options = {}) {
@@ -52,7 +45,8 @@ function runCommand(command, args, options = {}) {
   })
 }
 
-async function runUpstreamPython(username, token) {
+async function runUpstreamPython(username, token, outputDir) {
+  if (!token) throw new Error('The upstream Python script requires GITHUB_TOKEN')
   const sourcePath = join(upstreamDir, 'StarredRepoLists.py')
   const source = await readFile(sourcePath, 'utf8')
   const patched = source
@@ -67,14 +61,13 @@ async function runUpstreamPython(username, token) {
 }
 
 async function fetchJson(url, token) {
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'Ubermench-STARCHIVE',
-    },
-  })
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'Ubermench-STARCHIVE',
+  }
+  if (token) headers.Authorization = `Bearer ${token}`
+  const response = await fetch(url, { headers })
   if (response.status === 401 || response.status === 403) {
     throw new Error('GitHub authentication failed. Check the token and public_repo scope.')
   }
@@ -93,7 +86,7 @@ function csvField(value) {
   return text
 }
 
-async function exportWithApi(username, token) {
+async function exportWithApi(username, token, outputDir, snapshot) {
   const repos = []
   let url = `https://api.github.com/users/${encodeURIComponent(username)}/starred?per_page=100`
   while (url) {
@@ -101,14 +94,15 @@ async function exportWithApi(username, token) {
     if (!Array.isArray(payload)) throw new Error('GitHub starred response must be an array')
     for (const repo of payload) {
       repos.push({
-        full_name: repo.full_name,
+        fullName: repo.full_name,
         description: (repo.description || '').replace(/\n/g, ' ').replace(/\t/g, ' '),
-        html_url: repo.html_url,
-        language: repo.language || '',
-        stargazers_count: repo.stargazers_count,
-        forks_count: repo.forks_count,
-        created_at: repo.created_at,
-        updated_at: repo.updated_at,
+        htmlUrl: repo.html_url,
+        language: repo.language || null,
+        stars: repo.stargazers_count,
+        forks: repo.forks_count,
+        createdAt: repo.created_at,
+        updatedAt: repo.updated_at,
+        listed: false,
       })
     }
     url = parseNext(link)
@@ -116,52 +110,59 @@ async function exportWithApi(username, token) {
 
   const header = 'full_name,description,html_url,language,stargazers_count,forks_count,created_at,updated_at'
   const rows = repos.map((repo) => [
-    csvField(repo.full_name),
+    csvField(repo.fullName),
     csvField(repo.description),
-    csvField(repo.html_url),
+    csvField(repo.htmlUrl),
     csvField(repo.language),
-    csvField(repo.stargazers_count),
-    csvField(repo.forks_count),
-    csvField(repo.created_at),
-    csvField(repo.updated_at),
+    csvField(repo.stars),
+    csvField(repo.forks),
+    csvField(repo.createdAt),
+    csvField(repo.updatedAt),
   ].join(','))
   const csv = [header, ...rows].join('\n') + '\n'
   const reposPath = join(outputDir, 'starred_repos.csv')
   await writeFile(reposPath, csv, 'utf8')
-  console.log(`Fetched ${repos.length} starred repositories`)
+  if (snapshot) {
+    const catalog = {
+      username,
+      exportedAt: new Date().toISOString(),
+      repos,
+      lists: [],
+    }
+    await writeFile(join(outputDir, 'catalog.json'), `${JSON.stringify(catalog, null, 2)}\n`, 'utf8')
+  }
+  console.log(`Fetched ${repos.length} starred repositories for ${username}`)
   console.log(`Wrote ${reposPath}`)
+  if (snapshot) console.log(`Wrote ${join(outputDir, 'catalog.json')} for Cursor agents`)
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   if (args.help) {
-    console.log(`Usage: node scripts/starchive.mjs [--upstream]
+    console.log(`Usage: node scripts/starchive.mjs [--snapshot] [--upstream]
 
-Exports GitHub starred repositories in STARCHIVE CSV format.
+Exports GitHub starred repositories in STARCHIVE CSV format for Ubermench agents.
 
 Credentials:
-  GITHUB_USERNAME
-  GITHUB_TOKEN          (public_repo scope)
-  or an authenticated GitHub CLI session (gh)
+  GITHUB_USERNAME       defaults to jekidev
+  GITHUB_TOKEN          optional for public stars; needed for private/hidden stars
 
 Options:
+  --snapshot   Write the agent catalog to app/data/starchive/
   --upstream   Run the vendored Python script from tools/starchive
   --help       Show this message
-
-Output:
-  .runtime/starchive/starred_repos.csv
-  .runtime/starchive/starred_repo_lists.csv (upstream mode)
 `)
     return
   }
 
   const { username, token } = await resolveIdentity()
+  const outputDir = args.snapshot ? snapshotDir : runtimeDir
   await mkdir(outputDir, { recursive: true })
-  if (args.upstream) await runUpstreamPython(username, token)
-  else await exportWithApi(username, token)
+  if (args.upstream) await runUpstreamPython(username, token, outputDir)
+  else await exportWithApi(username, token, outputDir, args.snapshot)
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error)
+  console.error(error instanceof Error ? error.message : String(error))
   process.exit(1)
 })

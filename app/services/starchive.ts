@@ -1,5 +1,6 @@
 export const STARCHIVE_UPSTREAM = 'https://github.com/jwardsmith/STARCHIVE' as const
 export const STARCHIVE_GITHUB_API_VERSION = '2022-11-28' as const
+export const DEFAULT_STARCHIVE_USERNAME = 'jekidev' as const
 
 export type StarredRepo = {
   fullName: string
@@ -23,11 +24,12 @@ export type StarchiveCatalog = {
   username: string
   repos: StarredRepo[]
   lists: StarredList[]
+  exportedAt?: string
 }
 
 export type StarchiveClientOptions = {
   username: string
-  token: string
+  token?: string
   fetchImpl?: typeof fetch
 }
 
@@ -207,13 +209,60 @@ export function buildStarredRepoListsCsv(catalog: StarchiveCatalog): string {
   return [header.join(','), ...rows].join('\n') + '\n'
 }
 
-function authHeaders(token: string): HeadersInit {
-  return {
-    Authorization: `Bearer ${token}`,
+function requestHeaders(token?: string): HeadersInit {
+  const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': STARCHIVE_GITHUB_API_VERSION,
     'User-Agent': 'Ubermench-STARCHIVE',
   }
+  if (token?.trim()) headers.Authorization = `Bearer ${token.trim()}`
+  return headers
+}
+
+export function parseStarchiveSnapshot(payload: unknown): StarchiveCatalog {
+  if (!isRecord(payload) || !Array.isArray(payload.repos) || !Array.isArray(payload.lists)) {
+    throw new Error('STARCHIVE snapshot must include repos and lists arrays')
+  }
+  const username = readString(payload.username).trim()
+  if (!username) throw new Error('STARCHIVE snapshot is missing username')
+  return {
+    username,
+    repos: payload.repos.map((repo) => {
+      if (!isRecord(repo)) throw new Error('STARCHIVE snapshot repo must be an object')
+      return {
+        fullName: requireNonEmpty(readString(repo.fullName), 'repo.fullName'),
+        description: readString(repo.description),
+        htmlUrl: requireNonEmpty(readString(repo.htmlUrl), 'repo.htmlUrl'),
+        language: typeof repo.language === 'string' ? repo.language : null,
+        stars: readNumber(repo.stars),
+        forks: readNumber(repo.forks),
+        createdAt: readString(repo.createdAt),
+        updatedAt: readString(repo.updatedAt),
+        listed: repo.listed === true,
+      }
+    }),
+    lists: payload.lists.map((list) => {
+      if (!isRecord(list)) throw new Error('STARCHIVE snapshot list must be an object')
+      return {
+        slug: requireNonEmpty(readString(list.slug), 'list.slug'),
+        name: requireNonEmpty(readString(list.name), 'list.name'),
+        repos: Array.isArray(list.repos)
+          ? list.repos.map((item) => {
+              if (!isRecord(item)) throw new Error('STARCHIVE snapshot list repo must be an object')
+              return {
+                owner: requireNonEmpty(readString(item.owner), 'list.repo.owner'),
+                repo: requireNonEmpty(readString(item.repo), 'list.repo.repo'),
+              }
+            })
+          : [],
+      }
+    }),
+    exportedAt: readString(payload.exportedAt) || undefined,
+  }
+}
+
+export function serializeStarchiveSnapshot(catalog: StarchiveCatalog, exportedAt = new Date().toISOString()): string {
+  return `${JSON.stringify({ ...catalog, exportedAt }, null, 2)}\n`
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -222,7 +271,7 @@ async function readJson(response: Response): Promise<unknown> {
 
 export function createStarchiveClient(options: StarchiveClientOptions): StarchiveClient {
   const username = requireNonEmpty(options.username, 'GitHub username')
-  const token = requireNonEmpty(options.token, 'GitHub token')
+  const token = options.token?.trim() || undefined
   const fetchImpl = options.fetchImpl ?? globalThis.fetch
   if (typeof fetchImpl !== 'function') throw new Error('fetch is not available')
 
@@ -241,7 +290,7 @@ export function createStarchiveClient(options: StarchiveClientOptions): Starchiv
     const repos: StarredRepo[] = []
     let url: string | null = `https://api.github.com/users/${encodeURIComponent(username)}/starred?per_page=100`
     while (url) {
-      const response = await request(url, { headers: authHeaders(token) })
+      const response = await request(url, { headers: requestHeaders(token) })
       const payload = await readJson(response)
       if (!Array.isArray(payload)) throw new Error('GitHub starred response must be an array')
       for (const item of payload) repos.push(mapGithubStarredRepo(item))
@@ -294,6 +343,7 @@ export function createStarchiveClient(options: StarchiveClientOptions): Starchiv
         username,
         repos: assignListMembership(repos, lists),
         lists,
+        exportedAt: new Date().toISOString(),
       }
     },
   }

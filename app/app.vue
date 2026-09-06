@@ -36,6 +36,7 @@
 const navigation = [
   { label: 'Overview', to: '/' },
   { label: 'STARCHIVE', to: '/starchive' },
+  { label: 'Connectors', to: '/connectors' },
   { label: 'Settings', to: '/settings' },
 ]
 </script>

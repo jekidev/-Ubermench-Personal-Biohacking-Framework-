@@ -17,13 +17,13 @@
         <UInput v-model="tokenInput" type="password" placeholder="GitHub token (public_repo)" autocomplete="off" @change="persistToken" />
       </div>
       <p class="mt-3 text-xs text-zinc-500">
-        Username is stored locally. The token uses the secret vault on desktop and stays in memory in browser preview.
-        Prefer a fine-grained or classic token with <code>public_repo</code> scope.
+        Agents read the committed snapshot in <code>app/data/starchive/catalog.json</code>.
+        Username defaults to <code>jekidev</code>. A token is only needed for private or hidden stars.
       </p>
     </UCard>
 
     <div class="flex flex-wrap gap-3">
-      <UButton :loading="loading" :disabled="!usernameInput.trim() || !tokenInput.trim()" @click="runFetch">
+      <UButton :loading="loading" :disabled="!usernameInput.trim()" @click="runFetch">
         Fetch starred repos
       </UButton>
       <UButton color="neutral" variant="outline" :disabled="!catalog" @click="safeDownload('repos')">

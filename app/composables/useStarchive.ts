@@ -1,8 +1,11 @@
 import { getSecret, isSecretVaultUnlocked, removeSecret, setSecret } from '~/services/secret-vault'
+import committedCatalog from '~/data/starchive/catalog.json'
 import {
+  DEFAULT_STARCHIVE_USERNAME,
   buildStarredRepoListsCsv,
   buildStarredReposCsv,
   createStarchiveClient,
+  parseStarchiveSnapshot,
   type StarchiveCatalog,
 } from '~/services/starchive'
 
@@ -32,10 +35,18 @@ function downloadText(filename: string, contents: string): void {
   URL.revokeObjectURL(url)
 }
 
+function loadCommittedCatalog(): StarchiveCatalog | null {
+  try {
+    return parseStarchiveSnapshot(committedCatalog)
+  } catch {
+    return null
+  }
+}
+
 export function useStarchive() {
-  const username = useState<string>('ubermench-starchive-username', () => readStoredUsername())
+  const username = useState<string>('ubermench-starchive-username', () => readStoredUsername() || DEFAULT_STARCHIVE_USERNAME)
   const token = useState<string>('ubermench-starchive-token', () => '')
-  const catalog = useState<StarchiveCatalog | null>('ubermench-starchive-catalog', () => null)
+  const catalog = useState<StarchiveCatalog | null>('ubermench-starchive-catalog', () => loadCommittedCatalog())
   const error = useState<string>('ubermench-starchive-error', () => '')
   const status = useState<string>('ubermench-starchive-status', () => '')
   const loading = useState<boolean>('ubermench-starchive-loading', () => false)
@@ -67,7 +78,7 @@ export function useStarchive() {
     status.value = ''
     loading.value = true
     try {
-      const client = createStarchiveClient({ username: username.value, token: token.value })
+      const client = createStarchiveClient({ username: username.value, token: token.value || undefined })
       const next = await client.fetchCatalog()
       catalog.value = next
       status.value = next.lists.length

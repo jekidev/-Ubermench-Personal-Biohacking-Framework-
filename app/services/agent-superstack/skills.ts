@@ -27,5 +27,6 @@ export function createDefaultSkillRegistry(): SkillRegistry {
   registry.register({ id: 'coding-agent', name: 'Coding Agent', description: 'Plans, edits and validates software changes.', triggers: ['code', 'coding', 'debug', 'implement', 'github'], tools: ['filesystem', 'git', 'tests'], enabled: true })
   registry.register({ id: 'deep-research', name: 'Deep Research', description: 'Breaks complex questions into evidence-backed research tasks.', triggers: ['deep research', 'compare', 'investigate'], tools: ['web', 'knowledge-graph'], enabled: true })
   registry.register({ id: 'automation', name: 'Automation', description: 'Executes bounded tool workflows.', triggers: ['automate', 'automation', 'schedule'], tools: ['mcp', 'scheduler'], enabled: true })
+  registry.register({ id: 'starchive', name: 'STARCHIVE', description: 'Reads the committed GitHub star archive in app/data/starchive/catalog.json.', triggers: ['starchive', 'starred', 'star archive', 'github stars'], tools: ['starchive-catalog'], enabled: true })
   return registry
 }
