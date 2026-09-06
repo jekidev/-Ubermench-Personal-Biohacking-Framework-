@@ -1,4 +1,4 @@
-export type ResearchProvider = 'pubmed' | 'europe-pmc' | 'crossref'
+export type ResearchProvider = 'pubmed' | 'europe-pmc' | 'crossref' | 'paper-search'
 
 export type ResearchQuery = {
   query: string
@@ -10,6 +10,8 @@ export type ResearchRequest = {
   url: string
   query: string
   requiresApproval: true
+  sources?: string[]
+  sciHubEnabled?: false
 }
 
 export interface ResearchAdapter {
@@ -62,6 +64,46 @@ export const crossrefAdapter: ResearchAdapter = {
   },
 }
 
+export const PAPER_SEARCH_OPEN_SOURCES = [
+  'arxiv',
+  'pubmed',
+  'biorxiv',
+  'medrxiv',
+  'europepmc',
+  'pmc',
+  'openalex',
+  'crossref',
+] as const
+
+export const paperSearchAdapter: ResearchAdapter = {
+  provider: 'paper-search',
+  buildRequest({ query }) {
+    const normalized = query.trim()
+    if (!normalized) throw new Error('Research query cannot be empty.')
+    return {
+      provider: 'paper-search',
+      url: 'mcp://paper-search/search_papers',
+      query: normalized,
+      requiresApproval: true,
+      sources: [...PAPER_SEARCH_OPEN_SOURCES],
+      sciHubEnabled: false,
+    }
+  },
+}
+
 export function getResearchAdapter(provider: ResearchProvider): ResearchAdapter {
-  return ({ pubmed: pubmedAdapter, 'europe-pmc': europePmcAdapter, crossref: crossrefAdapter })[provider]
+  switch (provider) {
+    case 'pubmed':
+      return pubmedAdapter
+    case 'europe-pmc':
+      return europePmcAdapter
+    case 'crossref':
+      return crossrefAdapter
+    case 'paper-search':
+      return paperSearchAdapter
+    default: {
+      const _never: never = provider
+      throw new Error(`Unsupported research provider: ${_never}`)
+    }
+  }
 }

@@ -19,6 +19,19 @@ Agent tool: `connector.drive.sync` (requires approval).
 Desktop command `ocr_pdf_bytes` invokes system Tesseract on PDF bytes.
 Wired to `/longevity/bloods` via `TauriOcrAdapter` when "Local OCR fallback" is enabled.
 
+## Starred-repo integrations (approved)
+
+These are thin adapters, not wholesale merges:
+
+| Connector | Upstream | How it is used |
+| --- | --- | --- |
+| `paper-search` | openags/paper-search-mcp | MCP stdio literature search. Sci-Hub disabled. |
+| `paper-qa` | Future-House/paper-qa | Optional local PDF RAG with citations. |
+| `local-deep-research` | LearningCircuit/local-deep-research | Optional `ldr-mcp` sidecar. |
+| `pdf-inspector` | firecrawl/pdf-inspector idea | In-process text-vs-scanned classifier for lab PDFs. |
+
+Garmin-only biometric mapping from bio-vibing lives in `app/services/health-adapters/garmin-biometric-schema.ts`. Oura, Whoop, Apple Health, Fitbit and CGM providers stay rejected.
+
 ## Still missing vs Cursor
 
 1. Full MCP protocol client (tool discovery, SSE/HTTP)

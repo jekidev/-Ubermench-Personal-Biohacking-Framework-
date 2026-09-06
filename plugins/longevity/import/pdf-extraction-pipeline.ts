@@ -7,6 +7,7 @@ import {
 } from './ocr-adapter'
 import { extractPdfTextWithVision, type VisionDocumentRunner } from './vision-lab-extractor'
 import { parsePdfLabBlocks } from './pdf-lab-engine'
+import { inspectPdfBytes } from '../pdf/pdf-inspector'
 
 export type PdfExtractionMethod = 'native-text' | 'ocr' | 'vision'
 
@@ -33,6 +34,10 @@ export async function runPdfExtractionPipeline(
   const warnings: string[] = []
   let blocks: PdfTextBlock[] = []
   let method: PdfExtractionMethod = 'native-text'
+  const inspection = inspectPdfBytes(bytes)
+  if (inspection.recommendOcr) {
+    warnings.push(`PDF inspector classified this file as ${inspection.kind}; prefer local OCR for scanned lab reports.`)
+  }
 
   try {
     blocks = await extractor.extract(bytes)

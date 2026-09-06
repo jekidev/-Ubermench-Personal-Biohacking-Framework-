@@ -19,6 +19,10 @@ describe('connector registry', () => {
     expect(ids).toContain('google-drive')
     expect(ids).toContain('huggingface')
     expect(ids).toContain('discord')
+    expect(ids).toContain('paper-search')
+    expect(ids).toContain('paper-qa')
+    expect(ids).toContain('local-deep-research')
+    expect(ids).toContain('pdf-inspector')
   })
 
   it('tracks enabled state in local storage', () => {

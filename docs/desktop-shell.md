@@ -28,6 +28,15 @@ npm run build
 npm run tauri:build
 ```
 
+## Packaging notes (nuxtor-aligned)
+
+Keep the Nuxtor-shaped desktop path:
+
+- `ssr: false` and generate a static SPA for Tauri
+- bind native file/OCR/SQL commands in the Rust allowlist only
+- do not replace Ubermench plugins with a second app shell
+- smoke-test `npm run generate` then `npm run tauri:build` before a release
+
 ## Boundaries
 
 - Vue/Nuxt owns UI and plugin composition.

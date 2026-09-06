@@ -63,6 +63,7 @@ Apple Health, Oura, WHOOP, Fitbit and Polar are intentionally excluded from the 
 3. Add citation-level claim extraction with explicit uncertainty.
 4. Separate mechanistic plausibility from human outcome evidence in intervention ranking.
 5. Add evidence freshness/retraction checks and an auditable research snapshot.
+6. Optional paper-search MCP and PaperQA sidecars are registered; they stay disabled until the local tools are installed. Sci-Hub remains off.
 
 ### P1 — experiment engine maturity
 
