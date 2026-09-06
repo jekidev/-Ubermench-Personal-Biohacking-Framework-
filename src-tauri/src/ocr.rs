@@ -114,7 +114,8 @@ pub fn ocr_pdf_bytes(pdf_bytes: Vec<u8>) -> Result<OcrExtractionResult, String> 
             .map(|value| value.as_millis())
             .unwrap_or(0)
     ));
-    fs::write(&temp_path, &pdf_bytes).map_err(|error| format!("Failed to write temp PDF: {error}"))?;
+    fs::write(&temp_path, &pdf_bytes)
+        .map_err(|error| format!("Failed to write temp PDF: {error}"))?;
     let result = ocr_pdf_path(&temp_path);
     let _ = fs::remove_file(&temp_path);
     result
