@@ -15,7 +15,12 @@ Nuxt 4 uses the `app/` directory as the UI source. The STARCHIVE route lives the
 
 STARCHIVE does not modify GitHub stars, lists, or repositories.
 
-Cursor agents should read `app/data/starchive/catalog.json` to see Jeppe's starred repositories. Refresh that snapshot with `npm run starchive -- --snapshot`. The default GitHub user is `jekidev`. A token is only required for private or hidden stars.
+Cursor agents should use the **GitHub starred repos** skill (`.cursor/skills/github-starred-repos/SKILL.md`) and read either:
+
+- the portable archive at https://github.com/jekidev/stararchive (`genres/` + `catalog/catalog.json`)
+- the local snapshot `app/data/starchive/catalog.json`
+
+Refresh the local snapshot with `npm run starchive -- --snapshot`. The default GitHub user is `jekidev`. A token is only required for private or hidden stars.
 
 ## Credentials
 

@@ -56,10 +56,12 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Submodule: `tools/starchive`
 - App page: `/starchive`
 - Agent catalog: `app/data/starchive/catalog.json`
+- Portable multi-IDE archive: https://github.com/jekidev/stararchive
+- Cursor skill: `.cursor/skills/github-starred-repos/SKILL.md`
 - CLI: `npm run starchive -- --snapshot`
 - Docs: `docs/starchive.md`
 
-Cursor agents should read the committed catalog. Credentials come from `GITHUB_USERNAME` / `GITHUB_TOKEN` or the secret vault. Tokens are never committed. The default user is `jekidev`.
+Cursor agents should use the **GitHub starred repos** skill and read the committed catalog or https://github.com/jekidev/stararchive. Credentials come from `GITHUB_USERNAME` / `GITHUB_TOKEN` or the secret vault. Tokens are never committed. The default user is `jekidev`.
 
 ### AI orchestration
 - Multi-provider LLM layer for OpenRouter, OpenAI and Anthropic
