@@ -19,6 +19,76 @@
       </UCard>
     </div>
 
+    <div class="grid gap-4 lg:grid-cols-2">
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between gap-3">
+            <div class="font-medium">Data quality</div>
+            <NuxtLink to="/data-health"><UButton size="sm" variant="outline">Data health</UButton></NuxtLink>
+          </div>
+        </template>
+        <div class="grid gap-3 sm:grid-cols-2 text-sm">
+          <div><span class="text-zinc-500">Completeness:</span> {{ overview.qualityPercent }}%</div>
+          <div><span class="text-zinc-500">Issues:</span> {{ overview.quality.issues.length }}</div>
+          <div><span class="text-zinc-500">Source coverage:</span> {{ percent(overview.quality.sourceCoverage) }}</div>
+          <div><span class="text-zinc-500">Timestamp coverage:</span> {{ percent(overview.quality.timestampCoverage) }}</div>
+        </div>
+        <p v-if="overview.topGap" class="mt-3 text-sm text-zinc-400">
+          Top gap: {{ overview.topGap.metric }} — {{ overview.topGap.reason }}
+        </p>
+        <p v-else class="mt-3 text-sm text-zinc-400">No major data gaps detected.</p>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between gap-3">
+            <div class="font-medium">Experiments</div>
+            <NuxtLink to="/experiments"><UButton size="sm" variant="outline">Open</UButton></NuxtLink>
+          </div>
+        </template>
+        <div class="text-sm">
+          <div><span class="text-zinc-500">Stored protocols:</span> {{ overview.experimentCount }}</div>
+          <div v-if="overview.latestConclusion" class="mt-3">
+            <div class="font-medium">{{ overview.latestConclusion.intervention }} → {{ overview.latestConclusion.metric || 'metric' }}</div>
+            <div class="mt-1 text-zinc-400">
+              {{ overview.latestConclusion.conclusionType || overview.latestConclusion.status || 'No conclusion yet' }}
+            </div>
+            <p v-if="overview.latestConclusion.conclusionRationale" class="mt-1 text-xs text-zinc-500">
+              {{ overview.latestConclusion.conclusionRationale }}
+            </p>
+          </div>
+          <p v-else class="mt-3 text-zinc-400">No N-of-1 protocols stored yet.</p>
+        </div>
+      </UCard>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between gap-3">
+            <div class="font-medium">Safety</div>
+            <NuxtLink to="/safety"><UButton size="sm" variant="outline">Review</UButton></NuxtLink>
+          </div>
+        </template>
+        <div class="text-sm">
+          <UBadge :color="safetyColor" variant="subtle">{{ overview.safetySeverity }}</UBadge>
+          <p class="mt-3">{{ overview.safetyTitle }}</p>
+          <p class="mt-2 text-xs text-zinc-500">Safety screening is kept separate from efficacy ranking and does not approve treatment changes.</p>
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between gap-3">
+            <div class="font-medium">Biology backup</div>
+            <NuxtLink to="/biology"><UButton size="sm" variant="outline">Backup</UButton></NuxtLink>
+          </div>
+        </template>
+        <p class="text-sm text-zinc-400">{{ overview.backupNote }}</p>
+        <p class="mt-2 text-xs text-zinc-500">Export and restore stay local. No cloud account is required.</p>
+      </UCard>
+    </div>
+
     <UCard>
       <template #header><div class="font-medium">Personal data coverage</div></template>
       <div class="grid gap-3 sm:grid-cols-3 text-sm">
@@ -27,6 +97,21 @@
         <div><span class="text-zinc-500">Sleep / training:</span> {{ profile.sleep.length }} / {{ profile.training.length }}</div>
       </div>
       <p class="mt-3 text-xs text-zinc-500">Profile state is loaded from the local-first biology store.</p>
+    </UCard>
+
+    <UCard>
+      <template #header><div class="font-medium">Workspace</div></template>
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <NuxtLink
+          v-for="card in overview.navigation"
+          :key="card.to"
+          :to="card.to"
+          class="rounded-lg border border-zinc-800 p-3 hover:bg-zinc-900"
+        >
+          <div class="font-medium">{{ card.label }}</div>
+          <div class="mt-1 text-xs text-zinc-500">{{ card.description }}</div>
+        </NuxtLink>
+      </div>
     </UCard>
 
     <UCard>
@@ -50,24 +135,19 @@
         <div><span class="text-zinc-500">Rotation:</span> {{ llm.settings.value.autoRotate ? 'On' : 'Off' }}</div>
       </div>
     </UCard>
-
-    <UCard>
-      <template #header><div class="font-medium">Modules</div></template>
-      <div class="flex flex-wrap gap-4 text-sm">
-        <NuxtLink to="/longevity" class="underline underline-offset-4">Longevity</NuxtLink>
-        <NuxtLink to="/fearprime" class="underline underline-offset-4">Fearprime</NuxtLink>
-        <NuxtLink to="/settings" class="underline underline-offset-4">LLM Settings</NuxtLink>
-      </div>
-    </UCard>
   </div>
 </template>
 
 <script setup lang="ts">
+import { loadBackupStatus } from '~/services/backup-status'
 import { assessLongevity } from '~/services/longevity-engine'
+import { buildOverviewSummary } from '~/services/overview-dashboard'
+import { screenProfileSafety } from '~/services/profile-safety'
 
 const llm = useLLM()
 const ai = useBiohackingAI()
 const biology = usePersonalBiology()
+const experiments = useExperiments()
 const profile = biology.profile
 const prompt = ref('')
 const loading = ref(false)
@@ -75,15 +155,40 @@ const error = ref('')
 const lastRun = ref<Awaited<ReturnType<typeof ai.ask>> | null>(null)
 
 await biology.initialize()
+await experiments.initialize()
 
 const enabledProviders = computed(() => llm.settings.value.providers.filter((p) => p.enabled).length)
 const assessment = computed(() => assessLongevity(profile.value))
+const safetyFlags = computed(() => screenProfileSafety(profile.value))
+const overview = computed(() => buildOverviewSummary({
+  profile: profile.value,
+  experiments: experiments.experiments.value,
+  summarizeExperiment: (experiment) => {
+    const stored = experiments.experiments.value.find((item) => item.id === experiment.id)
+    if (!stored) return {}
+    const summary = experiments.summarize(stored).summary
+    return { conclusionType: summary.conclusionType, conclusionRationale: summary.conclusionRationale }
+  },
+  safetyFlags: safetyFlags.value,
+  backup: loadBackupStatus(),
+}))
+
+const safetyColor = computed(() => {
+  if (overview.value.safetySeverity === 'red') return 'error'
+  if (overview.value.safetySeverity === 'orange' || overview.value.safetySeverity === 'yellow') return 'warning'
+  return 'success'
+})
+
 const cards = computed(() => [
-  { title: 'Plugins', value: 'Fearprime + Longevity', note: 'Modular domain architecture' },
-  { title: 'Biology', value: String(profile.value.biomarkers.length), note: 'Biomarker records loaded locally' },
+  { title: 'Data quality', value: `${overview.value.qualityPercent}%`, note: overview.value.topGap ? `Gap: ${overview.value.topGap.metric}` : 'Core domains populated' },
+  { title: 'Experiments', value: String(overview.value.experimentCount), note: overview.value.latestConclusion?.conclusionType ?? 'No protocols yet' },
+  { title: 'Safety', value: overview.value.safetySeverity, note: overview.value.safetyTitle },
   { title: 'Longevity', value: `${assessment.value.score}/100`, note: 'Reference-bound screening only' },
-  { title: 'AI', value: `${enabledProviders.value} providers`, note: 'Multi-provider orchestration' },
 ])
+
+function percent(value: number) {
+  return `${Math.round(value * 100)}%`
+}
 
 async function runAI() {
   error.value = ''

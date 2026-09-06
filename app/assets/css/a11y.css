@@ -1,0 +1,30 @@
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 60;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #fafafa;
+  color: #09090b;
+  transform: translateY(-220%);
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: none;
+}
+
+:focus-visible {
+  outline: 2px solid #d4d4d8;
+  outline-offset: 2px;
+}
+
+.nav-link-active {
+  background: #18181b;
+  color: #fafafa;
+}
+
+#main-content:focus {
+  outline: none;
+}
