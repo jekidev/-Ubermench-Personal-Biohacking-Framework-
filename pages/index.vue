@@ -56,6 +56,7 @@
       <div class="flex flex-wrap gap-4 text-sm">
         <NuxtLink to="/longevity" class="underline underline-offset-4">Longevity</NuxtLink>
         <NuxtLink to="/fearprime" class="underline underline-offset-4">Fearprime</NuxtLink>
+        <NuxtLink to="/starchive" class="underline underline-offset-4">STARCHIVE</NuxtLink>
         <NuxtLink to="/settings" class="underline underline-offset-4">LLM Settings</NuxtLink>
       </div>
     </UCard>

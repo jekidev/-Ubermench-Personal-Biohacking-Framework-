@@ -14,7 +14,8 @@
     "test": "nuxt prepare && vitest run",
     "deployment:bootstrap": "node deployment/bootstrap.mjs",
     "deployment:replit": "node deployment/replit.mjs",
-    "deployment:manus": "node deployment/manus.mjs"
+    "deployment:manus": "node deployment/manus.mjs",
+    "starchive": "node scripts/starchive.mjs"
   },
   "dependencies": {
     "@nuxt/ui": "^4.0.0",
