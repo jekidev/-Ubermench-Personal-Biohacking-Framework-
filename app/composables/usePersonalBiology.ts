@@ -8,6 +8,7 @@ import { migrateBiologyProfile } from '~/services/biology-profile-migration'
 import { encryptBiologyBackup, decryptBiologyBackup, parseEncryptedBiologyBackup, serializeEncryptedBiologyBackup } from '~/services/encrypted-biology-backup'
 import { loadBiologyBackupNative, saveBiologyBackupNative } from '~/services/biology-backup-native'
 import { loadEncryptedBiologyBackupNative, saveEncryptedBiologyBackupNative } from '~/services/encrypted-biology-backup-native'
+import { recordBackupExport } from '~/services/backup-status'
 
 export function usePersonalBiology() {
   const profile = useState<PersonalBiologyProfile>('personal-biology-profile', () => emptyBiologyProfile())
@@ -34,12 +35,24 @@ export function usePersonalBiology() {
     await persist({ ...profile.value, biomarkers: [...profile.value.biomarkers, record] })
   }
 
+  function rememberBackup(exportedAt: string, checksum?: string, biomarkerCount?: number) {
+    recordBackupExport({
+      lastExportedAt: exportedAt,
+      lastChecksumPrefix: checksum?.slice(0, 12),
+      biomarkerCount,
+    })
+  }
+
   async function exportBackup() {
-    return serializeBiologyBackup(await createBiologyBackup(profile.value))
+    const backup = await createBiologyBackup(profile.value)
+    rememberBackup(backup.exportedAt, backup.checksum, backup.metadata?.biomarkerCount)
+    return serializeBiologyBackup(backup)
   }
 
   async function exportBackupToFile() {
-    return saveBiologyBackupNative(await createBiologyBackup(profile.value))
+    const backup = await createBiologyBackup(profile.value)
+    rememberBackup(backup.exportedAt, backup.checksum, backup.metadata?.biomarkerCount)
+    return saveBiologyBackupNative(backup)
   }
 
   async function importBackup(raw: string, options?: { force?: boolean }) {
@@ -69,12 +82,15 @@ export function usePersonalBiology() {
   }
 
   async function exportEncryptedBackup(passphrase: string) {
-    const encrypted = await encryptBiologyBackup(await createBiologyBackup(profile.value), passphrase)
-    return serializeEncryptedBiologyBackup(encrypted)
+    const backup = await createBiologyBackup(profile.value)
+    rememberBackup(backup.exportedAt, backup.checksum, backup.metadata?.biomarkerCount)
+    return serializeEncryptedBiologyBackup(await encryptBiologyBackup(backup, passphrase))
   }
 
   async function exportEncryptedBackupToFile(passphrase: string) {
-    return saveEncryptedBiologyBackupNative(await createBiologyBackup(profile.value), passphrase)
+    const backup = await createBiologyBackup(profile.value)
+    rememberBackup(backup.exportedAt, backup.checksum, backup.metadata?.biomarkerCount)
+    return saveEncryptedBiologyBackupNative(backup, passphrase)
   }
 
   async function importEncryptedBackup(raw: string, passphrase: string, options?: { force?: boolean }) {

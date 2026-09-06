@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { screenProfileSafety } from '~/services/profile-safety'
+import type { SafetySeverity } from '~/services/safety-engine'
+
 const { profile, initialize, biomarkerNames, trend, interactionFlags, exportBackup, importBackup, previewImport, exportEncryptedBackup, importEncryptedBackup, exportBackupToFile, importBackupFromFile } = usePersonalBiology()
 const { selectModel, evidenceQuery } = useBiohackingAI()
 const chronologicalAge = ref(35)
@@ -21,7 +24,14 @@ const models = computed(() => ({
 
 const trends = computed(() => biomarkerNames().map((name) => trend(name)))
 const flags = computed(() => interactionFlags())
+const safetyFlags = computed(() => screenProfileSafety(profile.value))
 const goalQuery = computed(() => evidenceQuery(profile.value.goals[0] ?? 'personal health optimization'))
+
+function safetyColor(severity: SafetySeverity) {
+  if (severity === 'red') return 'error'
+  if (severity === 'orange' || severity === 'yellow') return 'warning'
+  return 'success'
+}
 const phenotypicAge = computed(() => computePhenotypicAge(biomarkersToPhenotypicInputs(profile.value.biomarkers, chronologicalAge.value)))
 
 function resetBackupStatus() {
@@ -134,7 +144,7 @@ async function handleEncryptedBackupFile(event: Event) {
       <UCard><p class="text-sm text-muted">Biomarkers</p><p class="text-2xl font-semibold">{{ profile.biomarkers.length }}</p></UCard>
       <UCard><p class="text-sm text-muted">Variants</p><p class="text-2xl font-semibold">{{ profile.variants.length }}</p></UCard>
       <UCard><p class="text-sm text-muted">Active medications</p><p class="text-2xl font-semibold">{{ profile.medications.filter((x) => x.active).length }}</p></UCard>
-      <UCard><p class="text-sm text-muted">Safety flags</p><p class="text-2xl font-semibold">{{ flags.length }}</p></UCard>
+      <UCard><p class="text-sm text-muted">Safety flags</p><p class="text-2xl font-semibold">{{ safetyFlags.filter((flag) => flag.requiresReview).length }}</p></UCard>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-3">
@@ -160,10 +170,24 @@ async function handleEncryptedBackupFile(event: Event) {
     </UCard>
 
     <UCard>
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Safety screening</h2>
+        <NuxtLink to="/safety"><UButton size="sm" variant="outline">Open safety</UButton></NuxtLink>
+      </div>
+      <p class="mt-1 text-sm text-muted">Duplicate ingredients, cumulative dose and interaction rules. Kept separate from efficacy ranking.</p>
+      <div v-if="safetyFlags.length" class="mt-4 space-y-2 text-sm">
+        <div v-for="(flag, index) in safetyFlags" :key="`${flag.code}-${index}`" class="flex justify-between gap-3 border-b border-default py-2">
+          <span>{{ flag.title }}</span>
+          <UBadge :color="safetyColor(flag.severity)" variant="subtle">{{ flag.severity }}</UBadge>
+        </div>
+      </div>
+    </UCard>
+
+    <UCard>
       <h2 class="font-semibold">Interaction flags</h2>
       <div v-if="flags.length" class="mt-4 space-y-2 text-sm">
-        <div v-for="flag in flags" :key="flag.code" class="flex justify-between gap-3 border-b border-default py-2">
-          <span>{{ flag.title }}</span>
+        <div v-for="flag in flags" :key="flag.subject" class="flex justify-between gap-3 border-b border-default py-2">
+          <span>{{ flag.subject }}</span>
           <span class="text-muted">{{ flag.severity }}</span>
         </div>
       </div>
