@@ -2,6 +2,7 @@ import type { AgentTask } from '~/services/agent-superstack/types'
 import { agentKernel } from '~/services/agent-superstack/kernel'
 import { evaluateTask } from '~/services/agent-superstack/governance'
 import { nativeMcpExecute } from './native-mcp'
+import { createMcpServerTools } from './mcp-server-tools'
 import type { AgentTool, AgentToolCall } from './types'
 
 export class AgentToolGateway {
@@ -69,5 +70,8 @@ export function createDefaultToolGateway(): AgentToolGateway {
       return nativeMcpExecute(command, commandArgs, approvalToken, stdinPayload, timeoutMs)
     },
   })
+  for (const tool of createMcpServerTools()) {
+    gateway.register(tool)
+  }
   return gateway
 }

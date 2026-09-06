@@ -35,6 +35,26 @@ function standardDeviation(values: number[], average?: number) {
   return Math.sqrt(variance)
 }
 
+export type ExperimentConclusionType = 'association' | 'within-person' | 'causal-hypothesis'
+
+export function classifyExperimentConclusion(input: {
+  baselineCount: number
+  interventionCount: number
+  adherenceRate?: number
+  standardizedEffect?: number
+}): { conclusionType: ExperimentConclusionType; rationale: string } {
+  if (input.baselineCount < 3 || input.interventionCount < 3) {
+    return { conclusionType: 'association', rationale: 'Insufficient paired observations for within-person inference.' }
+  }
+  if (typeof input.adherenceRate === 'number' && input.adherenceRate < 0.7) {
+    return { conclusionType: 'association', rationale: 'Low adherence weakens within-person attribution.' }
+  }
+  if (typeof input.standardizedEffect === 'number' && Math.abs(input.standardizedEffect) >= 0.5) {
+    return { conclusionType: 'within-person', rationale: 'Repeated within-person contrast exceeds moderate effect threshold.' }
+  }
+  return { conclusionType: 'association', rationale: 'Observed contrast is compatible with association only.' }
+}
+
 export function summarizeNOf1(experiment: NOf1Experiment, nowInput: Date = new Date()) {
   const baselineDays = Math.max(0, Math.floor(experiment.baselineDays))
   const interventionDays = Math.max(0, Math.floor(experiment.interventionDays))
@@ -61,6 +81,12 @@ export function summarizeNOf1(experiment: NOf1Experiment, nowInput: Date = new D
   const adherenceRate = adherenceEvents.length ? completedAdherence / adherenceEvents.length : undefined
   const adverseEvents = experiment.adverseEvents ?? []
   const relatedAdverseEvents = adverseEvents.filter((event) => event.related !== false)
+  const conclusion = classifyExperimentConclusion({
+    baselineCount: baseline.length,
+    interventionCount: intervention.length,
+    adherenceRate,
+    standardizedEffect,
+  })
 
   return {
     baselineMean, interventionMean, baselineSd, interventionSd, delta, standardizedEffect,
@@ -73,5 +99,7 @@ export function summarizeNOf1(experiment: NOf1Experiment, nowInput: Date = new D
     relatedAdverseEventCount: relatedAdverseEvents.length,
     severeAdverseEventCount: adverseEvents.filter((event) => event.severity === 'severe').length,
     interpretation: standardizedEffect === undefined ? 'Insufficient data for standardised effect estimation.' : Math.abs(standardizedEffect) < 0.2 ? 'Small signal' : Math.abs(standardizedEffect) < 0.5 ? 'Moderate signal' : 'Large signal',
+    conclusionType: conclusion.conclusionType,
+    conclusionRationale: conclusion.rationale,
   }
 }

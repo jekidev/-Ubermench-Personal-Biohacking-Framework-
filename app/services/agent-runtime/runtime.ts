@@ -10,6 +10,7 @@ import { SkillEvolutionEngine } from './skill-evolution'
 import { executeApprovedToolCalls } from './tool-loop'
 import { extractToolCalls } from './tool-plan'
 import { auditTaskSecurity } from './security-audit'
+import { isMcpStdioToolName } from './mcp-server-tools'
 
 const skillEvolution = new SkillEvolutionEngine()
 
@@ -18,7 +19,7 @@ function auditEvent(runId: string, type: Parameters<typeof recordAudit>[1]['type
 }
 
 function splitToolCalls(calls: AgentToolCall[]): { executable: AgentToolCall[]; awaitingApproval: AgentToolCall[] } {
-  const approvalRequired = (call: AgentToolCall) => call.requiresApproval === true || call.name === 'mcp.stdio'
+  const approvalRequired = (call: AgentToolCall) => call.requiresApproval === true || isMcpStdioToolName(call.name)
   const executable = calls.filter((call) => !approvalRequired(call) || Boolean(call.approvalToken?.trim()))
   const awaitingApproval = calls.filter((call) => approvalRequired(call) && !call.approvalToken?.trim())
   return { executable, awaitingApproval }

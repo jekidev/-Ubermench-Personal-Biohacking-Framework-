@@ -1,0 +1,78 @@
+import type { EvidenceItem } from '~/types/biology'
+import type { ResearchHit } from './research-engine'
+import { deduplicateEvidence, resolveEvidenceIdentity } from './evidence-identity'
+
+export type NormalizedEvidenceRecord = EvidenceItem & {
+  doi?: string
+  pmid?: string
+  retrievedAt: string
+  reviewRequired: boolean
+  claimUncertainty: 'high' | 'medium' | 'low'
+  mechanisticOnly: boolean
+}
+
+const STORAGE_KEY = 'ubermench.evidence.records.v1'
+
+export function normalizeResearchHit(hit: ResearchHit, retrievedAt: string): NormalizedEvidenceRecord {
+  const item: EvidenceItem = {
+    id: hit.doi ? `doi:${hit.doi}` : `pmid:${hit.id}`,
+    title: hit.title,
+    source: hit.source,
+    url: hit.url,
+    evidenceLevel: 'observational',
+    confidence: 0.35,
+    publishedAt: hit.publishedAt,
+    summary: hit.abstract,
+  }
+  const identity = resolveEvidenceIdentity(item)
+  return {
+    ...item,
+    doi: identity.doi,
+    pmid: identity.pmid,
+    retrievedAt,
+    reviewRequired: true,
+    claimUncertainty: 'high',
+    mechanisticOnly: false,
+  }
+}
+
+export function loadEvidenceStore(): NormalizedEvidenceRecord[] {
+  if (!import.meta.client) return []
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) as NormalizedEvidenceRecord[] : []
+  } catch {
+    return []
+  }
+}
+
+export function saveEvidenceStore(records: NormalizedEvidenceRecord[]): void {
+  if (!import.meta.client) return
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
+}
+
+export function persistNormalizedEvidence(records: NormalizedEvidenceRecord[]): NormalizedEvidenceRecord[] {
+  const byId = new Map<string, NormalizedEvidenceRecord>()
+  for (const record of [...loadEvidenceStore(), ...records]) {
+    byId.set(record.id, record)
+  }
+  const next = [...byId.values()]
+  saveEvidenceStore(next)
+  return next
+}
+
+export function normalizeEuropePmcResults(hits: ResearchHit[], retrievedAt: string): NormalizedEvidenceRecord[] {
+  const records = hits.map((hit) => normalizeResearchHit(hit, retrievedAt))
+  const unique = deduplicateEvidence(records.map((record) => ({
+    id: record.id,
+    title: record.title,
+    source: record.source,
+    url: record.url,
+    evidenceLevel: record.evidenceLevel,
+    confidence: record.confidence,
+    publishedAt: record.publishedAt,
+    summary: record.summary,
+  })))
+  const byId = new Map(records.map((record) => [record.id, record]))
+  return unique.map((item) => byId.get(item.id)!)
+}

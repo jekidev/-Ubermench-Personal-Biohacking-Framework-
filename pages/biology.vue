@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { profile, initialize, biomarkerNames, trend, interactionFlags, exportBackup, importBackup, exportEncryptedBackup, importEncryptedBackup, exportBackupToFile, importBackupFromFile } = usePersonalBiology()
+const { profile, initialize, biomarkerNames, trend, interactionFlags, exportBackup, importBackup, previewImport, exportEncryptedBackup, importEncryptedBackup, exportBackupToFile, importBackupFromFile } = usePersonalBiology()
 const { selectModel, evidenceQuery } = useBiohackingAI()
 const chronologicalAge = ref(35)
 
@@ -9,6 +9,7 @@ const backupMessage = ref('')
 const backupError = ref('')
 const encryptedPassphrase = ref('')
 const encryptedImportPassphrase = ref('')
+const backupPreview = ref<Awaited<ReturnType<typeof previewImport>> | null>(null)
 
 onMounted(initialize)
 
@@ -88,8 +89,10 @@ async function handleBackupFile(event: Event) {
   const file = input.files?.[0]
   if (!file) return
   try {
-    await importBackup(await file.text())
-    backupMessage.value = 'Biology backup imported.'
+    const raw = await file.text()
+    backupPreview.value = await previewImport(raw)
+    await importBackup(raw, { force: true })
+    backupMessage.value = `Biology backup imported. Checksum ${backupPreview.value.checksum?.slice(0, 12)}…`
   } catch (error) {
     backupError.value = error instanceof Error ? error.message : 'Unable to import biology backup.'
   } finally {

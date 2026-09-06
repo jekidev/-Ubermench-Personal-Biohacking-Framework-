@@ -1,5 +1,6 @@
 import type { EvidencePreview } from '../../plugins/longevity/evidence/live-lookup'
 import { buildResearchQuery, searchEuropePMC } from './research-engine'
+import { normalizeEuropePmcResults, persistNormalizedEvidence } from './evidence-normalizer'
 
 export interface ResearchWorkflowRequest {
   goal: string
@@ -13,6 +14,7 @@ export interface ResearchWorkflowResult {
   query: string
   hits: Awaited<ReturnType<typeof searchEuropePMC>>['hits']
   evidenceCandidates: EvidencePreview[]
+  normalizedRecords: ReturnType<typeof normalizeEuropePmcResults>
   retrievedAt: string
 }
 
@@ -38,5 +40,6 @@ export async function runResearchWorkflow(request: ResearchWorkflowRequest): Pro
     reviewRequired: true,
     notes: ['Bibliographic candidate only.', 'Evidence strength requires explicit review.'],
   }))
-  return { query, hits: research.hits, evidenceCandidates, retrievedAt: research.retrievedAt }
+  const normalizedRecords = persistNormalizedEvidence(normalizeEuropePmcResults(research.hits, research.retrievedAt))
+  return { query, hits: research.hits, evidenceCandidates, normalizedRecords, retrievedAt: research.retrievedAt }
 }
