@@ -1,12 +1,17 @@
 # Agent notes
 
-## STARCHIVE
+## GitHub starred repos
 
-Cursor agents should read the committed GitHub star archive before answering questions about Jeppe's starred repositories, tools, or research watchlist.
+Cursor skill: `.cursor/skills/github-starred-repos/SKILL.md`
 
-- Catalog: `app/data/starchive/catalog.json`
+The portable multi-IDE archive is https://github.com/jekidev/stararchive
+
+- Genres: `genres/INDEX.md` and `genres/<genre>.md` in that repo
+- Catalog: `catalog/catalog.json` in that repo
+- Local Ubermench snapshot: `app/data/starchive/catalog.json`
 - CSV: `app/data/starchive/starred_repos.csv`
 - Default GitHub user: `jekidev`
-- Refresh: `npm run starchive -- --snapshot`
+- Refresh here: `npm run starchive -- --snapshot`
+- Refresh portable repo: `node scripts/refresh.mjs && node scripts/classify.mjs`
 
-The live GitHub API for `jekidev` is public and currently has no starred repositories. A token is only required for private/hidden stars or another account (`GITHUB_USERNAME` / `GITHUB_TOKEN`).
+Read the catalog or genre files before answering questions about starred repositories. A token is only required for private or hidden stars (`GITHUB_USERNAME` / `GITHUB_TOKEN`).
