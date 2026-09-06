@@ -19,6 +19,6 @@ describe('connector runtime', () => {
   it('returns status snapshots for all connectors', async () => {
     const statuses = await listConnectorStatuses()
     expect(statuses.length).toBeGreaterThan(10)
-    expect(statuses.find((item) => item.id === 'gmail')?.implementationStatus).toBe('scaffold')
+    expect(statuses.find((item) => item.id === 'gmail')?.implementationStatus).toBe('live')
   })
 })

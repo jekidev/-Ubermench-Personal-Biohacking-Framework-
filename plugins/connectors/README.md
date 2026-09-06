@@ -1,45 +1,27 @@
 # Connectors (Cursor-style integrations)
 
-Unified registry for external services, modeled after Cursor MCP plugins.
+## Google OAuth (live)
 
-## Architecture
+PKCE browser flow on `/connectors`:
 
-```text
-CONNECTOR_REGISTRY (plugins/connectors/registry.ts)
-  ↓
-connector-store (enabled/disabled in localStorage)
-  ↓
-connector-runtime (credential check via secret vault)
-  ↓
-MCP_SERVER_REGISTRY (stdio spawn for live connectors)
-  ↓
-Agent tools: connector.list | connector.status | connector.catalog
-              mcp.stdio:<serverId>
-```
+1. Save `GOOGLE_CLIENT_ID` (and optional client secret) in the vault
+2. Add redirect URI `{origin}/connectors/oauth/callback` in Google Cloud Console
+3. Connect Drive, Gmail, or both
+4. Tokens stored as `GOOGLE_ACCESS_TOKEN`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_TOKEN_EXPIRES_AT`
 
-## Live vs scaffold
+## Google Drive → RAG (live)
 
-| Connector | Status | What's wired |
-|-----------|--------|--------------|
-| Discord | live | MCP stdio + agent tool |
-| Hugging Face | live | Inference engine + MCP registry entry |
-| GitHub, Slack, Tavily, Context7 | scaffold | MCP registry + vault keys; needs credentials |
-| Gmail, Google Drive, Calendar | scaffold | OAuth UI not built; manual token storage only |
-| Notion, Sentry, Stripe, Supabase, Convex, Vercel | planned | Registry metadata only |
+`syncDrivePdfsToRag()` downloads new PDFs, extracts text, and indexes chunks.
+Agent tool: `connector.drive.sync` (requires approval).
 
-## Missing vs Cursor
+## Tauri Tesseract OCR (live)
 
-1. OAuth redirect flows (Gmail, Drive, Calendar)
-2. Full MCP protocol client (tool discovery, SSE/HTTP transport)
-3. Connector marketplace / dynamic install
-4. Per-connector scoped permissions
-5. Google Drive → RAG sync adapter
-6. OAuth token refresh
-7. Connector health dashboard (only LLM provider health exists today)
+Desktop command `ocr_pdf_bytes` invokes system Tesseract on PDF bytes.
+Wired to `/longevity/bloods` via `TauriOcrAdapter` when "Local OCR fallback" is enabled.
 
-## Adding a connector
+## Still missing vs Cursor
 
-1. Add entry to `plugins/connectors/registry.ts`
-2. If MCP-based, add to `plugins/llm/mcp/servers.ts`
-3. Store credentials via secret vault (`pages/connectors.vue` or Settings)
-4. Optional: add domain-specific adapter under `plugins/connectors/adapters/`
+1. Full MCP protocol client (tool discovery, SSE/HTTP)
+2. Connector marketplace / dynamic install
+3. Per-connector scoped permissions
+4. Vector embeddings for RAG
