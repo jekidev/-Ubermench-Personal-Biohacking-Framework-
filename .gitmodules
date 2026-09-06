@@ -1,0 +1,3 @@
+[submodule "tools/starchive"]
+	path = tools/starchive
+	url = https://github.com/jwardsmith/STARCHIVE.git

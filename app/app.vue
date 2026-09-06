@@ -35,26 +35,8 @@
 <script setup lang="ts">
 const navigation = [
   { label: 'Overview', to: '/' },
-  { label: 'Agent', to: '/agent' },
-  { label: 'AI Models', to: '/ai-models' },
-  { label: 'Settings', to: '/settings' },
   { label: 'STARCHIVE', to: '/starchive' },
   { label: 'Connectors', to: '/connectors' },
-  { label: 'Biology', to: '/biology' },
-  { label: 'Experiments', to: '/experiments' },
-  { label: 'Fearprime', to: '/fearprime' },
-  { label: 'Health Sync', to: '/health-sync' },
-  { label: 'Longevity', to: '/longevity' },
-  { label: 'Bloods', to: '/longevity/bloods' },
-  { label: 'Genetics', to: '/longevity/genetics' },
-  { label: 'Cardiovascular', to: '/longevity/cardiovascular' },
-  { label: 'Metabolic', to: '/longevity/metabolic' },
-  { label: 'Mito Map', to: '/longevity/mito' },
-  { label: 'Fitness', to: '/longevity/fitness' },
-  { label: 'Recovery', to: '/longevity/recovery' },
-  { label: 'Organ Health', to: '/longevity/organs' },
-  { label: 'Prevention', to: '/longevity/prevention' },
-  { label: 'Interventions', to: '/longevity/interventions' },
-  { label: 'Evidence', to: '/longevity/evidence' },
+  { label: 'Settings', to: '/settings' },
 ]
 </script>

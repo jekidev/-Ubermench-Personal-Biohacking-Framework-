@@ -49,6 +49,18 @@ A local-first web/desktop framework for personal biology, evidence-driven experi
 - Evidence supersession tracking so updated claims can replace older evidence without losing provenance
 - Explainable decision traces connect evidence strength, personal fit, priority and safety signals without autonomously prescribing treatment
 
+### STARCHIVE
+
+[jwardsmith/STARCHIVE](https://github.com/jwardsmith/STARCHIVE) is installed as a read-only GitHub starred-repository exporter.
+
+- Submodule: `tools/starchive`
+- App page: `/starchive`
+- Agent catalog: `app/data/starchive/catalog.json`
+- CLI: `npm run starchive -- --snapshot`
+- Docs: `docs/starchive.md`
+
+Cursor agents should read the committed catalog. Credentials come from `GITHUB_USERNAME` / `GITHUB_TOKEN` or the secret vault. Tokens are never committed. The default user is `jekidev`.
+
 ### AI orchestration
 - Multi-provider LLM layer for OpenRouter, OpenAI and Anthropic
 - OpenRouter free-first routing with automatic provider/model fallback
