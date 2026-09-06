@@ -3,6 +3,7 @@ import { listConnectorStatuses } from '../../../../plugins/connectors/connector-
 import { CONNECTOR_REGISTRY, getConnector } from '../../../../plugins/connectors/registry'
 import { syncDrivePdfsToRag } from '../../../../plugins/connectors/drive-rag-sync'
 import { indexYouTubeUrlsToRag } from '../../../../plugins/connectors/youtube-rag-sync'
+import { isGoogleServiceConnected } from '../../../../plugins/connectors/oauth/google-token-store'
 import type { ConnectorId } from '../../../../plugins/connectors/types'
 
 export function createConnectorTools(): AgentTool[] {
@@ -64,9 +65,13 @@ export function createConnectorTools(): AgentTool[] {
       risk: 'medium',
       requiresApproval: true,
       async execute(args) {
-        const folderId = typeof args.folderId === 'string' ? args.folderId : undefined
-        const limit = typeof args.limit === 'number' ? args.limit : undefined
-        return syncDrivePdfsToRag({ folderId, limit })
+        if (!(await isGoogleServiceConnected('google-drive'))) {
+          throw new Error('google-drive is not connected. Connect it on the Connectors page.')
+        }
+        return syncDrivePdfsToRag({
+          folderId: typeof args.folderId === 'string' ? args.folderId : undefined,
+          limit: typeof args.limit === 'number' ? args.limit : undefined,
+        })
       },
     },
     {

@@ -3,7 +3,7 @@
     <h1 class="text-2xl font-semibold">Google OAuth</h1>
     <p v-if="busy" class="text-sm text-zinc-400">Completing Google authorization…</p>
     <UAlert v-if="error" title="OAuth failed" :description="error" color="error" variant="subtle" />
-    <UAlert v-else-if="done" title="Connected" description="Google Drive and Gmail tokens were saved to the secret vault." color="success" variant="subtle" />
+    <UAlert v-else-if="done" title="Connected" description="Google tokens were saved to the secret vault. Drive, Gmail, and Calendar share this token." color="success" variant="subtle" />
     <NuxtLink to="/connectors"><UButton variant="outline">Back to connectors</UButton></NuxtLink>
   </div>
 </template>
@@ -28,7 +28,7 @@ onMounted(async () => {
     await handleCallback(code)
     done.value = true
   } catch {
-    // error ref is set in composable
+    // error ref is set in the composable
   }
 })
 </script>

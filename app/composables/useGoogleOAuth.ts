@@ -2,23 +2,36 @@ import {
   buildGoogleAuthorizeUrl,
   clearOAuthState,
   defaultGoogleRedirectUri,
-  GOOGLE_COMBINED_SCOPES,
-  GOOGLE_DRIVE_SCOPES,
-  GOOGLE_GMAIL_SCOPES,
+  GOOGLE_CONNECTOR_IDS,
   GOOGLE_SECRET_KEYS,
   loadOAuthState,
+  scopesForConnectors,
+  type GoogleConnectorId,
 } from '../../plugins/connectors/oauth/google-oauth'
 import { YOUTUBE_SCOPES } from '../../plugins/connectors/oauth/youtube-oauth'
-import { completeGoogleOAuth, isGoogleConnected, loadGoogleCredentials } from '../../plugins/connectors/oauth/google-token-store'
+import {
+  completeGoogleOAuth,
+  disconnectGoogle,
+  googleWorkspaceStatus,
+  loadGoogleCredentials,
+} from '../../plugins/connectors/oauth/google-token-store'
+import { setConnectorEnabled } from '../../plugins/connectors/connector-store'
 import { getSecret, setSecret } from '../services/secret-vault'
 
 export function useGoogleOAuth() {
   const busy = ref(false)
   const error = ref('')
   const connected = ref(false)
+  const services = ref<Record<GoogleConnectorId, boolean>>({
+    'google-drive': false,
+    gmail: false,
+    'google-calendar': false,
+  })
 
   async function refreshStatus() {
-    connected.value = await isGoogleConnected()
+    const status = await googleWorkspaceStatus()
+    connected.value = status.connected
+    services.value = status.services
   }
 
   async function saveClientId(clientId: string) {
@@ -55,22 +68,20 @@ export function useGoogleOAuth() {
     }
   }
 
-  async function startOAuth(connectorIds: Array<'google-drive' | 'gmail'>) {
+  async function startOAuth(connectorIds: GoogleConnectorId[]) {
     busy.value = true
     error.value = ''
     try {
       const creds = await loadGoogleCredentials()
-      if (!creds.clientId) throw new Error('Add your Google Client ID before connecting.')
-      const scopes = connectorIds.includes('google-drive') && connectorIds.includes('gmail')
-        ? GOOGLE_COMBINED_SCOPES
-        : connectorIds.includes('gmail')
-          ? GOOGLE_GMAIL_SCOPES
-          : GOOGLE_DRIVE_SCOPES
+      if (!creds.clientId) throw new Error('Paste your Google Client ID (or client JSON) before connecting.')
+      const requested = connectorIds.length ? connectorIds : [...GOOGLE_CONNECTOR_IDS]
+      const already = creds.connectedServices
+      const scopes = scopesForConnectors([...new Set([...already, ...requested])])
       const url = await buildGoogleAuthorizeUrl({
         clientId: creds.clientId,
         redirectUri: defaultGoogleRedirectUri(),
         scopes,
-        connectorIds,
+        connectorIds: requested,
       })
       if (typeof window !== 'undefined') window.location.href = url
     } catch (cause) {
@@ -91,9 +102,11 @@ export function useGoogleOAuth() {
         code,
         redirectUri: state.redirectUri,
         codeVerifier: state.codeVerifier,
+        connectorIds: state.connectorIds,
       })
+      for (const id of state.connectorIds) setConnectorEnabled(id, true)
       clearOAuthState()
-      connected.value = true
+      await refreshStatus()
       return state.connectorIds
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : 'OAuth callback failed'
@@ -103,14 +116,28 @@ export function useGoogleOAuth() {
     }
   }
 
+  async function disconnect(service?: GoogleConnectorId) {
+    await disconnectGoogle(service)
+    await refreshStatus()
+  }
+
   async function loadClientId(): Promise<string> {
     return (await getSecret(GOOGLE_SECRET_KEYS.clientId)) ?? ''
+  }
+
+  async function importClientJson(raw: string) {
+    const { parseGoogleClientSecretJson } = await import('../../plugins/connectors/oauth/google-client-json')
+    const parsed = parseGoogleClientSecretJson(raw)
+    await saveClientId(parsed.clientId)
+    if (parsed.clientSecret) await saveClientSecret(parsed.clientSecret)
+    return parsed
   }
 
   return {
     busy,
     error,
     connected,
+    services,
     refreshStatus,
     saveClientId,
     saveClientSecret,
@@ -118,6 +145,8 @@ export function useGoogleOAuth() {
     startOAuth,
     connectYouTube,
     handleCallback,
+    disconnect,
     loadClientId,
+    importClientJson,
   }
 }

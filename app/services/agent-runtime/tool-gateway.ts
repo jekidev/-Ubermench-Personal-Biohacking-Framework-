@@ -5,6 +5,8 @@ import { nativeMcpExecute } from './native-mcp'
 import { createMcpServerTools } from './mcp-server-tools'
 import { createDocumentsSearchTool } from './tools/documents-search'
 import { createConnectorTools } from './tools/connector-tools'
+import { createGoogleWorkspaceTools } from './tools/google-workspace-tools'
+import { createMcpInstallTools } from './tools/mcp-install-tools'
 import type { AgentTool, AgentToolCall } from './types'
 
 export class AgentToolGateway {
@@ -74,6 +76,12 @@ export function createDefaultToolGateway(): AgentToolGateway {
   })
   gateway.register(createDocumentsSearchTool())
   for (const tool of createConnectorTools()) {
+    gateway.register(tool)
+  }
+  for (const tool of createGoogleWorkspaceTools()) {
+    gateway.register(tool)
+  }
+  for (const tool of createMcpInstallTools()) {
     gateway.register(tool)
   }
   for (const tool of createMcpServerTools()) {
