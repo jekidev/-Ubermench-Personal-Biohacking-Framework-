@@ -1,7 +1,7 @@
 import type { Client, Stronghold } from '@tauri-apps/plugin-stronghold'
 import { clearBrowserSecrets, getBrowserSecret, removeBrowserSecret, setBrowserSecret } from './browser-secret-store'
 
-const VAULT_PATH = 'ubermench-secrets.hold'
+const VAULT_PATH = 'ubermensch-secrets.hold'
 const CLIENT_NAME = 'llm-provider-secrets'
 
 let stronghold: Stronghold | null = null

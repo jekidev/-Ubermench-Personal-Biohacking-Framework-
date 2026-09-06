@@ -90,14 +90,26 @@ function defaultSessionStorage(): Storage | undefined {
   return typeof sessionStorage === 'undefined' ? undefined : sessionStorage
 }
 
+const OAUTH_STATE_BACKUP_KEY = `${OAUTH_STATE_KEY}:backup`
+
+function backupOAuthState(state: GoogleOAuthState): void {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(OAUTH_STATE_BACKUP_KEY, JSON.stringify(state))
+}
+
+function readOAuthStateBackup(): string | null {
+  if (typeof localStorage === 'undefined') return null
+  return localStorage.getItem(OAUTH_STATE_BACKUP_KEY)
+}
+
 export function saveOAuthState(state: GoogleOAuthState, storage: Pick<Storage, 'setItem'> | undefined = defaultSessionStorage()): void {
   storage?.setItem(OAUTH_STATE_KEY, JSON.stringify(state))
+  backupOAuthState(state)
 }
 
 export function loadOAuthState(storage: Pick<Storage, 'getItem'> | undefined = defaultSessionStorage()): GoogleOAuthState | null {
-  if (!storage) return null
   try {
-    const raw = storage.getItem(OAUTH_STATE_KEY)
+    const raw = storage?.getItem(OAUTH_STATE_KEY) ?? readOAuthStateBackup()
     if (!raw) return null
     return JSON.parse(raw) as GoogleOAuthState
   } catch {
@@ -107,6 +119,7 @@ export function loadOAuthState(storage: Pick<Storage, 'getItem'> | undefined = d
 
 export function clearOAuthState(storage: Pick<Storage, 'removeItem'> | undefined = defaultSessionStorage()): void {
   storage?.removeItem(OAUTH_STATE_KEY)
+  if (typeof localStorage !== 'undefined') localStorage.removeItem(OAUTH_STATE_BACKUP_KEY)
 }
 
 export function scopesForConnectors(connectorIds: GoogleConnectorId[]): string[] {

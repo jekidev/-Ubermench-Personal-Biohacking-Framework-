@@ -11,6 +11,13 @@
     <UAlert v-if="error" title="Connector error" :description="error" color="error" variant="subtle" />
     <UAlert v-if="google.error.value" title="Google OAuth" :description="google.error.value" color="warning" variant="subtle" />
     <UAlert v-if="mcp.error.value" title="MCP install" :description="mcp.error.value" color="warning" variant="subtle" />
+    <UAlert
+      v-if="isAndroidBrowserRef"
+      title="Android browser"
+      description="Google tokens persist in localStorage on mobile. Use Chrome (not an in-app WebView) for OAuth if Google blocks sign-in."
+      color="primary"
+      variant="subtle"
+    />
 
     <UCard>
       <template #header><div class="font-medium">Google Workspace (one OAuth client)</div></template>
@@ -269,6 +276,9 @@ import { listCalendarEvents, type CalendarEvent } from '~~/plugins/connectors/ad
 import { syncDrivePdfsToRag } from '~~/plugins/connectors/drive-rag-sync'
 import { indexYouTubeUrlsToRag } from '~~/plugins/connectors/youtube-rag-sync'
 import type { ConnectorConnectionStatus, ConnectorId } from '~~/plugins/connectors/types'
+import { isAndroidBrowser } from '~~/app/utils/runtime-platform'
+
+const isAndroidBrowserRef = computed(() => isAndroidBrowser())
 
 const { catalog, statuses, busy, error, refresh, toggle, saveCredential, isEnabled } = useConnectors()
 const google = useGoogleOAuth()
