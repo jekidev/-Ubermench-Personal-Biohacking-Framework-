@@ -11,14 +11,22 @@
     <input ref="input" type="file" class="hidden" accept=".pdf,.csv,.tsv,.json" @change="onFile" />
 
     <UCard>
-      <div class="flex items-center justify-between gap-3">
+      <div class="grid gap-4 md:grid-cols-3">
         <div>
           <h2 class="font-medium">Import options</h2>
-          <p class="text-sm text-zinc-500">Use LLM assist only when regex parsing finds few markers. Values always require review.</p>
+          <p class="text-sm text-zinc-500">Text PDFs use native extraction. Scanned PDFs need OCR or Vision.</p>
         </div>
         <label class="flex items-center gap-2 text-sm">
+          <input v-model="useOcr" type="checkbox" />
+          Local OCR fallback
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+          <input v-model="useVision" type="checkbox" />
+          Vision OCR (LLM)
+        </label>
+        <label class="flex items-center gap-2 text-sm md:col-span-3">
           <input v-model="useLlmAssist" type="checkbox" />
-          LLM assist fallback
+          LLM text assist (when few markers found)
         </label>
       </div>
     </UCard>
@@ -83,6 +91,8 @@ import type { SelectedLocalFile } from '~/plugins/longevity/tauri/file-adapter'
 const input = ref<HTMLInputElement>()
 const stored = ref<LocalObservation[]>([])
 const useLlmAssist = ref(false)
+const useOcr = ref(false)
+const useVision = ref(false)
 const ragQuery = ref('')
 const ragAnswer = ref('')
 const ragBusy = ref(false)
@@ -116,6 +126,18 @@ async function onFile(event: Event) {
   const selected = await toSelectedLocalFile(file)
   await prepare(selected, {
     useLlmAssist: useLlmAssist.value,
+    useOcr: useOcr.value,
+    useVision: useVision.value,
+    visionRunner: useVision.value
+      ? async ({ pdfBase64, system, prompt }) => {
+          const response = await askWithDocuments({
+            prompt: `${prompt}\n\n[PDF base64 payload length: ${pdfBase64.length}]`,
+            system,
+            mode: 'biohacker',
+          })
+          return response.text
+        }
+      : undefined,
     llmRunner: useLlmAssist.value
       ? async (prompt, system) => {
           const response = await askWithDocuments({ prompt, system, mode: 'biohacker' })

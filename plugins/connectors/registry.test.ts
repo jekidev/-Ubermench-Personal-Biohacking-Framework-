@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest'
+import { CONNECTOR_REGISTRY, getConnector } from './registry'
+import { loadConnectorSettings, setConnectorEnabled } from './connector-store'
+
+class MemoryStorage implements Storage {
+  private store = new Map<string, string>()
+  get length() { return this.store.size }
+  clear() { this.store.clear() }
+  getItem(key: string) { return this.store.get(key) ?? null }
+  key(index: number) { return [...this.store.keys()][index] ?? null }
+  removeItem(key: string) { this.store.delete(key) }
+  setItem(key: string, value: string) { this.store.set(key, value) }
+}
+
+describe('connector registry', () => {
+  it('includes Cursor-parity connectors', () => {
+    const ids = CONNECTOR_REGISTRY.map((entry) => entry.id)
+    expect(ids).toContain('gmail')
+    expect(ids).toContain('google-drive')
+    expect(ids).toContain('huggingface')
+    expect(ids).toContain('discord')
+  })
+
+  it('tracks enabled state in local storage', () => {
+    const storage = new MemoryStorage()
+    setConnectorEnabled('discord', true, storage)
+    expect(loadConnectorSettings(storage).enabled.discord).toBe(true)
+  })
+
+  it('resolves connector by id', () => {
+    expect(getConnector('huggingface')?.transport).toBe('hybrid')
+  })
+})

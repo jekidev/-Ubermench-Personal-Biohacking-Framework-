@@ -17,7 +17,14 @@ export function useLongevityImport() {
   const busy = ref(false)
   const error = ref('')
 
-  async function prepare(file: SelectedLocalFile, options?: { useLlmAssist?: boolean; llmRunner?: (prompt: string, system: string) => Promise<string> }) {
+  async function prepare(file: SelectedLocalFile, options?: {
+    useLlmAssist?: boolean
+    useOcr?: boolean
+    useVision?: boolean
+    ocrAdapter?: import('../import/ocr-adapter').OcrAdapter
+    visionRunner?: import('../import/vision-lab-extractor').VisionDocumentRunner
+    llmRunner?: (prompt: string, system: string) => Promise<string>
+  }) {
     busy.value = true
     error.value = ''
     indexedChunks.value = 0

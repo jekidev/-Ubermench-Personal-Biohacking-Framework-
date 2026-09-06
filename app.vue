@@ -38,6 +38,7 @@ const navigation = [
   { label: 'Agent', to: '/agent' },
   { label: 'AI Models', to: '/ai-models' },
   { label: 'Settings', to: '/settings' },
+  { label: 'Connectors', to: '/connectors' },
   { label: 'Biology', to: '/biology' },
   { label: 'Experiments', to: '/experiments' },
   { label: 'Fearprime', to: '/fearprime' },
