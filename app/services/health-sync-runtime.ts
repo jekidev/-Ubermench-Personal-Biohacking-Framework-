@@ -1,7 +1,9 @@
 import type { ExternalHealthSample } from './health-data-adapters'
 import type { HealthProviderId } from './health-provider-registry'
 import { HealthSyncOrchestrator } from './health-sync-orchestrator'
-import { GarminHealthAdapter, HealthConnectAdapter } from './health-adapters/stub-adapters'
+import { GarminOAuthAdapter } from './health-adapters/garmin-oauth-adapter'
+import { HealthConnectAdapter } from './health-adapters/health-connect-adapter'
+import { withHealthSyncRetry } from './health-sync-retry'
 
 export function createHealthSyncOrchestrator(subjectId = 'self'): HealthSyncOrchestrator {
   const platform = import.meta.client && /Android/i.test(navigator.userAgent) ? 'android' : 'web'
@@ -9,7 +11,7 @@ export function createHealthSyncOrchestrator(subjectId = 'self'): HealthSyncOrch
     platform,
     subjectId,
     adapters: {
-      garmin: new GarminHealthAdapter(),
+      garmin: new GarminOAuthAdapter(),
       'health-connect': new HealthConnectAdapter(),
     },
   })
@@ -18,7 +20,7 @@ export function createHealthSyncOrchestrator(subjectId = 'self'): HealthSyncOrch
 export async function syncHealthProvider(provider: HealthProviderId, subjectId = 'self'): Promise<{ samples: ExternalHealthSample[]; error?: string }> {
   const orchestrator = createHealthSyncOrchestrator(subjectId)
   try {
-    const result = await orchestrator.syncProvider(provider)
+    const result = await withHealthSyncRetry(() => orchestrator.syncProvider(provider))
     return { samples: result.samples, error: result.state.lastError }
   } catch (error) {
     return { samples: [], error: error instanceof Error ? error.message : String(error) }

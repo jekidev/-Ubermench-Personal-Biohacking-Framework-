@@ -25,11 +25,18 @@ export async function nativeMcpPreflight(command: string, args: string[], timeou
   })
 }
 
-export async function nativeMcpExecute(command: string, args: string[], approvalToken: string, stdinPayload = '', timeoutMs?: number): Promise<NativeMcpResult> {
+export async function nativeMcpExecute(
+  command: string,
+  args: string[],
+  approvalToken: string,
+  stdinPayload = '',
+  timeoutMs?: number,
+  env?: Record<string, string>,
+): Promise<NativeMcpResult> {
   if (!isTauriRuntime()) throw new Error('Native MCP execution is available only in the Tauri runtime.')
   if (!approvalToken.trim()) throw new Error('Native MCP execution requires an explicit approval token.')
   return invoke<NativeMcpResult>('mcp_stdio_execute', {
-    request: { command, args, approval_token: approvalToken, timeout_ms: timeoutMs },
+    request: { command, args, approval_token: approvalToken, timeout_ms: timeoutMs, env },
     stdinPayload,
   })
 }

@@ -1,5 +1,6 @@
 import type { PersonalBiologyProfile } from '~/types/biology'
 import { clearSqliteBiologyProfile, loadSqliteBiologyProfile, saveSqliteBiologyProfile } from './sqlite-store'
+import { migrateBiologyProfile } from './biology-profile-migration'
 
 const STORAGE_KEY = 'ubermench.personal-biology.v1'
 
@@ -31,7 +32,7 @@ export async function loadBiologyProfile(): Promise<PersonalBiologyProfile> {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return emptyBiologyProfile()
     const parsed = JSON.parse(raw) as PersonalBiologyProfile
-    return parsed.version === 1 ? parsed : emptyBiologyProfile()
+    return migrateBiologyProfile(parsed)
   } catch {
     return emptyBiologyProfile()
   }

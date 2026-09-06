@@ -123,16 +123,19 @@ pub fn extract_pdf_lab_text(source_path_token: String) -> Result<PdfExtractionRe
     if !path.exists() {
         return Err("PDF source path token does not resolve to an existing file.".into());
     }
-    if path.extension().and_then(|ext| ext.to_str()).map(|ext| ext.eq_ignore_ascii_case("pdf")) != Some(true) {
+    if path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.eq_ignore_ascii_case("pdf"))
+        != Some(true)
+    {
         return Err("Only PDF files are supported for lab extraction.".into());
     }
 
     let bytes = fs::read(path).map_err(|error| format!("Failed to read PDF: {error}"))?;
     let extracted = extract_text_from_pdf_bytes(&bytes);
     let warnings = if extracted.is_empty() {
-        vec![
-            "No readable text streams were found. OCR may be required for scanned PDFs.".into(),
-        ]
+        vec!["No readable text streams were found. OCR may be required for scanned PDFs.".into()]
     } else {
         Vec::new()
     };

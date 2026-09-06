@@ -3,6 +3,8 @@ import { emptyBiologyProfile, loadBiologyProfile, saveBiologyProfile, clearBiolo
 import { calculateBiomarkerTrend, getBiomarkerNames } from '~/services/biomarker-engine'
 import { screenInteractions } from '~/services/interaction-engine'
 import { createBiologyBackup, parseBiologyBackup, serializeBiologyBackup } from '~/services/biology-backup'
+import { validateImportCandidate, type ImportValidationResult } from '~/services/biology-import-validator'
+import { migrateBiologyProfile } from '~/services/biology-profile-migration'
 import { encryptBiologyBackup, decryptBiologyBackup, parseEncryptedBiologyBackup, serializeEncryptedBiologyBackup } from '~/services/encrypted-biology-backup'
 import { loadBiologyBackupNative, saveBiologyBackupNative } from '~/services/biology-backup-native'
 import { loadEncryptedBiologyBackupNative, saveEncryptedBiologyBackupNative } from '~/services/encrypted-biology-backup-native'
@@ -40,16 +42,30 @@ export function usePersonalBiology() {
     return saveBiologyBackupNative(await createBiologyBackup(profile.value))
   }
 
-  async function importBackup(raw: string) {
+  async function importBackup(raw: string, options?: { force?: boolean }) {
     const backup = await parseBiologyBackup(raw)
-    await persist(backup.profile)
+    const validation = validateImportCandidate(backup, profile.value)
+    if (!validation.valid && !options?.force) {
+      throw new Error(validation.issues.map((issue) => issue.message).join(' '))
+    }
+    await persist(validation.incoming)
+    return validation
   }
 
-  async function importBackupFromFile() {
+  async function previewImport(raw: string): Promise<ImportValidationResult> {
+    const backup = await parseBiologyBackup(raw)
+    return validateImportCandidate(backup, profile.value)
+  }
+
+  async function importBackupFromFile(options?: { force?: boolean }) {
     const backup = await loadBiologyBackupNative()
     if (!backup) return false
-    await persist(backup.profile)
-    return true
+    const validation = validateImportCandidate(backup, profile.value)
+    if (!validation.valid && !options?.force) {
+      throw new Error(validation.issues.map((issue) => issue.message).join(' '))
+    }
+    await persist(validation.incoming)
+    return validation
   }
 
   async function exportEncryptedBackup(passphrase: string) {
@@ -61,17 +77,26 @@ export function usePersonalBiology() {
     return saveEncryptedBiologyBackupNative(await createBiologyBackup(profile.value), passphrase)
   }
 
-  async function importEncryptedBackup(raw: string, passphrase: string) {
+  async function importEncryptedBackup(raw: string, passphrase: string, options?: { force?: boolean }) {
     const envelope = parseEncryptedBiologyBackup(raw)
     const backup = await decryptBiologyBackup(envelope, passphrase)
-    await persist(backup.profile)
+    const validation = validateImportCandidate(backup, profile.value)
+    if (!validation.valid && !options?.force) {
+      throw new Error(validation.issues.map((issue) => issue.message).join(' '))
+    }
+    await persist(validation.incoming)
+    return validation
   }
 
-  async function importEncryptedBackupFromFile(passphrase: string) {
+  async function importEncryptedBackupFromFile(passphrase: string, options?: { force?: boolean }) {
     const backup = await loadEncryptedBiologyBackupNative(passphrase)
     if (!backup) return false
-    await persist(backup.profile)
-    return true
+    const validation = validateImportCandidate(backup, profile.value)
+    if (!validation.valid && !options?.force) {
+      throw new Error(validation.issues.map((issue) => issue.message).join(' '))
+    }
+    await persist(validation.incoming)
+    return validation
   }
 
   function trend(name: string) { return calculateBiomarkerTrend(profile.value.biomarkers, name) }
@@ -93,6 +118,7 @@ export function usePersonalBiology() {
     exportBackup,
     exportBackupToFile,
     importBackup,
+    previewImport,
     importBackupFromFile,
     exportEncryptedBackup,
     exportEncryptedBackupToFile,

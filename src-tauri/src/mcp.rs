@@ -15,6 +15,8 @@ const MAX_STDIN_BYTES: usize = 1024 * 1024;
 const MAX_ARGS: usize = 64;
 const MAX_ARG_BYTES: usize = 8 * 1024;
 const APPROVAL_TTL_MS: u64 = 30_000;
+const MAX_ENV_KEYS: usize = 16;
+const MAX_ENV_VALUE_BYTES: usize = 4096;
 
 #[derive(Debug, Deserialize)]
 pub struct McpStdioRequest {
@@ -22,6 +24,7 @@ pub struct McpStdioRequest {
     pub args: Vec<String>,
     pub approval_token: String,
     pub timeout_ms: Option<u64>,
+    pub env: Option<HashMap<String, String>>,
 }
 #[derive(Debug, Serialize)]
 pub struct McpStdioPreflight {
@@ -89,6 +92,24 @@ fn validate_args(args: &[String]) -> Result<(), String> {
         return Err(format!(
             "MCP stdio blocked: an argument exceeds the {MAX_ARG_BYTES}-byte limit."
         ));
+    }
+    Ok(())
+}
+fn validate_env(env: &HashMap<String, String>) -> Result<(), String> {
+    if env.len() > MAX_ENV_KEYS {
+        return Err(format!(
+            "MCP stdio blocked: too many environment variables (max {MAX_ENV_KEYS})."
+        ));
+    }
+    for (key, value) in env {
+        if key.trim().is_empty() || key.contains('=') {
+            return Err("MCP stdio blocked: invalid environment variable key.".into());
+        }
+        if value.len() > MAX_ENV_VALUE_BYTES {
+            return Err(format!(
+                "MCP stdio blocked: environment variable {key} exceeds the {MAX_ENV_VALUE_BYTES}-byte limit."
+            ));
+        }
     }
     Ok(())
 }
@@ -221,11 +242,21 @@ pub fn mcp_stdio_execute(
         &request.command,
         &request.args,
     )?;
-    let mut child = Command::new(&request.command)
+    if let Some(env) = &request.env {
+        validate_env(env)?;
+    }
+    let mut command = Command::new(&request.command);
+    command
         .args(&request.args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    if let Some(env) = &request.env {
+        for (key, value) in env {
+            command.env(key, value);
+        }
+    }
+    let mut child = command
         .spawn()
         .map_err(|e| format!("MCP stdio spawn failed: {e}"))?;
     if let Some(mut stdin) = child.stdin.take() {
