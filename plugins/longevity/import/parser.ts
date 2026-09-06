@@ -1,10 +1,21 @@
 import type { LocalGeneticVariant, LocalObservation } from '../persistence/local-store'
 import { detectImportMime, type SelectedLocalFile } from '../tauri/file-adapter'
-import { BrowserPdfTextExtractor, extractLabCandidates } from './pdf-adapter'
+import { extractLabCandidatesWithLlm } from './llm-lab-extractor'
+import type { OcrAdapter } from './ocr-adapter'
+import { runPdfExtractionPipeline, type PdfExtractionMethod } from './pdf-extraction-pipeline'
+import type { PdfTextBlock } from './pdf-lab-engine'
+import type { VisionDocumentRunner } from './vision-lab-extractor'
 
 export type ImportCandidate =
   | { type: 'observation'; value: LocalObservation }
   | { type: 'variant'; value: LocalGeneticVariant }
+
+export type ParseSelectedFileResult = {
+  candidates: ImportCandidate[]
+  pageTexts: PdfTextBlock[]
+  extractionMethod?: PdfExtractionMethod
+  extractionWarnings?: string[]
+}
 
 const MARKER_ALIASES: Record<string, string> = {
   apob: 'ApoB',
@@ -180,38 +191,85 @@ function pdfCandidateToObservation(
   }
 }
 
-async function parsePdf(file: SelectedLocalFile, sourceDocumentId: string): Promise<ImportCandidate[]> {
-  const { candidates, requiresReview } = await extractLabCandidates(new BrowserPdfTextExtractor(), file.contents)
-  return candidates.map((item, index) =>
-    pdfCandidateToObservation(
-      sourceDocumentId,
-      file,
-      item.biomarker,
-      item.value,
-      item.unit,
-      item.collectedAt,
-      item.locator ?? `page:${item.page}:${index}`,
-      requiresReview ? Math.min(item.confidence, 0.8) : item.confidence,
+async function parsePdf(
+  file: SelectedLocalFile,
+  sourceDocumentId: string,
+  options?: {
+    useLlmAssist?: boolean
+    useOcr?: boolean
+    useVision?: boolean
+    ocrAdapter?: OcrAdapter
+    visionRunner?: VisionDocumentRunner
+    llmRunner?: (prompt: string, system: string) => Promise<string>
+  },
+): Promise<ParseSelectedFileResult> {
+  const pipeline = await runPdfExtractionPipeline(file.contents, {
+    useOcr: options?.useOcr,
+    useVision: options?.useVision,
+    ocrAdapter: options?.ocrAdapter,
+    visionRunner: options?.visionRunner,
+  })
+  let { candidates, requiresReview } = {
+    candidates: pipeline.candidates,
+    requiresReview: pipeline.requiresReview,
+  }
+
+  if ((options?.useLlmAssist || candidates.length < 3) && options?.llmRunner && pipeline.blocks.some((block) => block.text.trim())) {
+    const llmResult = await extractLabCandidatesWithLlm(pipeline.blocks.map((block) => block.text), options.llmRunner)
+    if (llmResult.candidates.length > candidates.length) {
+      candidates = llmResult.candidates
+      requiresReview = true
+    }
+  }
+
+  const confidenceCap = pipeline.method === 'native-text' ? 0.8 : 0.65
+
+  return {
+    pageTexts: pipeline.blocks,
+    extractionMethod: pipeline.method,
+    extractionWarnings: pipeline.warnings,
+    candidates: candidates.map((item, index) =>
+      pdfCandidateToObservation(
+        sourceDocumentId,
+        file,
+        item.biomarker,
+        item.value,
+        item.unit,
+        item.collectedAt,
+        item.locator ?? `page:${item.page}:${index}`,
+        requiresReview ? Math.min(item.confidence, confidenceCap) : item.confidence,
+      ),
     ),
-  )
+  }
 }
 
-export function parseSelectedFile(file: SelectedLocalFile, sourceDocumentId: string): ImportCandidate[] {
+export function parseSelectedFile(file: SelectedLocalFile, sourceDocumentId: string): ParseSelectedFileResult {
   const format = detectImportMime(file.name, file.mimeType)
   const text = decode(file)
   try {
-    if (format === 'csv') return parseDelimited(text, ',', sourceDocumentId, file)
-    if (format === 'tsv') return parseDelimited(text, '\t', sourceDocumentId, file)
-    if (format === 'json') return parseJson(text, sourceDocumentId, file)
-    if (format === 'vcf') return parseVcf(text, sourceDocumentId)
+    if (format === 'csv') return { candidates: parseDelimited(text, ',', sourceDocumentId, file), pageTexts: [] }
+    if (format === 'tsv') return { candidates: parseDelimited(text, '\t', sourceDocumentId, file), pageTexts: [] }
+    if (format === 'json') return { candidates: parseJson(text, sourceDocumentId, file), pageTexts: [] }
+    if (format === 'vcf') return { candidates: parseVcf(text, sourceDocumentId), pageTexts: [] }
   } catch {
-    return []
+    return { candidates: [], pageTexts: [] }
   }
-  return []
+  return { candidates: [], pageTexts: [] }
 }
 
-export async function parseSelectedFileAsync(file: SelectedLocalFile, sourceDocumentId: string): Promise<ImportCandidate[]> {
+export async function parseSelectedFileAsync(
+  file: SelectedLocalFile,
+  sourceDocumentId: string,
+  options?: {
+    useLlmAssist?: boolean
+    useOcr?: boolean
+    useVision?: boolean
+    ocrAdapter?: OcrAdapter
+    visionRunner?: VisionDocumentRunner
+    llmRunner?: (prompt: string, system: string) => Promise<string>
+  },
+): Promise<ParseSelectedFileResult> {
   const format = detectImportMime(file.name, file.mimeType)
-  if (format === 'pdf') return parsePdf(file, sourceDocumentId)
+  if (format === 'pdf') return parsePdf(file, sourceDocumentId, options)
   return parseSelectedFile(file, sourceDocumentId)
 }

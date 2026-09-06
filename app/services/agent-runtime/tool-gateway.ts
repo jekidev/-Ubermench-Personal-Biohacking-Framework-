@@ -3,6 +3,8 @@ import { agentKernel } from '~/services/agent-superstack/kernel'
 import { evaluateTask } from '~/services/agent-superstack/governance'
 import { nativeMcpExecute } from './native-mcp'
 import { createMcpServerTools } from './mcp-server-tools'
+import { createDocumentsSearchTool } from './tools/documents-search'
+import { createConnectorTools } from './tools/connector-tools'
 import type { AgentTool, AgentToolCall } from './types'
 
 export class AgentToolGateway {
@@ -70,6 +72,10 @@ export function createDefaultToolGateway(): AgentToolGateway {
       return nativeMcpExecute(command, commandArgs, approvalToken, stdinPayload, timeoutMs)
     },
   })
+  gateway.register(createDocumentsSearchTool())
+  for (const tool of createConnectorTools()) {
+    gateway.register(tool)
+  }
   for (const tool of createMcpServerTools()) {
     gateway.register(tool)
   }

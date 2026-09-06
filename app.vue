@@ -39,6 +39,7 @@ const navigation = [
   { label: 'AI Models', to: '/ai-models' },
   { label: 'Settings', to: '/settings' },
   { label: 'STARCHIVE', to: '/starchive' },
+  { label: 'Connectors', to: '/connectors' },
   { label: 'Biology', to: '/biology' },
   { label: 'Experiments', to: '/experiments' },
   { label: 'Fearprime', to: '/fearprime' },
