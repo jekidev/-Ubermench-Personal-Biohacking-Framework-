@@ -64,12 +64,16 @@ export function defaultGoogleRedirectUri(): string {
 export function saveOAuthState(state: GoogleOAuthState): void {
   if (typeof sessionStorage === 'undefined') return
   sessionStorage.setItem(OAUTH_STATE_KEY, JSON.stringify(state))
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(`${OAUTH_STATE_KEY}:backup`, JSON.stringify(state))
+  }
 }
 
 export function loadOAuthState(): GoogleOAuthState | null {
   if (typeof sessionStorage === 'undefined') return null
   try {
     const raw = sessionStorage.getItem(OAUTH_STATE_KEY)
+      ?? (typeof localStorage !== 'undefined' ? localStorage.getItem(`${OAUTH_STATE_KEY}:backup`) : null)
     if (!raw) return null
     return JSON.parse(raw) as GoogleOAuthState
   } catch {
@@ -80,6 +84,7 @@ export function loadOAuthState(): GoogleOAuthState | null {
 export function clearOAuthState(): void {
   if (typeof sessionStorage === 'undefined') return
   sessionStorage.removeItem(OAUTH_STATE_KEY)
+  if (typeof localStorage !== 'undefined') localStorage.removeItem(`${OAUTH_STATE_KEY}:backup`)
 }
 
 export async function buildGoogleAuthorizeUrl(input: {
