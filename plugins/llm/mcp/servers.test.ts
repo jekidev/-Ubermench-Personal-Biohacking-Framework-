@@ -7,4 +7,9 @@ describe('mcp server registry', () => {
     expect(discord?.executable).toBe('npx')
     expect(discord?.envKeys).toContain('DISCORD_BOT_TOKEN')
   })
+
+  it('links MCP servers to connector ids', () => {
+    expect(getMcpServer('github')?.connectorId).toBe('github')
+    expect(getMcpServer('huggingface')?.connectorId).toBe('huggingface')
+  })
 })

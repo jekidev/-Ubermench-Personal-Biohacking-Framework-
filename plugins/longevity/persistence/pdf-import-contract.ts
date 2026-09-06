@@ -1,4 +1,4 @@
-export type PdfExtractionMethod = 'native-text' | 'ocr'
+export type PdfExtractionMethod = 'native-text' | 'ocr' | 'vision'
 
 export type PdfPage = {
   page: number
