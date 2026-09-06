@@ -24,6 +24,7 @@ import { learnOutcome } from '~/services/outcome-learning'
 import { rankValueOfInformation } from '~/services/value-of-information'
 import { usePersonalBiology } from './usePersonalBiology'
 import { useLLM } from './useLLM'
+import { searchDocuments } from '../../plugins/longevity/rag/document-index'
 
 export function useBiohackingAI() {
   const biology = usePersonalBiology()
@@ -100,5 +101,23 @@ export function useBiohackingAI() {
     return llm.run({ ...request, system })
   }
 
-  return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, compileGoal, runDecisionLoop, anomalies, dataQuality, dataGaps, timeline, simulate, estimateEffect, evaluatePolicy, dailyPlan, learn, valueOfInformation, remember, recall, ingestHealth, ask, llm, biology }
+  async function askWithDocuments(request: LLMRequest, documentQuery?: string) {
+    await biology.initialize()
+    const query = documentQuery ?? request.prompt
+    const hits = searchDocuments(query, 6)
+    const documentContext = hits.map((hit, index) => `Document excerpt ${index + 1} (${hit.title}, score ${hit.score.toFixed(2)}):\n${hit.content}`).join('\n\n')
+    const system = [
+      request.system,
+      'You are answering using indexed local lab documents. Cite excerpts when possible. Never invent biomarker values not present in the excerpts.',
+      documentContext || 'No matching local document excerpts were found.',
+      ...biology.profile.value.biomarkers.slice(-8).map((x) => `Confirmed biomarker: ${x.name} ${x.value} ${x.unit}`),
+    ].filter(Boolean).join('\n\n')
+    return llm.run({ ...request, system })
+  }
+
+  function searchLabDocuments(query: string, limit = 8) {
+    return searchDocuments(query, limit)
+  }
+
+  return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, compileGoal, runDecisionLoop, anomalies, dataQuality, dataGaps, timeline, simulate, estimateEffect, evaluatePolicy, dailyPlan, learn, valueOfInformation, remember, recall, ingestHealth, ask, askWithDocuments, searchLabDocuments, llm, biology }
 }

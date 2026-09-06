@@ -14,7 +14,12 @@ This document tracks the gap between the current research-grade framework founda
 - Agent runtime approvals, audit, checkpoints, recovery and tool validation
 - Fearprime and Longevity plugin foundations
 - Tauri/Nuxt desktop shell and deployment bootstrap
-- Portable, versioned biology backup envelope
+- Portable, versioned biology backup envelope with checksum/metadata and import validation
+- Phenotypic age engine, Danish lab PDF import, Fearprime UI, health sync adapters (Garmin OAuth + Health Connect)
+- Evidence auto-normalization with human-outcome vs mechanistic separation in ranking
+- Experiment protocol templates, stopping rules, and `/experiments` UI
+- Mitochondrial complex map overlay at `/longevity/mito`
+- Discord MCP registry wired into agent tools
 
 ## Supported health-provider scope
 
