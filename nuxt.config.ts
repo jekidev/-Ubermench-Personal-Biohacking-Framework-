@@ -7,7 +7,6 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       googleClientId: '',
-      googleClientSecret: '',
     },
   },
   app: {
