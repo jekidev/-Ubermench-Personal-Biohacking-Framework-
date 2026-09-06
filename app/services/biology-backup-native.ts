@@ -39,5 +39,5 @@ export async function loadBiologyBackupNative(): Promise<BiologyBackup | null> {
   })
   if (!selected || Array.isArray(selected)) return null
 
-  return parseBiologyBackup(await readTextFile(selected))
+  return await parseBiologyBackup(await readTextFile(selected))
 }

@@ -32,16 +32,16 @@ export function usePersonalBiology() {
     await persist({ ...profile.value, biomarkers: [...profile.value.biomarkers, record] })
   }
 
-  function exportBackup() {
-    return serializeBiologyBackup(createBiologyBackup(profile.value))
+  async function exportBackup() {
+    return serializeBiologyBackup(await createBiologyBackup(profile.value))
   }
 
   async function exportBackupToFile() {
-    return saveBiologyBackupNative(createBiologyBackup(profile.value))
+    return saveBiologyBackupNative(await createBiologyBackup(profile.value))
   }
 
   async function importBackup(raw: string) {
-    const backup = parseBiologyBackup(raw)
+    const backup = await parseBiologyBackup(raw)
     await persist(backup.profile)
   }
 
@@ -53,12 +53,12 @@ export function usePersonalBiology() {
   }
 
   async function exportEncryptedBackup(passphrase: string) {
-    const encrypted = await encryptBiologyBackup(createBiologyBackup(profile.value), passphrase)
+    const encrypted = await encryptBiologyBackup(await createBiologyBackup(profile.value), passphrase)
     return serializeEncryptedBiologyBackup(encrypted)
   }
 
   async function exportEncryptedBackupToFile(passphrase: string) {
-    return saveEncryptedBiologyBackupNative(createBiologyBackup(profile.value), passphrase)
+    return saveEncryptedBiologyBackupNative(await createBiologyBackup(profile.value), passphrase)
   }
 
   async function importEncryptedBackup(raw: string, passphrase: string) {

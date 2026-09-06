@@ -24,6 +24,18 @@ const ENTITY_REGISTRY: PharmacologyEntity[] = [
   { id: 'vasodilator', name: 'Vasodilator', mechanisms: ['vasodilation'], monitoring: ['blood pressure', 'dizziness'] },
   { id: 'anticoagulant', name: 'Anticoagulant', mechanisms: ['anticoagulation'], monitoring: ['bleeding'] },
   { id: 'serotonergic', name: 'Serotonergic agent', mechanisms: ['serotonin signaling'], monitoring: ['agitation', 'tremor', 'temperature'] },
+  { id: 'dopamine-agonist', name: 'Dopamine agonist', mechanisms: ['dopamine agonism'], monitoring: ['impulse control', 'sleep', 'nausea'] },
+  { id: 'stimulant', name: 'CNS stimulant', mechanisms: ['catecholamine reuptake inhibition'], monitoring: ['heart rate', 'blood pressure', 'anxiety', 'sleep'] },
+  { id: 'anticholinergic', name: 'Anticholinergic agent', mechanisms: ['anticholinergic'], monitoring: ['dry mouth', 'constipation', 'cognitive effects'] },
+]
+
+const NAME_CLASSIFICATION: Array<{ terms: string[]; entityId: string }> = [
+  { terms: ['mirtazapin', 'mirtazapine'], entityId: 'serotonergic' },
+  { terms: ['nortriptylin', 'nortriptyline'], entityId: 'serotonergic' },
+  { terms: ['pramipexol', 'pramipexole'], entityId: 'dopamine-agonist' },
+  { terms: ['methylphenidat', 'methylphenidate', 'ritalin', 'concerta'], entityId: 'stimulant' },
+  { terms: ['olanzapin', 'olanzapine'], entityId: 'serotonergic' },
+  { terms: ['pregabalin', 'gabapentin', 'zolpidem', 'benzodiazepine'], entityId: 'cns-depressant' },
 ]
 
 const INTERACTIONS: PharmacologyInteraction[] = [
@@ -31,12 +43,16 @@ const INTERACTIONS: PharmacologyInteraction[] = [
   { a: 'vasodilator', b: 'vasodilator', severity: 'warning', mechanism: 'Additive blood-pressure lowering can increase hypotension/dizziness risk.', monitoring: ['blood pressure', 'dizziness'], source: 'built-in-rule' },
   { a: 'anticoagulant', b: 'anticoagulant', severity: 'warning', mechanism: 'Additive anticoagulant effect can increase bleeding risk.', monitoring: ['bleeding'], source: 'built-in-rule' },
   { a: 'serotonergic', b: 'serotonergic', severity: 'critical', mechanism: 'Multiple serotonergic agents may increase serotonin-toxicity risk.', monitoring: ['agitation', 'tremor', 'temperature'], source: 'built-in-rule' },
+  { a: 'dopamine-agonist', b: 'stimulant', severity: 'warning', mechanism: 'Dopaminergic agonism combined with stimulant catecholamine effects may increase psychiatric and cardiovascular activation.', monitoring: ['anxiety', 'sleep', 'heart rate', 'blood pressure'], source: 'built-in-rule' },
+  { a: 'stimulant', b: 'cns-depressant', severity: 'warning', mechanism: 'Stimulant/depressant combinations can mask sedation and complicate autonomic monitoring.', monitoring: ['sleep', 'mood', 'blood pressure'], source: 'built-in-rule' },
 ]
 
 function normalize(value: string) { return value.trim().toLowerCase() }
 
 export function classifyPharmacology(name: string): PharmacologyEntity | undefined {
   const normalized = normalize(name)
+  const mapped = NAME_CLASSIFICATION.find((entry) => entry.terms.some((term) => normalized.includes(term)))
+  if (mapped) return ENTITY_REGISTRY.find((entity) => entity.id === mapped.entityId)
   return ENTITY_REGISTRY.find((entity) => normalized.includes(entity.name.toLowerCase()) || entity.mechanisms?.some((mechanism) => normalized.includes(mechanism.toLowerCase())))
 }
 

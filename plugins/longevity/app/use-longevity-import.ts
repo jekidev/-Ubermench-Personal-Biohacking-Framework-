@@ -1,7 +1,7 @@
 import { appendDocument, appendObservations, appendVariants, emptyLongevityStore, loadLongevityStore, saveLongevityStore, type LocalGeneticVariant, type LocalObservation } from '../persistence/local-store'
 import { sha256Hex, type SelectedLocalFile } from '../tauri/file-adapter'
 import { confirmDocumentImport, previewImport, type ImportPreview } from '../tauri/import-service'
-import { parseSelectedFile } from '../import/parser'
+import { parseSelectedFileAsync } from '../import/parser'
 
 const storage = () => localStorage
 
@@ -16,7 +16,7 @@ export function useLongevityImport() {
     error.value = ''
     try {
       preview.value = await previewImport(file)
-      candidates.value = parseSelectedFile(file, preview.value.document.id)
+      candidates.value = await parseSelectedFileAsync(file, preview.value.document.id)
     } catch (cause) {
       preview.value = null
       candidates.value = []

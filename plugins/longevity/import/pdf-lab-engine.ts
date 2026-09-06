@@ -19,20 +19,29 @@ export type PdfLabCandidate = {
   warnings: string[]
 }
 
+import { parseSundhedDkBlocks } from './sundhed-dk-parser'
+
 const CANONICAL: Array<{ key: string; aliases: string[] }> = [
-  { key: 'hemoglobin', aliases: ['hemoglobin', 'haemoglobin', 'hgb'] },
-  { key: 'leukocytes', aliases: ['leukocytes', 'white blood cells', 'wbc'] },
-  { key: 'platelets', aliases: ['platelets', 'thrombocytes'] },
-  { key: 'creatinine', aliases: ['creatinine'] },
+  { key: 'hemoglobin', aliases: ['hemoglobin', 'haemoglobin', 'hgb', 'hæmoglobin'] },
+  { key: 'leukocytes', aliases: ['leukocytes', 'white blood cells', 'wbc', 'leukocytter'] },
+  { key: 'lymphocytes', aliases: ['lymphocytes', 'lymfocytter'] },
+  { key: 'platelets', aliases: ['platelets', 'thrombocytes', 'trombocytter'] },
+  { key: 'albumin', aliases: ['albumin'] },
+  { key: 'creatinine', aliases: ['creatinine', 'kreatinin'] },
   { key: 'egfr', aliases: ['egfr', 'gfr'] },
-  { key: 'crp', aliases: ['crp', 'c-reactive protein', 'c reactive protein'] },
+  { key: 'crp', aliases: ['crp', 'c-reactive protein', 'c reactive protein', 'c-reaktivt protein'] },
   { key: 'apoB', aliases: ['apob', 'apo b', 'apolipoprotein b'] },
-  { key: 'ldl_c', aliases: ['ldl-c', 'ldl c', 'ldl'] },
-  { key: 'hdl_c', aliases: ['hdl-c', 'hdl c', 'hdl'] },
+  { key: 'ldl_c', aliases: ['ldl-c', 'ldl c', 'ldl', 'kolesterol ldl'] },
+  { key: 'hdl_c', aliases: ['hdl-c', 'hdl c', 'hdl', 'kolesterol hdl'] },
   { key: 'triglycerides', aliases: ['triglycerides', 'triglycerid'] },
-  { key: 'total_cholesterol', aliases: ['total cholesterol', 'cholesterol total'] },
-  { key: 'hba1c', aliases: ['hba1c', 'hb a1c', 'glycated hemoglobin'] },
-  { key: 'glucose', aliases: ['glucose', 'blood glucose', 'fasting glucose'] },
+  { key: 'total_cholesterol', aliases: ['total cholesterol', 'cholesterol total', 'kolesterol'] },
+  { key: 'hba1c', aliases: ['hba1c', 'hb a1c', 'glycated hemoglobin', 'hæmoglobin a1c'] },
+  { key: 'glucose', aliases: ['glucose', 'blood glucose', 'fasting glucose', 'glukose'] },
+  { key: 'tsh', aliases: ['tsh', 'thyrotropin'] },
+  { key: 'alt', aliases: ['alt', 'alat', 'alanintransaminase'] },
+  { key: 'alp', aliases: ['alp', 'basisk fosfatase', 'alkaline phosphatase'] },
+  { key: 'mcv', aliases: ['mcv', 'erytrocytvolumen'] },
+  { key: 'rdw', aliases: ['rdw', 'erytrocytvol'] },
 ]
 
 function normalizeName(raw: string): string | null {
@@ -52,6 +61,9 @@ function parseReference(text: string): { low?: number; high?: number } {
 }
 
 export function parsePdfLabBlocks(blocks: PdfTextBlock[]): PdfLabCandidate[] {
+  const sundhed = parseSundhedDkBlocks(blocks)
+  if (sundhed.candidates.length > 0) return sundhed.candidates
+
   const candidates: PdfLabCandidate[] = []
   for (const block of blocks) {
     const lines = block.text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)

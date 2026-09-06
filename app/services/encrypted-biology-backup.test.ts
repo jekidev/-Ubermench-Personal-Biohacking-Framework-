@@ -12,7 +12,7 @@ describe('encrypted biology backup', () => {
   it('encrypts and decrypts a biology backup without changing its contents', async () => {
     const profile = emptyBiologyProfile()
     profile.goals = ['healthspan']
-    const backup = createBiologyBackup(profile, '2026-08-25T09:00:00.000Z')
+    const backup = await createBiologyBackup(profile, '2026-08-25T09:00:00.000Z')
 
     const encrypted = await encryptBiologyBackup(backup, 'correct horse battery staple')
     const parsedEnvelope = parseEncryptedBiologyBackup(serializeEncryptedBiologyBackup(encrypted))
@@ -24,12 +24,12 @@ describe('encrypted biology backup', () => {
   })
 
   it('rejects short passphrases', async () => {
-    const backup = createBiologyBackup(emptyBiologyProfile())
+    const backup = await createBiologyBackup(emptyBiologyProfile())
     await expect(encryptBiologyBackup(backup, 'too-short')).rejects.toThrow(/12 characters/)
   })
 
   it('rejects an incorrect passphrase and tampered ciphertext', async () => {
-    const backup = createBiologyBackup(emptyBiologyProfile())
+    const backup = await createBiologyBackup(emptyBiologyProfile())
     const encrypted = await encryptBiologyBackup(backup, 'correct horse battery staple')
 
     await expect(decryptBiologyBackup(encrypted, 'wrong horse battery staple')).rejects.toThrow(/incorrect passphrase/)

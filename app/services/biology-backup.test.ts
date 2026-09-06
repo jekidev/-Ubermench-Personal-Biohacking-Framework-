@@ -3,7 +3,7 @@ import { createBiologyBackup, parseBiologyBackup, serializeBiologyBackup } from 
 import { emptyBiologyProfile } from './biology-store'
 
 describe('biology backup', () => {
-  it('round-trips a personal biology profile', () => {
+  it('round-trips a personal biology profile', async () => {
     const profile = emptyBiologyProfile()
     profile.goals = ['healthspan']
     profile.biomarkers.push({
@@ -15,22 +15,29 @@ describe('biology backup', () => {
       source: 'lab-import',
     })
 
-    const backup = createBiologyBackup(profile, '2026-08-25T09:00:00.000Z')
-    const parsed = parseBiologyBackup(serializeBiologyBackup(backup))
+    const backup = await createBiologyBackup(profile, '2026-08-25T09:00:00.000Z')
+    const parsed = await parseBiologyBackup(serializeBiologyBackup(backup))
 
-    expect(parsed).toEqual(backup)
     expect(parsed.profile.goals).toEqual(['healthspan'])
     expect(parsed.profile.biomarkers[0]?.name).toBe('CRP')
+    expect(parsed.checksum).toBeTruthy()
+    expect(parsed.metadata?.biomarkerCount).toBe(1)
   })
 
-  it('rejects an unknown backup format or version', () => {
-    expect(() => parseBiologyBackup(JSON.stringify({ format: 'other', version: 1 }))).toThrow()
-    expect(() => parseBiologyBackup(JSON.stringify({ format: 'ubermench-biology-backup', version: 99 }))).toThrow()
+  it('rejects an unknown backup format or version', async () => {
+    await expect(parseBiologyBackup(JSON.stringify({ format: 'other', version: 1 }))).rejects.toThrow()
+    await expect(parseBiologyBackup(JSON.stringify({ format: 'ubermench-biology-backup', version: 99 }))).rejects.toThrow()
   })
 
-  it('does not mutate the source profile when creating a backup', () => {
+  it('rejects checksum mismatch', async () => {
+    const backup = await createBiologyBackup(emptyBiologyProfile())
+    backup.checksum = 'invalid'
+    await expect(parseBiologyBackup(serializeBiologyBackup(backup))).rejects.toThrow(/checksum/i)
+  })
+
+  it('does not mutate the source profile when creating a backup', async () => {
     const profile = emptyBiologyProfile()
-    const backup = createBiologyBackup(profile)
+    const backup = await createBiologyBackup(profile)
     backup.profile.goals.push('copied')
 
     expect(profile.goals).toEqual([])

@@ -1,4 +1,5 @@
 mod mcp;
+mod pdf;
 
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -42,6 +43,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             fingerprint_bytes,
             app_name,
+            pdf::extract_pdf_lab_text,
             mcp::mcp_stdio_preflight,
             mcp::mcp_issue_approval,
             mcp::mcp_stdio_execute

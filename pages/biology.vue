@@ -1,6 +1,7 @@
 <script setup lang="ts">
-const { profile, initialize, biomarkerNames, trend, interactionFlags, exportBackup, importBackup, exportEncryptedBackup, importEncryptedBackup } = usePersonalBiology()
+const { profile, initialize, biomarkerNames, trend, interactionFlags, exportBackup, importBackup, exportEncryptedBackup, importEncryptedBackup, exportBackupToFile, importBackupFromFile } = usePersonalBiology()
 const { selectModel, evidenceQuery } = useBiohackingAI()
+const chronologicalAge = ref(35)
 
 const importInput = ref<HTMLInputElement | null>(null)
 const encryptedImportInput = ref<HTMLInputElement | null>(null)
@@ -20,22 +21,43 @@ const models = computed(() => ({
 const trends = computed(() => biomarkerNames().map((name) => trend(name)))
 const flags = computed(() => interactionFlags())
 const goalQuery = computed(() => evidenceQuery(profile.value.goals[0] ?? 'personal health optimization'))
+const phenotypicAge = computed(() => computePhenotypicAge(biomarkersToPhenotypicInputs(profile.value.biomarkers, chronologicalAge.value)))
 
 function resetBackupStatus() {
   backupError.value = ''
   backupMessage.value = ''
 }
 
-function downloadBackup() {
+async function downloadBackup() {
   resetBackupStatus()
-  const blob = new Blob([exportBackup()], { type: 'application/json' })
+  const blob = new Blob([await exportBackup()], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = `ubermench-biology-${new Date().toISOString().slice(0, 10)}.json`
   anchor.click()
   URL.revokeObjectURL(url)
-  backupMessage.value = 'Biology backup exported.'
+  backupMessage.value = 'Biology backup exported with checksum metadata.'
+}
+
+async function downloadNativeBackup() {
+  resetBackupStatus()
+  try {
+    const path = await exportBackupToFile()
+    backupMessage.value = path ? `Backup saved to ${path}` : 'Native export cancelled.'
+  } catch (error) {
+    backupError.value = error instanceof Error ? error.message : 'Native export failed.'
+  }
+}
+
+async function importNativeBackup() {
+  resetBackupStatus()
+  try {
+    const imported = await importBackupFromFile()
+    backupMessage.value = imported ? 'Native biology backup imported.' : 'Native import cancelled.'
+  } catch (error) {
+    backupError.value = error instanceof Error ? error.message : 'Native import failed.'
+  }
 }
 
 async function downloadEncryptedBackup() {
@@ -119,11 +141,40 @@ async function handleEncryptedBackupFile(event: Event) {
     </div>
 
     <UCard>
+      <h2 class="font-semibold">Phenotypic age (research estimate)</h2>
+      <div class="mt-4 flex flex-wrap items-end gap-3">
+        <div>
+          <label class="text-sm text-muted">Chronological age</label>
+          <UInput v-model.number="chronologicalAge" type="number" min="18" max="120" class="mt-1 w-32" />
+        </div>
+        <div v-if="phenotypicAge.phenotypicAgeYears" class="text-sm">
+          Estimate: <span class="font-semibold">{{ phenotypicAge.phenotypicAgeYears }} years</span>
+          (Δ {{ phenotypicAge.ageDeltaYears }} years)
+        </div>
+        <p v-else class="text-sm text-muted">Missing markers: {{ phenotypicAge.missingMarkers.join(', ') }}</p>
+      </div>
+      <p class="mt-3 text-xs text-muted">{{ phenotypicAge.disclaimer }}</p>
+    </UCard>
+
+    <UCard>
+      <h2 class="font-semibold">Interaction flags</h2>
+      <div v-if="flags.length" class="mt-4 space-y-2 text-sm">
+        <div v-for="flag in flags" :key="flag.code" class="flex justify-between gap-3 border-b border-default py-2">
+          <span>{{ flag.title }}</span>
+          <span class="text-muted">{{ flag.severity }}</span>
+        </div>
+      </div>
+      <p v-else class="mt-3 text-sm text-muted">No interaction flags from the current medication list.</p>
+    </UCard>
+
+    <UCard>
       <h2 class="font-semibold">Portable biology backup</h2>
       <p class="mt-1 text-sm text-muted">Export or restore the complete local biology profile as a versioned JSON backup.</p>
       <div class="mt-4 flex flex-wrap gap-2">
         <UButton @click="downloadBackup">Export backup</UButton>
         <UButton variant="outline" @click="importInput?.click()">Import backup</UButton>
+        <UButton variant="outline" @click="downloadNativeBackup">Export (native dialog)</UButton>
+        <UButton variant="outline" @click="importNativeBackup">Import (native dialog)</UButton>
         <input ref="importInput" class="hidden" type="file" accept="application/json,.json" @change="handleBackupFile">
       </div>
 
