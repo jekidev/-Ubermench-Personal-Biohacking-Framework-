@@ -68,7 +68,7 @@ export async function decryptBiologyBackup(
     throw new Error('Unable to decrypt biology backup: incorrect passphrase or corrupted data')
   }
 
-  return parseBiologyBackup(new TextDecoder().decode(plaintext))
+  return await parseBiologyBackup(new TextDecoder().decode(plaintext))
 }
 
 export function serializeEncryptedBiologyBackup(envelope: EncryptedBiologyBackup): string {

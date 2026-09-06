@@ -55,7 +55,7 @@
       <template #header><div class="font-medium">Modules</div></template>
       <div class="flex flex-wrap gap-4 text-sm">
         <NuxtLink to="/longevity" class="underline underline-offset-4">Longevity</NuxtLink>
-        <span class="text-zinc-400">Fearprime</span>
+        <NuxtLink to="/fearprime" class="underline underline-offset-4">Fearprime</NuxtLink>
         <NuxtLink to="/settings" class="underline underline-offset-4">LLM Settings</NuxtLink>
       </div>
     </UCard>

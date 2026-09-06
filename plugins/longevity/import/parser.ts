@@ -1,5 +1,6 @@
 import type { LocalGeneticVariant, LocalObservation } from '../persistence/local-store'
 import { detectImportMime, type SelectedLocalFile } from '../tauri/file-adapter'
+import { BrowserPdfTextExtractor, extractLabCandidates } from './pdf-adapter'
 
 export type ImportCandidate =
   | { type: 'observation'; value: LocalObservation }
@@ -10,15 +11,36 @@ const MARKER_ALIASES: Record<string, string> = {
   'apo b': 'ApoB',
   ldl: 'LDL-C',
   'ldl-c': 'LDL-C',
+  'ldl_c': 'LDL-C',
   hdl: 'HDL-C',
+  'hdl_c': 'HDL-C',
   triglycerides: 'Triglycerides',
   tg: 'Triglycerides',
   glucose: 'Glucose',
+  glukose: 'Glucose',
   'fasting glucose': 'Glucose',
   hba1c: 'HbA1c',
-  'crp': 'CRP',
+  crp: 'CRP',
   creatinine: 'Creatinine',
+  kreatinin: 'Creatinine',
   egfr: 'eGFR',
+  hemoglobin: 'Hemoglobin',
+  hæmoglobin: 'Hemoglobin',
+  leukocytes: 'Leukocytes',
+  leukocytter: 'Leukocytes',
+  lymphocytes: 'Lymphocytes',
+  lymfocytter: 'Lymphocytes',
+  platelets: 'Platelets',
+  trombocytter: 'Platelets',
+  albumin: 'Albumin',
+  tsh: 'TSH',
+  alt: 'ALT',
+  alat: 'ALT',
+  alp: 'ALP',
+  mcv: 'MCV',
+  rdw: 'RDW',
+  total_cholesterol: 'Total cholesterol',
+  kolesterol: 'Total cholesterol',
 }
 
 function canonicalMarker(input: string): string {
@@ -132,6 +154,48 @@ function parseVcf(text: string, sourceId: string): ImportCandidate[] {
     .filter((item): item is ImportCandidate => item !== null)
 }
 
+function pdfCandidateToObservation(
+  sourceDocumentId: string,
+  file: SelectedLocalFile,
+  biomarker: string,
+  value: number,
+  unit: string,
+  collectedAt?: string,
+  locator?: string,
+  confidence = 0.85,
+): ImportCandidate {
+  const marker = canonicalMarker(biomarker)
+  return {
+    type: 'observation',
+    value: {
+      id: observationId(sourceDocumentId, 0, marker),
+      sourceDocumentId,
+      biomarker: marker,
+      value,
+      unit,
+      collectedAt: collectedAt ?? new Date().toISOString().slice(0, 10),
+      confidence,
+      locator: locator ?? `${file.name}:pdf`,
+    },
+  }
+}
+
+async function parsePdf(file: SelectedLocalFile, sourceDocumentId: string): Promise<ImportCandidate[]> {
+  const { candidates, requiresReview } = await extractLabCandidates(new BrowserPdfTextExtractor(), file.contents)
+  return candidates.map((item, index) =>
+    pdfCandidateToObservation(
+      sourceDocumentId,
+      file,
+      item.biomarker,
+      item.value,
+      item.unit,
+      item.collectedAt,
+      item.locator ?? `page:${item.page}:${index}`,
+      requiresReview ? Math.min(item.confidence, 0.8) : item.confidence,
+    ),
+  )
+}
+
 export function parseSelectedFile(file: SelectedLocalFile, sourceDocumentId: string): ImportCandidate[] {
   const format = detectImportMime(file.name, file.mimeType)
   const text = decode(file)
@@ -144,4 +208,10 @@ export function parseSelectedFile(file: SelectedLocalFile, sourceDocumentId: str
     return []
   }
   return []
+}
+
+export async function parseSelectedFileAsync(file: SelectedLocalFile, sourceDocumentId: string): Promise<ImportCandidate[]> {
+  const format = detectImportMime(file.name, file.mimeType)
+  if (format === 'pdf') return parsePdf(file, sourceDocumentId)
+  return parseSelectedFile(file, sourceDocumentId)
 }

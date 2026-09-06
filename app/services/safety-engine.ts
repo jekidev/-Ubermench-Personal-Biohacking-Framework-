@@ -12,7 +12,10 @@ export interface SafetyFlag {
 }
 
 const HIGH_RISK_TERMS = ['warfarin', 'apixaban', 'rivaroxaban', 'heparin', 'clopidogrel', 'insulin', 'opioid', 'benzodiazepine']
-const CNS_DEPRESSANTS = ['pregabalin', 'gabapentin', 'baclofen', 'zolpidem', 'doxepin', 'mirtazapine']
+const CNS_DEPRESSANTS = ['pregabalin', 'gabapentin', 'baclofen', 'zolpidem', 'doxepin', 'mirtazapine', 'mirtazapin', 'olanzapine', 'olanzapin']
+const SEROTONERGIC_AGENTS = ['mirtazapin', 'mirtazapine', 'nortriptylin', 'nortriptyline', 'ssri', 'snri', 'olanzapin', 'olanzapine']
+const DOPAMINE_AGONISTS = ['pramipexol', 'pramipexole', 'ropinirol', 'rotigotine']
+const STIMULANTS = ['methylphenidat', 'methylphenidate', 'amphetamine', 'lisdexamfetamine', 'modafinil']
 const BP_LOWERING = ['nebivolol', 'propranolol', 'metoprolol', 'tadalafil', 'amlodipine', 'losartan', 'lisinopril']
 
 function includesTerm(value: string, terms: string[]) {
@@ -38,6 +41,19 @@ export function screenInterventionSafety(
 
   if (activeMeds.some((m) => includesTerm(m.name, CNS_DEPRESSANTS)) && includesTerm(intervention, ['sedative', 'sleep aid', 'alcohol', 'opioid', 'benzodiazepine'])) {
     flags.push({ severity: 'orange', code: 'CNS_DEPRESSANT_STACK', title: 'CNS-depressant stacking', detail: 'Multiple central nervous system depressant effects may compound sedation, impaired coordination or respiratory risk.', requiresReview: true })
+  }
+
+  const serotonergicMeds = activeMeds.filter((m) => includesTerm(m.name, SEROTONERGIC_AGENTS))
+  if (serotonergicMeds.length >= 2) {
+    flags.push({ severity: 'red', code: 'SEROTONERGIC_POLYPHARMACY', title: 'Multiple serotonergic agents active', detail: 'The active medication list contains multiple serotonergic agents (for example mirtazapine with nortriptyline). This combination requires close psychiatric and cardiological monitoring.', requiresReview: true })
+  }
+
+  if (activeMeds.some((m) => includesTerm(m.name, DOPAMINE_AGONISTS)) && activeMeds.some((m) => includesTerm(m.name, STIMULANTS))) {
+    flags.push({ severity: 'orange', code: 'DOPAMINE_STIMULANT_COMBO', title: 'Dopamine agonist with stimulant', detail: 'Pramipexole-type dopamine agonism combined with methylphenidate-type stimulant effects may increase activation, sleep disruption and cardiovascular load.', requiresReview: true })
+  }
+
+  if (includesTerm(intervention, SEROTONERGIC_AGENTS) && serotonergicMeds.length > 0) {
+    flags.push({ severity: 'red', code: 'SEROTONERGIC_INTERVENTION', title: 'Proposed serotonergic addition', detail: 'The proposed intervention may add serotonergic load on top of existing serotonergic medication.', requiresReview: true })
   }
 
   if (activeMeds.some((m) => includesTerm(m.name, BP_LOWERING)) && includesTerm(intervention, ['vasodilator', 'nitrate', 'blood pressure lowering', 'tadalafil', 'sildenafil'])) {

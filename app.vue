@@ -39,6 +39,8 @@ const navigation = [
   { label: 'AI Models', to: '/ai-models' },
   { label: 'Settings', to: '/settings' },
   { label: 'Biology', to: '/biology' },
+  { label: 'Fearprime', to: '/fearprime' },
+  { label: 'Health Sync', to: '/health-sync' },
   { label: 'Longevity', to: '/longevity' },
   { label: 'Bloods', to: '/longevity/bloods' },
   { label: 'Genetics', to: '/longevity/genetics' },
