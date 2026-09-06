@@ -8,8 +8,10 @@ Pinned upstream commit: `620d8c7b95ae88128c8c692c2156a700228bddea`
 
 - Git submodule at `tools/starchive` (original PowerShell + Python scripts)
 - TypeScript client in `app/services/starchive.ts` (no hardcoded credentials)
-- Dashboard page at `/starchive`
+- Nuxt 4 page at `app/pages/starchive.vue` (route `/starchive`)
 - CLI at `scripts/starchive.mjs`
+
+Nuxt 4 uses the `app/` directory as the UI source. The STARCHIVE route lives there so it actually renders. The older root `pages/` tree is unchanged.
 
 STARCHIVE does not modify GitHub stars, lists, or repositories.
 
