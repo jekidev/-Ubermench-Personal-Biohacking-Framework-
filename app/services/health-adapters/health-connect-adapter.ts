@@ -70,7 +70,10 @@ export class HealthConnectAdapter implements HealthProviderAdapter {
       unit: item.unit,
       recordedAt: item.recordedAt,
       source: 'health-connect',
-      metadata: { adapter: 'health-connect-native', warnings: result.warnings },
+      metadata: {
+        adapter: 'health-connect-native',
+        warnings: result.warnings.join(' | ') || null,
+      },
     }))
 
     if (result.cursor) {

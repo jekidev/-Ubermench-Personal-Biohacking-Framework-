@@ -90,10 +90,13 @@ export function parseSundhedDkText(text: string, page = 1): PdfLabCandidate[] {
 
     const unitMatch = line.match(/(?:mmol\/l|mg\/l|μmol\/l|umol\/l|× 10\^9\/l|u\/l|pmol\/l|nmol\/l|fl|g\/l)/i)
     const tail = unitMatch ? line.slice(unitMatch.index! + unitMatch[0].length) : line
-    const rawMatches = [...tail.matchAll(/(?:<\s*)?(\d+(?:[,.]\d+)?)/g)].map((match) => ({
-      value: parseDanishNumber(match[1]),
-      belowDetection: match[0].includes('<'),
-    })).filter((entry): entry is { value: number; belowDetection: boolean } => entry.value !== null)
+    const rawMatches = [...tail.matchAll(/(?:<\s*)?(\d+(?:[,.]\d+)?)/g)].flatMap((match) => {
+      const token = match[1]
+      if (!token) return []
+      const value = parseDanishNumber(token)
+      if (value === null) return []
+      return [{ value, belowDetection: match[0].includes('<') }]
+    })
 
     const numericValues = rawMatches.length > 1 && rawMatches[0]?.belowDetection
       ? rawMatches.slice(1)

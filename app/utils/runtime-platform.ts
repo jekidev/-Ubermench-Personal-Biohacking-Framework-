@@ -7,14 +7,7 @@ export function isAndroidUserAgent(): boolean {
 }
 
 export async function isTauriAndroid(): Promise<boolean> {
-  if (!isTauriRuntime()) return false
-  try {
-    const { type } = await import('@tauri-apps/plugin-os')
-    const osType = await type()
-    return osType === 'android'
-  } catch {
-    return isAndroidUserAgent()
-  }
+  return isTauriRuntime() && isAndroidUserAgent()
 }
 
 export function isAndroidBrowser(): boolean {

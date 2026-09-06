@@ -56,8 +56,13 @@ function numberFromToken(token: string): number | null {
 
 function parseReference(text: string): { low?: number; high?: number } {
   const range = text.match(/(-?\d+(?:[,.]\d+)?)\s*(?:-|–|—|to)\s*(-?\d+(?:[,.]\d+)?)/i)
-  if (!range) return {}
-  return { low: numberFromToken(range[1]), high: numberFromToken(range[2]) }
+  if (!range?.[1] || !range[2]) return {}
+  const low = numberFromToken(range[1])
+  const high = numberFromToken(range[2])
+  return {
+    low: low ?? undefined,
+    high: high ?? undefined,
+  }
 }
 
 export function parsePdfLabBlocks(blocks: PdfTextBlock[]): PdfLabCandidate[] {
@@ -72,7 +77,7 @@ export function parsePdfLabBlocks(blocks: PdfTextBlock[]): PdfLabCandidate[] {
       if (!name) continue
       const tail = line.slice(line.toLowerCase().indexOf(name.toLowerCase()) + name.length).trim()
       const valueMatch = tail.match(/(-?\d+(?:[,.]\d+)?)/)
-      if (!valueMatch) continue
+      if (!valueMatch?.[1]) continue
       const value = numberFromToken(valueMatch[1])
       if (value === null) continue
       const unit = tail.replace(valueMatch[1], '').trim().split(/\s{2,}|\(|\[/)[0] || 'unknown'
