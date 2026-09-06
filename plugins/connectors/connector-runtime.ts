@@ -2,7 +2,10 @@ import { getSecret } from '../../app/services/secret-vault'
 import { getMcpServer } from '../llm/mcp/servers'
 import { CONNECTOR_REGISTRY, getConnector } from './registry'
 import { isConnectorEnabled, loadConnectorSettings } from './connector-store'
+import { isGoogleConnected } from './oauth/google-token-store'
 import type { ConnectorConnectionStatus, ConnectorId, ConnectorStatusSnapshot } from './types'
+
+const GOOGLE_CONNECTORS = new Set<ConnectorId>(['gmail', 'google-drive'])
 
 async function resolveConfiguredKeys(envKeys: string[] = []): Promise<{ present: string[]; missing: string[] }> {
   const present: string[] = []
@@ -25,6 +28,9 @@ export async function getConnectorStatus(id: ConnectorId): Promise<ConnectorStat
   let status: ConnectorConnectionStatus = 'disabled'
   if (!enabled) status = 'disabled'
   else if (connector.status === 'planned') status = 'unavailable'
+  else if (GOOGLE_CONNECTORS.has(connector.id)) {
+    status = (await isGoogleConnected()) ? 'connected' : (missing.length ? 'missing-credentials' : 'missing-credentials')
+  }
   else if (connector.auth.type === 'oauth') status = missing.length ? 'missing-credentials' : 'configured'
   else if (connector.auth.type === 'none') status = 'connected'
   else if (missing.length === 0) status = connector.status === 'live' ? 'connected' : 'configured'

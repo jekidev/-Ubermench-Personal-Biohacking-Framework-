@@ -1,4 +1,5 @@
 mod mcp;
+mod ocr;
 mod pdf;
 
 use serde::Serialize;
@@ -44,6 +45,9 @@ pub fn run() {
             fingerprint_bytes,
             app_name,
             pdf::extract_pdf_lab_text,
+            ocr::ocr_pdf_lab_text,
+            ocr::ocr_pdf_bytes,
+            ocr::ocr_runtime_status,
             mcp::mcp_stdio_preflight,
             mcp::mcp_issue_approval,
             mcp::mcp_stdio_execute

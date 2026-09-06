@@ -87,6 +87,7 @@
 import { loadLongevityStore, type LocalObservation } from '~/plugins/longevity/persistence/local-store'
 import { useLongevityImport } from '~/plugins/longevity/app/use-longevity-import'
 import type { SelectedLocalFile } from '~/plugins/longevity/tauri/file-adapter'
+import { TauriOcrAdapter } from '~/plugins/longevity/pdf/tauri-ocr-adapter'
 
 const input = ref<HTMLInputElement>()
 const stored = ref<LocalObservation[]>([])
@@ -128,6 +129,7 @@ async function onFile(event: Event) {
     useLlmAssist: useLlmAssist.value,
     useOcr: useOcr.value,
     useVision: useVision.value,
+    ocrAdapter: useOcr.value ? new TauriOcrAdapter() : undefined,
     visionRunner: useVision.value
       ? async ({ pdfBase64, system, prompt }) => {
           const response = await askWithDocuments({
