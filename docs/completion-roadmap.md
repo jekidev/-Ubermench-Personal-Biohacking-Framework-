@@ -60,9 +60,9 @@ Apple Health, Oura, WHOOP, Fitbit and Polar are intentionally excluded from the 
 
 1. Normalize Europe PMC results into durable evidence records automatically.
 2. Add DOI/PMID identity resolution and duplicate detection.
-3. Add citation-level claim extraction with explicit uncertainty.
+3. Citation-level claim extraction is implemented from stored title/abstract text with polarity, hedges and explicit uncertainty. Numeric effects are copied only when present in the source text.
 4. Separate mechanistic plausibility from human outcome evidence in intervention ranking.
-5. Add evidence freshness/retraction checks and an auditable research snapshot.
+5. Freshness bands, retraction/expression-of-concern checks (record flags, local registry and Crossref `update-to` payloads) and checksummed research snapshots are implemented and visible on `/longevity/evidence`.
 6. Optional paper-search MCP and PaperQA sidecars are registered; they stay disabled until the local tools are installed. Sci-Hub remains off.
 
 ### P1 — experiment engine maturity

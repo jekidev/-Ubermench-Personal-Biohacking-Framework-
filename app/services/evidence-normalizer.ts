@@ -1,5 +1,6 @@
 import type { EvidenceItem } from '~/types/biology'
 import type { ResearchHit } from './research-engine'
+import { extractEvidenceClaims, highestClaimUncertainty } from './evidence-claims'
 import { deduplicateEvidence, resolveEvidenceIdentity } from './evidence-identity'
 
 export type NormalizedEvidenceRecord = EvidenceItem & {
@@ -9,6 +10,8 @@ export type NormalizedEvidenceRecord = EvidenceItem & {
   reviewRequired: boolean
   claimUncertainty: 'high' | 'medium' | 'low'
   mechanisticOnly: boolean
+  retracted?: boolean
+  retractionNotice?: string
 }
 
 const STORAGE_KEY = 'ubermench.evidence.records.v1'
@@ -25,13 +28,14 @@ export function normalizeResearchHit(hit: ResearchHit, retrievedAt: string): Nor
     summary: hit.abstract,
   }
   const identity = resolveEvidenceIdentity(item)
+  const claims = extractEvidenceClaims({ title: item.title, summary: item.summary, evidenceLevel: item.evidenceLevel })
   return {
     ...item,
     doi: identity.doi,
     pmid: identity.pmid,
     retrievedAt,
     reviewRequired: true,
-    claimUncertainty: 'high',
+    claimUncertainty: highestClaimUncertainty(claims),
     mechanisticOnly: false,
   }
 }
