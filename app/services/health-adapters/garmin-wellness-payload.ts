@@ -78,11 +78,11 @@ function extractSamplesFromRecord(record: Record<string, unknown>): GarminBiomet
   const dateKey = recordedAt.slice(0, 10)
   const samples: GarminBiometricSample[] = []
 
-  pushNumeric(samples, record, ['restingHeartRate', 'resting_hr', 'rhr'], 'resting_hr', 'bpm', recordedAt, `garmin:daily:${dateKey}:resting_hr`)
-  pushNumeric(samples, record, ['steps', 'totalSteps'], 'steps', 'count', recordedAt, `garmin:daily:${dateKey}:steps`)
-  pushNumeric(samples, record, sleepScoreKeys(record), 'sleep_score', 'score', recordedAt, `garmin:sleep:${dateKey}:sleep_score`)
-  pushNumeric(samples, record, hrvKeys(record), 'hrv_rmssd', 'ms', recordedAt, `garmin:hrv:${dateKey}:hrv_rmssd`)
-  pushNumeric(samples, record, spo2Keys(record), 'spo2', '%', recordedAt, `garmin:pulseox:${dateKey}:spo2`)
+  pushNumeric(samples, [record.restingHeartRate, record.resting_hr, record.rhr], 'resting_hr', 'bpm', recordedAt, `garmin:daily:${dateKey}:resting_hr`)
+  pushNumeric(samples, [record.steps, record.totalSteps], 'steps', 'count', recordedAt, `garmin:daily:${dateKey}:steps`)
+  pushNumeric(samples, sleepScoreKeys(record), 'sleep_score', 'score', recordedAt, `garmin:sleep:${dateKey}:sleep_score`)
+  pushNumeric(samples, hrvKeys(record), 'hrv_rmssd', 'ms', recordedAt, `garmin:hrv:${dateKey}:hrv_rmssd`)
+  pushNumeric(samples, spo2Keys(record), 'spo2', '%', recordedAt, `garmin:pulseox:${dateKey}:spo2`)
 
   const weightKg = resolveWeightKg(record)
   if (weightKg !== undefined) {
@@ -170,14 +170,13 @@ function toIsoTimestamp(value: unknown): string | undefined {
 
 function pushNumeric(
   samples: GarminBiometricSample[],
-  record: Record<string, unknown>,
-  keys: unknown[],
+  values: unknown[],
   metric: GarminBiometricSample['metric'],
   unit: string,
   recordedAt: string,
   sourceId: string,
 ): void {
-  const value = firstFinite(...keys)
+  const value = firstFinite(...values)
   if (value === undefined) return
   samples.push({ metric, value, unit, recordedAt, provider: 'garmin', sourceId })
 }
