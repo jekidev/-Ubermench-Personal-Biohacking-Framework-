@@ -256,6 +256,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     docsUrl: 'https://github.com/LearningCircuit/local-deep-research',
   },
   {
+<<<<<<< HEAD
     id: 'youtube-rag',
     name: 'YouTube → RAG',
     category: 'research',
@@ -283,6 +284,8 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     docsUrl: 'https://github.com/samson-art/transcriptor-mcp',
   },
   {
+=======
+>>>>>>> 6d2c29b (fix: restore research connectors, Health Connect types and remove duplicate connectors page)
     id: 'pdf-inspector',
     name: 'PDF Inspector',
     category: 'research',
