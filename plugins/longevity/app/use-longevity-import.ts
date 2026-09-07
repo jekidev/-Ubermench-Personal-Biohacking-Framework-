@@ -88,5 +88,9 @@ export function useLongevityImport() {
     indexedChunks.value = 0
   }
 
-  return { preview, candidates, pageTexts, indexedChunks, busy, error, prepare, confirm, cancel }
+  function removeCandidate(id: string) {
+    candidates.value = candidates.value.filter((item) => item.value.id !== id)
+  }
+
+  return { preview, candidates, pageTexts, indexedChunks, busy, error, prepare, confirm, cancel, removeCandidate }
 }

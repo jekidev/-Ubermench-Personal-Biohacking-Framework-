@@ -47,11 +47,37 @@
         <div><span class="text-zinc-500">Candidates</span><div>{{ observations.length }}</div></div>
       </div>
       <UAlert v-if="preview.warnings.length" class="mt-4" title="Review required" :description="preview.warnings.join(' • ')" color="warning" variant="subtle" />
-      <div v-if="observations.length" class="mt-4 space-y-2">
-        <div v-for="item in observations" :key="item.value.id" class="flex items-center justify-between rounded-lg border border-zinc-800 px-3 py-2 text-sm">
-          <span>{{ item.value.biomarker }}</span>
-          <span>{{ item.value.value }} {{ item.value.unit }} · {{ item.value.collectedAt }}</span>
-        </div>
+      <div v-if="observations.length" class="mt-4 overflow-x-auto">
+        <table class="min-w-full text-left text-sm">
+          <thead class="text-zinc-500">
+            <tr>
+              <th class="py-2 pr-3">Biomarker</th>
+              <th class="py-2 pr-3">Value</th>
+              <th class="py-2 pr-3">Unit</th>
+              <th class="py-2 pr-3">Collected</th>
+              <th class="py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in observations" :key="item.value.id" class="border-t border-zinc-800">
+              <td class="py-2 pr-3">
+                <input v-model="item.value.biomarker" class="w-full min-w-32 rounded border border-zinc-700 bg-zinc-900 px-2 py-1" />
+              </td>
+              <td class="py-2 pr-3">
+                <input v-model.number="item.value.value" type="number" step="any" class="w-24 rounded border border-zinc-700 bg-zinc-900 px-2 py-1" />
+              </td>
+              <td class="py-2 pr-3">
+                <input v-model="item.value.unit" class="w-20 rounded border border-zinc-700 bg-zinc-900 px-2 py-1" />
+              </td>
+              <td class="py-2 pr-3">
+                <input v-model="item.value.collectedAt" type="date" class="rounded border border-zinc-700 bg-zinc-900 px-2 py-1" />
+              </td>
+              <td class="py-2">
+                <UButton size="xs" variant="ghost" color="error" @click="removeCandidate(item.value.id)">Remove</UButton>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
       <template #footer>
         <div class="flex justify-end gap-2">
@@ -98,7 +124,7 @@ const ragQuery = ref('')
 const ragAnswer = ref('')
 const ragBusy = ref(false)
 const { askWithDocuments } = useBiohackingAI()
-const { preview, candidates, busy, error, prepare, confirm, cancel } = useLongevityImport()
+const { preview, candidates, busy, error, prepare, confirm, cancel, removeCandidate } = useLongevityImport()
 const observations = computed(() => candidates.value.filter((item): item is { type: 'observation'; value: LocalObservation } => item.type === 'observation'))
 
 function refresh() {
