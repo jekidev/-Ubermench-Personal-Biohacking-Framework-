@@ -35,7 +35,7 @@ function acknowledge() {
     <div>
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Safety</p>
       <h1 class="mt-2 text-3xl font-semibold">Safety screening</h1>
-      <p class="mt-2 text-muted">Local interaction, duplicate-ingredient and cumulative-dose checks. This output is kept separate from efficacy ranking and is not a treatment approval.</p>
+      <p class="mt-2 text-muted">Local interaction, duplicate-ingredient, cumulative-dose, contraindication and monitoring checks. This output is kept separate from efficacy ranking and is not a treatment approval.</p>
     </div>
 
     <UCard>
@@ -44,10 +44,14 @@ function acknowledge() {
         <div v-for="(flag, index) in regimenFlags" :key="`${flag.code}-${index}`" class="rounded-lg border border-zinc-800 p-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="font-medium">{{ flag.title }}</div>
-            <UBadge :color="badgeColor(flag.severity)" variant="subtle">{{ flag.severity }}</UBadge>
+            <div class="flex flex-wrap gap-2">
+              <UBadge v-if="flag.kind" variant="subtle">{{ flag.kind }}</UBadge>
+              <UBadge :color="badgeColor(flag.severity)" variant="subtle">{{ flag.severity }}</UBadge>
+            </div>
           </div>
           <p class="mt-2 text-sm text-muted">{{ flag.detail }}</p>
-          <p class="mt-1 text-xs text-zinc-500">{{ flag.code }}{{ flag.requiresReview ? ' · review required' : '' }}</p>
+          <p v-if="flag.monitoringMetrics?.length" class="mt-1 text-xs text-zinc-400">Monitor: {{ flag.monitoringMetrics.join(', ') }}</p>
+          <p class="mt-1 text-xs text-zinc-500">{{ flag.code }}{{ flag.requiresReview ? ' · review required' : '' }}{{ flag.provenance ? ` · ${flag.provenance}` : '' }}</p>
         </div>
       </div>
     </UCard>

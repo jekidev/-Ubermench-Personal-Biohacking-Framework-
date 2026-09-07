@@ -54,7 +54,8 @@ export const OVERVIEW_NAVIGATION: OverviewNavigationCard[] = [
   { label: 'Health Sync', to: '/health-sync', description: 'Garmin and Health Connect adapters' },
   { label: 'Bloods', to: '/longevity/bloods', description: 'Laboratory results and review' },
   { label: 'Evidence', to: '/longevity/evidence', description: 'Normalized research records' },
-  { label: 'Safety', to: '/safety', description: 'Interaction and dose screening' },
+  { label: 'Timeline', to: '/longevity/timeline', description: 'Longitudinal series and evidence overlay' },
+  { label: 'Safety', to: '/safety', description: 'Interaction, contraindication and monitoring' },
   { label: 'Agent', to: '/agent', description: 'Local agent runtime' },
 ]
 

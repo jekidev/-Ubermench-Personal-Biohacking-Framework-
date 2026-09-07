@@ -76,14 +76,14 @@ Apple Health, Oura, WHOOP, Fitbit and Polar are intentionally excluded from the 
 ### P1 — safety layer
 
 1. Expand medication/supplement interaction coverage with provenance.
-2. Add contraindication and monitoring requirements as structured rules.
+2. Contraindication and monitoring requirements are structured local rules (`app/services/safety-rules.ts`) evaluated against the profile and shown on `/safety`. They are conservative heuristics, not clinical guidelines.
 3. Add duplicate-ingredient and cumulative-dose detection.
 4. Require explicit user confirmation for high-risk interventions.
 5. Keep safety output separate from efficacy ranking.
 
 ### P2 — product completeness
 
-1. Complete Biology, Experiments, Evidence, Fearprime, Longevity and Agent dashboards.
+1. Complete Biology, Experiments, Evidence, Fearprime, Longevity and Agent dashboards. Longitudinal series and evidence-to-state overlay live at `/longevity/timeline`.
 2. Add import/export UX and visible data-health diagnostics.
 3. Add offline/online sync state and conflict resolution.
 4. Add accessibility and keyboard navigation pass.

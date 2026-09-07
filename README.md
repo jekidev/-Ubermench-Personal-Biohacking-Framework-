@@ -232,7 +232,7 @@ GitHub Actions runs the repository's quality checks on pushes and pull requests 
 3. Expand source-specific reconciliation policies and missingness-aware longitudinal analytics; baseline provenance scoring, conflict resolution, provider-aware reconciliation and aggregation are now implemented.
 4. Expand the closed-loop experiment layer with automatic follow-up scheduling and richer intervention-event timelines; deterministic phase-midpoint scheduling and due/upcoming/next selection are now implemented.
 5. Integrate explainable evidence-to-decision traces, citation-level claims with explicit uncertainty, retraction checks and checksummed research snapshots into the evidence dashboard.
-6. Add richer longitudinal visualisation and temporal evidence-to-state views.
+6. Richer longitudinal visualisation and temporal evidence-to-state views are on `/longevity/timeline` (sparklines, data-quality labels, evidence overlay). Direction is first-to-last only and is not clinical meaning.
 7. Integrate encrypted snapshots into the broader recovery UI; encrypted browser/Tauri export/import, strict envelope validation, persistence integration and dashboard controls are now implemented, while OS-keychain-backed key/passphrase handling remains.
 
 ## Security note
