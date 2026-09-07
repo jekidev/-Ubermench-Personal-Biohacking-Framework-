@@ -62,7 +62,7 @@ Apple Health, Oura, WHOOP, Fitbit and Polar are intentionally excluded from the 
 2. Add DOI/PMID identity resolution and duplicate detection.
 3. Citation-level claim extraction is implemented from stored title/abstract text with polarity, hedges and explicit uncertainty. Numeric effects are copied only when present in the source text.
 4. Separate mechanistic plausibility from human outcome evidence in intervention ranking.
-5. Freshness bands, retraction/expression-of-concern checks (record flags, local registry and Crossref `update-to` payloads) and checksummed research snapshots are implemented and visible on `/longevity/evidence`.
+5. Freshness bands, retraction/expression-of-concern checks (record flags, local registry and Crossref `update-to` payloads) and checksummed research snapshots are implemented and visible on `/longevity/evidence`. Nuxt 4 is configured to serve the repo-root `pages/` directory so those product routes resolve.
 6. Optional paper-search MCP and PaperQA sidecars are registered; they stay disabled until the local tools are installed. Sci-Hub remains off.
 
 ### P1 — experiment engine maturity

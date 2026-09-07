@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import EvidenceLookupPreview from '~/plugins/longevity/evidence/EvidenceLookupPreview.vue'
-import { LONGEVITY_WATCHLIST } from '~/plugins/longevity/evidence/watchlist'
+import EvidenceLookupPreview from '~~/plugins/longevity/evidence/EvidenceLookupPreview.vue'
+import { LONGEVITY_WATCHLIST } from '~~/plugins/longevity/evidence/watchlist'
 import { extractEvidenceClaims } from '~/services/evidence-claims'
 import { rankEvidenceRecords, type EvidenceFreshnessBand } from '~/services/evidence-freshness'
 import { loadEvidenceStore } from '~/services/evidence-normalizer'

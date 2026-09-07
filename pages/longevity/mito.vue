@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MITO_COMPLEX_MAP, buildMitoOverlay } from '~/plugins/longevity/mito/mito-complex-map'
+import { MITO_COMPLEX_MAP, buildMitoOverlay } from '~~/plugins/longevity/mito/mito-complex-map'
 
 const { profile, initialize } = usePersonalBiology()
 onMounted(initialize)

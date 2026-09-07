@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { nextBestTest } from '~/plugins/fearprime/engine/next-best-test'
-import { scorePhenotype, type LearningEventForPhenotype } from '~/plugins/fearprime/engine/phenotype'
-import { FEARPRIME_INTERVENTION_REGISTRY } from '~/plugins/fearprime/interventions/registry'
+import { nextBestTest } from '~~/plugins/fearprime/engine/next-best-test'
+import { scorePhenotype, type LearningEventForPhenotype } from '~~/plugins/fearprime/engine/phenotype'
+import { FEARPRIME_INTERVENTION_REGISTRY } from '~~/plugins/fearprime/interventions/registry'
 
 const { listMemoryTargets, listPendingFollowUps, loadEvents } = useFearprimeStore()
 const memoryCount = ref(0)

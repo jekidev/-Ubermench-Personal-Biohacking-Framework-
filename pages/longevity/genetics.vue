@@ -16,9 +16,9 @@
 </template>
 
 <script setup lang="ts">
-import { loadLongevityStore, type LocalGeneticVariant } from '~/plugins/longevity/persistence/local-store'
-import { useLongevityImport } from '~/plugins/longevity/app/use-longevity-import'
-import type { SelectedLocalFile } from '~/plugins/longevity/tauri/file-adapter'
+import { loadLongevityStore, type LocalGeneticVariant } from '~~/plugins/longevity/persistence/local-store'
+import { useLongevityImport } from '~~/plugins/longevity/app/use-longevity-import'
+import type { SelectedLocalFile } from '~~/plugins/longevity/tauri/file-adapter'
 
 const input = ref<HTMLInputElement>()
 const stored = ref<LocalGeneticVariant[]>([])

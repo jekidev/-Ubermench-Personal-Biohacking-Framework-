@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { screenProfileSafety } from '~/services/profile-safety'
+import { biomarkersToPhenotypicInputs, computePhenotypicAge } from '~/services/phenotypic-age-engine'
 import type { SafetySeverity } from '~/services/safety-engine'
 
 const { profile, initialize, biomarkerNames, trend, interactionFlags, exportBackup, importBackup, previewImport, exportEncryptedBackup, importEncryptedBackup, exportBackupToFile, importBackupFromFile } = usePersonalBiology()

@@ -110,10 +110,10 @@
 </template>
 
 <script setup lang="ts">
-import { loadLongevityStore, type LocalObservation } from '~/plugins/longevity/persistence/local-store'
-import { useLongevityImport } from '~/plugins/longevity/app/use-longevity-import'
-import type { SelectedLocalFile } from '~/plugins/longevity/tauri/file-adapter'
-import { TauriOcrAdapter } from '~/plugins/longevity/pdf/tauri-ocr-adapter'
+import { loadLongevityStore, type LocalObservation } from '~~/plugins/longevity/persistence/local-store'
+import { useLongevityImport } from '~~/plugins/longevity/app/use-longevity-import'
+import type { SelectedLocalFile } from '~~/plugins/longevity/tauri/file-adapter'
+import { TauriOcrAdapter } from '~~/plugins/longevity/pdf/tauri-ocr-adapter'
 
 const input = ref<HTMLInputElement>()
 const stored = ref<LocalObservation[]>([])
