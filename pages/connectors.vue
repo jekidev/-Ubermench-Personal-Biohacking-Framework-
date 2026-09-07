@@ -96,10 +96,10 @@
 </template>
 
 <script setup lang="ts">
-import { defaultGoogleRedirectUri } from '../../plugins/connectors/oauth/google-oauth'
-import { listGmailMessages, type GmailMessageSummary } from '../../plugins/connectors/adapters/gmail-adapter'
-import { syncDrivePdfsToRag } from '../../plugins/connectors/drive-rag-sync'
-import type { ConnectorConnectionStatus, ConnectorId } from '../../plugins/connectors/types'
+import { defaultGoogleRedirectUri } from '~~/plugins/connectors/oauth/google-oauth'
+import { listGmailMessages, type GmailMessageSummary } from '~~/plugins/connectors/adapters/gmail-adapter'
+import { syncDrivePdfsToRag } from '~~/plugins/connectors/drive-rag-sync'
+import type { ConnectorConnectionStatus, ConnectorId } from '~~/plugins/connectors/types'
 
 const { catalog, statuses, busy, error, refresh, toggle, saveCredential, isEnabled } = useConnectors()
 const google = useGoogleOAuth()
