@@ -4,6 +4,7 @@ export default defineNuxtConfig({
   modules: ['@nuxt/ui'],
   devtools: { enabled: true },
   typescript: { strict: true, typeCheck: true },
+  css: ['~/assets/css/a11y.css'],
   app: {
     head: {
       title: 'Ubermench',

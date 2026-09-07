@@ -3,19 +3,23 @@ import type { ExperimentDesign } from '~/services/experiment-protocols'
 import { createProtocolSpec, EXPERIMENT_PROTOCOL_TEMPLATES } from '~/services/experiment-protocols'
 import { summarizeNOf1, type NOf1Experiment } from '~/services/experiment-engine'
 import { evaluateStoppingRules } from '~/services/experiment-stopping-rules'
+import { analyzeExperimentSensitivity, buildSensitivityObservations } from '~/services/experiment-sensitivity'
+import { summarizeExperimentConfounders, type ExperimentConfounder } from '~/services/experiment-confounders'
 
 const STORAGE_KEY = 'ubermench.experiments.v1'
 
 export type StoredExperiment = ExperimentSpec & {
   design: ExperimentDesign
   runtime: NOf1Experiment
+  confounders: ExperimentConfounder[]
 }
 
 function loadExperiments(): StoredExperiment[] {
   if (!import.meta.client) return []
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) as StoredExperiment[] : []
+    const parsed = raw ? JSON.parse(raw) as Array<StoredExperiment & { confounders?: ExperimentConfounder[] }> : []
+    return parsed.map((item) => ({ ...item, confounders: item.confounders ?? [] }))
   } catch {
     return []
   }
@@ -24,6 +28,16 @@ function loadExperiments(): StoredExperiment[] {
 function saveExperiments(experiments: StoredExperiment[]) {
   if (!import.meta.client) return
   localStorage.setItem(STORAGE_KEY, JSON.stringify(experiments))
+}
+
+function plannedObservationDays(experiment: StoredExperiment) {
+  return Math.max(1, experiment.baselineDays + experiment.interventionDays)
+}
+
+function missingDataRate(experiment: StoredExperiment, summary: ReturnType<typeof summarizeNOf1>) {
+  const planned = plannedObservationDays(experiment)
+  const completed = summary.baselineCount + summary.interventionCount
+  return Math.max(0, Math.min(1, 1 - completed / planned))
 }
 
 export function useExperiments() {
@@ -43,21 +57,64 @@ export function useExperiments() {
       interventionDays: protocol.interventionDays,
       washoutDays: protocol.washoutDays,
       observations: [],
+      adherence: [],
+      adverseEvents: [],
       status: 'planned',
     }
-    const stored = { ...protocol, runtime }
+    const stored: StoredExperiment = { ...protocol, runtime, confounders: [] }
     experiments.value = [...experiments.value, stored]
     saveExperiments(experiments.value)
     return stored
+  }
+
+  function updateExperiment(id: string, updater: (experiment: StoredExperiment) => StoredExperiment) {
+    experiments.value = experiments.value.map((item) => (item.id === id ? updater(item) : item))
+    saveExperiments(experiments.value)
+  }
+
+  function recordAdherence(experimentId: string, completed: boolean, note?: string) {
+    updateExperiment(experimentId, (experiment) => ({
+      ...experiment,
+      runtime: {
+        ...experiment.runtime,
+        adherence: [
+          ...(experiment.runtime.adherence ?? []),
+          {
+            plannedAt: new Date().toISOString(),
+            completedAt: completed ? new Date().toISOString() : undefined,
+            completed,
+            note,
+          },
+        ],
+      },
+    }))
+  }
+
+  function recordConfounder(experimentId: string, confounder: Omit<ExperimentConfounder, 'id' | 'recordedAt'>) {
+    updateExperiment(experimentId, (experiment) => ({
+      ...experiment,
+      confounders: [
+        ...experiment.confounders,
+        {
+          ...confounder,
+          id: `conf-${Date.now()}`,
+          recordedAt: new Date().toISOString(),
+        },
+      ],
+    }))
   }
 
   function summarize(experiment: StoredExperiment) {
     const summary = summarizeNOf1(experiment.runtime)
     const stopping = evaluateStoppingRules({
       severeAdverseEvents: summary.severeAdverseEventCount,
-      missingDataRate: summary.baselineCount + summary.interventionCount === 0 ? 1 : undefined,
+      missingDataRate: missingDataRate(experiment, summary),
+      completedVisits: summary.baselineCount + summary.interventionCount,
+      plannedVisits: plannedObservationDays(experiment),
     })
-    return { summary, stopping }
+    const sensitivity = analyzeExperimentSensitivity(buildSensitivityObservations(experiment.runtime))
+    const confounders = summarizeExperimentConfounders(experiment.confounders)
+    return { summary, stopping, sensitivity, confounders }
   }
 
   return {
@@ -65,6 +122,8 @@ export function useExperiments() {
     templates: EXPERIMENT_PROTOCOL_TEMPLATES,
     initialize,
     createExperiment,
+    recordAdherence,
+    recordConfounder,
     summarize,
   }
 }

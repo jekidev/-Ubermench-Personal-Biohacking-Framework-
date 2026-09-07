@@ -11,14 +11,12 @@
     <UAlert v-if="error" title="Connector error" :description="error" color="error" variant="subtle" />
 
     <UCard>
-      <template #header><div class="font-medium">What is missing vs Cursor?</div></template>
+      <template #header><div class="font-medium">Connector status</div></template>
       <ul class="list-disc space-y-2 pl-5 text-sm text-zinc-400">
-        <li><strong class="text-zinc-200">OAuth browser flows</strong> — Gmail, Drive, Calendar need redirect UI (scaffolded only).</li>
-        <li><strong class="text-zinc-200">Full MCP protocol client</strong> — today we spawn stdio processes; no tool discovery or SSE transport.</li>
-        <li><strong class="text-zinc-200">Connector marketplace</strong> — static registry, no install/uninstall.</li>
-        <li><strong class="text-zinc-200">Per-connector permissions</strong> — global approval gate, not scoped ACLs.</li>
-        <li><strong class="text-zinc-200">Vector RAG from Drive</strong> — env vars exist in deployment bootstrap; sync adapter not wired.</li>
-        <li><strong class="text-zinc-200">Token refresh</strong> — OAuth refresh logic not implemented for Garmin/Drive.</li>
+        <li><strong class="text-zinc-200">Google OAuth</strong> — PKCE flow with automatic token refresh via the secret vault.</li>
+        <li><strong class="text-zinc-200">MCP stdio</strong> — spawn allowlisted servers with Tauri approval; no SSE/HTTP transport yet.</li>
+        <li><strong class="text-zinc-200">Garmin OAuth</strong> — health adapter scaffold; live Connectors flow still pending.</li>
+        <li><strong class="text-zinc-200">Vector RAG from Drive</strong> — lexical document index; embeddings not wired.</li>
       </ul>
     </UCard>
 
