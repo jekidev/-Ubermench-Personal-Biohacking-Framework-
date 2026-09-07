@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analyzeExperimentSensitivity } from './experiment-sensitivity'
+import { analyzeExperimentSensitivity, buildSensitivityObservations } from './experiment-sensitivity'
 
 describe('experiment sensitivity', () => {
   it('excludes invalid observations and reports missingness', () => {
@@ -33,5 +33,24 @@ describe('experiment sensitivity', () => {
       { recordedAt: '2026-08-04T00:00:00Z', value: 120, phase: 'intervention' },
     ])
     expect(result.conclusion).toBe('sensitive-to-observations')
+  })
+
+  it('maps experiment observations into baseline and intervention phases', () => {
+    const now = new Date('2026-08-20T00:00:00Z')
+    const observations = buildSensitivityObservations({
+      metric: 'hrv',
+      baselineDays: 7,
+      interventionDays: 7,
+      washoutDays: 0,
+      observations: [
+        { recordedAt: '2026-08-10T00:00:00Z', metric: 'hrv', value: 60 },
+        { recordedAt: '2026-08-18T00:00:00Z', metric: 'hrv', value: 70 },
+        { recordedAt: '2026-08-18T00:00:00Z', metric: 'sleep', value: 8 },
+      ],
+    }, now)
+    expect(observations).toEqual([
+      { recordedAt: '2026-08-10T00:00:00Z', value: 60, phase: 'baseline' },
+      { recordedAt: '2026-08-18T00:00:00Z', value: 70, phase: 'intervention' },
+    ])
   })
 })

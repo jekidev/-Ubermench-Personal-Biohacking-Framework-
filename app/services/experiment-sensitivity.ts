@@ -69,3 +69,39 @@ export function analyzeExperimentSensitivity(observations: SensitivityObservatio
     conclusion,
   }
 }
+
+export function buildSensitivityObservations(
+  experiment: {
+    metric?: string
+    baselineDays: number
+    interventionDays: number
+    washoutDays?: number
+    observations: Array<{ recordedAt: string; metric: string; value: number }>
+  },
+  nowInput: Date = new Date(),
+): SensitivityObservation[] {
+  const baselineDays = Math.max(0, Math.floor(experiment.baselineDays))
+  const interventionDays = Math.max(0, Math.floor(experiment.interventionDays))
+  const washoutDays = Math.max(0, Math.floor(experiment.washoutDays ?? 0))
+  const now = new Date(nowInput)
+  const interventionStart = new Date(now)
+  interventionStart.setDate(interventionStart.getDate() - interventionDays)
+  const washoutStart = new Date(interventionStart)
+  washoutStart.setDate(washoutStart.getDate() - washoutDays)
+  const baselineStart = new Date(washoutStart)
+  baselineStart.setDate(baselineStart.getDate() - baselineDays)
+
+  return experiment.observations
+    .filter((item) => Number.isFinite(item.value) && (!experiment.metric || item.metric === experiment.metric))
+    .map((item) => {
+      const date = new Date(item.recordedAt)
+      if (date >= baselineStart && date <= washoutStart) {
+        return { recordedAt: item.recordedAt, value: item.value, phase: 'baseline' as const }
+      }
+      if (date > interventionStart && date <= now) {
+        return { recordedAt: item.recordedAt, value: item.value, phase: 'intervention' as const }
+      }
+      return null
+    })
+    .filter((item): item is SensitivityObservation => item !== null)
+}
