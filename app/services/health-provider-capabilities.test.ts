@@ -5,6 +5,8 @@ import { filterSupportedProviderSamples, isSupportedProviderMetric } from './hea
 describe('health-provider-capabilities', () => {
   it('uses the registry as the runtime metric allow-list', () => {
     expect(isSupportedProviderMetric('garmin', 'sleep')).toBe(true)
+    expect(isSupportedProviderMetric('garmin', 'resting_heart_rate')).toBe(true)
+    expect(isSupportedProviderMetric('garmin', 'training_load')).toBe(true)
     expect(isSupportedProviderMetric('garmin', 'respiratory-rate')).toBe(false)
     expect(isSupportedProviderMetric('health-connect', 'respiratory-rate')).toBe(true)
   })

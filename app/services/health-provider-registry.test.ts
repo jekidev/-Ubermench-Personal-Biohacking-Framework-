@@ -6,6 +6,7 @@ describe('health-provider-registry', () => {
     expect(HEALTH_PROVIDER_REGISTRY.map((provider) => provider.id)).toEqual(['health-connect', 'garmin'])
     expect(getHealthProvider('health-connect')?.requiresNativeAdapter).toBe(true)
     expect(getHealthProvider('garmin')?.supports).toContain('hrv')
+    expect(getHealthProvider('garmin')?.supports).toContain('resting_heart_rate')
     expect(HEALTH_PROVIDER_REGISTRY).toHaveLength(2)
   })
 })

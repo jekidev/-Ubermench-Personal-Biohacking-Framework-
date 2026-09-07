@@ -49,12 +49,12 @@ Apple Health, Oura, WHOOP, Fitbit and Polar are intentionally excluded from the 
 
 ### P1 — real health-data ingestion
 
-1. Implement the Android Health Connect native adapter path on Android.
-2. Implement the authenticated Garmin import adapter.
-3. Add deduplication using provider + source record ID + timestamp + measurement identity.
-4. Add sync cursors, retry/backoff and partial-failure reporting.
-5. Preserve source payload hashes for reproducibility without storing unnecessary raw payloads.
-6. Add integration tests for both providers and explicit rejection tests for unsupported providers.
+1. Implement the Android Health Connect native adapter path on Android. Browser/web still refuses invented Health Connect samples; the native Kotlin/Tauri bridge lives on the open Android PR.
+2. Authenticated Garmin import is implemented: Wellness JSON parse/import, vault-stored access tokens, optional Wellness API fetch with partial-failure reporting, sync cursors and sample-identity hashes. The adapter never fabricates resting HR or step counts.
+3. Deduplication uses provider source IDs plus timestamped measurement identity; imported Garmin samples are keyed as `garmin:{collection}:{date|activity}:{metric}`.
+4. Sync cursors, retry/backoff and Garmin partial-failure reporting are implemented.
+5. Garmin sample-identity SHA-256 hashes are stored in metadata without keeping raw Wellness payloads.
+6. Garmin parser/adapter tests reject Oura/WHOOP/Apple envelopes and assert that tokens never enter local sample caches. Health Connect native integration tests remain on the Android bridge PR.
 
 ### P1 — evidence engine maturity
 

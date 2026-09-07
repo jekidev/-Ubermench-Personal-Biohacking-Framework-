@@ -1,10 +1,25 @@
 export type HealthProviderId = 'health-connect' | 'garmin'
 
+export type HealthProviderMetric =
+  | 'sleep'
+  | 'sleep_score'
+  | 'heart-rate'
+  | 'resting_heart_rate'
+  | 'hrv'
+  | 'training'
+  | 'training_load'
+  | 'workout_duration'
+  | 'steps'
+  | 'spo2'
+  | 'weight'
+  | 'temperature'
+  | 'respiratory-rate'
+
 export interface HealthProviderCapability {
   id: HealthProviderId
   name: string
   platform: 'android' | 'web' | 'desktop'
-  supports: Array<'sleep' | 'heart-rate' | 'hrv' | 'training' | 'steps' | 'temperature' | 'respiratory-rate'>
+  supports: HealthProviderMetric[]
   requiresNativeAdapter: boolean
 }
 
@@ -24,7 +39,19 @@ export const HEALTH_PROVIDER_REGISTRY: HealthProviderCapability[] = [
     id: 'garmin',
     name: 'Garmin',
     platform: 'web',
-    supports: ['sleep', 'heart-rate', 'hrv', 'training', 'steps'],
+    supports: [
+      'sleep',
+      'sleep_score',
+      'heart-rate',
+      'resting_heart_rate',
+      'hrv',
+      'training',
+      'training_load',
+      'workout_duration',
+      'steps',
+      'spo2',
+      'weight',
+    ],
     requiresNativeAdapter: false,
   },
 ]

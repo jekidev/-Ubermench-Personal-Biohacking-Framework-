@@ -35,6 +35,11 @@
 <script setup lang="ts">
 const navigation = [
   { label: 'Overview', to: '/' },
+  { label: 'Biology', to: '/biology' },
+  { label: 'Health Sync', to: '/health-sync' },
+  { label: 'Experiments', to: '/experiments' },
+  { label: 'Longevity', to: '/longevity' },
+  { label: 'Evidence', to: '/longevity/evidence' },
   { label: 'STARCHIVE', to: '/starchive' },
   { label: 'Connectors', to: '/connectors' },
   { label: 'Settings', to: '/settings' },

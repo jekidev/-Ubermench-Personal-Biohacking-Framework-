@@ -42,10 +42,14 @@ export class HealthConnectAdapter extends StubHealthProviderAdapter {
   }
 }
 
-export function loadSyncCursor(provider: string): SyncCursor {
-  if (!import.meta.client) return { provider }
+export function loadSyncCursor(
+  provider: string,
+  storage?: Pick<Storage, 'getItem'>,
+): SyncCursor {
+  const store = storage ?? (typeof localStorage === 'undefined' ? undefined : localStorage)
+  if (!store) return { provider }
   try {
-    const raw = localStorage.getItem(`health-sync:${provider}`)
+    const raw = store.getItem(`health-sync:${provider}`)
     if (!raw) return { provider }
     const parsed = JSON.parse(raw) as SyncCursor
     return { ...parsed, provider }
@@ -54,7 +58,11 @@ export function loadSyncCursor(provider: string): SyncCursor {
   }
 }
 
-export function saveSyncCursor(cursor: SyncCursor): void {
-  if (!import.meta.client) return
-  localStorage.setItem(`health-sync:${cursor.provider}`, JSON.stringify(cursor))
+export function saveSyncCursor(
+  cursor: SyncCursor,
+  storage?: Pick<Storage, 'setItem'>,
+): void {
+  const store = storage ?? (typeof localStorage === 'undefined' ? undefined : localStorage)
+  if (!store) return
+  store.setItem(`health-sync:${cursor.provider}`, JSON.stringify(cursor))
 }
