@@ -8,7 +8,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "lint": "eslint .",
-    "typecheck": "nuxt typecheck",
+    "typecheck": "nuxt prepare && vue-tsc --noEmit -p .nuxt/tsconfig.json",
     "tauri": "tauri",
     "tauri:dev": "bun scripts/tauri-dev.ts",
     "tauri:dev:android": "tauri android dev",

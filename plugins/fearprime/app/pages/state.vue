@@ -1,7 +1,23 @@
 <script setup lang="ts">
 const { appendEvent } = useFearprimeStore();
 
-const state = reactive({
+const sliderFields = [
+  ["fear", "Fear"],
+  ["hypervigilance", "Hypervigilance"],
+  ["intrusion", "Intrusioner"],
+  ["dissociation", "Dissociation"],
+  ["interoceptiveThreat", "Interoceptiv threat"],
+  ["socialThreat", "Social threat"],
+  ["cognitiveClarity", "Kognitiv klarhed"],
+  ["sleepQuality", "Søvnkvalitet"],
+  ["stress", "Stress"],
+  ["energy", "Energi"],
+  ["function", "Funktion"],
+] as const;
+
+type SliderField = (typeof sliderFields)[number][0];
+
+const sliders = reactive<Record<SliderField, number>>({
   fear: 3,
   hypervigilance: 3,
   intrusion: 2,
@@ -13,8 +29,9 @@ const state = reactive({
   stress: 4,
   energy: 6,
   function: 7,
-  confounded: false
 });
+
+const confounded = ref(false);
 
 const saved = ref(false);
 
@@ -23,7 +40,7 @@ async function save() {
     id: crypto.randomUUID(),
     type: "daily_state",
     timestamp: new Date().toISOString(),
-    payload: { ...state, source: "manual" },
+    payload: { ...sliders, confounded: confounded.value, source: "manual" },
     schemaVersion: "2.0.0"
   });
   saved.value = true;
@@ -41,26 +58,14 @@ async function save() {
 
     <UCard>
       <div class="grid gap-6 sm:grid-cols-2">
-        <div v-for="field in [
-          ['fear', 'Fear'],
-          ['hypervigilance', 'Hypervigilance'],
-          ['intrusion', 'Intrusioner'],
-          ['dissociation', 'Dissociation'],
-          ['interoceptiveThreat', 'Interoceptiv threat'],
-          ['socialThreat', 'Social threat'],
-          ['cognitiveClarity', 'Kognitiv klarhed'],
-          ['sleepQuality', 'Søvnkvalitet'],
-          ['stress', 'Stress'],
-          ['energy', 'Energi'],
-          ['function', 'Funktion']
-        ]" :key="field[0]" class="space-y-2">
-          <div class="flex justify-between text-sm"><span>{{ field[1] }}</span><span class="font-medium">{{ state[field[0] as keyof typeof state] }}/10</span></div>
-          <USlider v-model="state[field[0] as keyof typeof state]" :min="0" :max="10" :step="1" />
+        <div v-for="field in sliderFields" :key="field[0]" class="space-y-2">
+          <div class="flex justify-between text-sm"><span>{{ field[1] }}</span><span class="font-medium">{{ sliders[field[0]] }}/10</span></div>
+          <USlider v-model="sliders[field[0]]" :min="0" :max="10" :step="1" />
         </div>
       </div>
 
       <div class="mt-6 flex items-center gap-3 border-t border-default pt-4">
-        <UCheckbox v-model="state.confounded" label="Større confounder i dag (fx sygdom, markant søvnmangel eller anden stor ændring)" />
+        <UCheckbox v-model="confounded" label="Større confounder i dag (fx sygdom, markant søvnmangel eller anden stor ændring)" />
       </div>
 
       <div class="mt-4 flex items-center justify-between border-t border-default pt-4">
