@@ -14,14 +14,14 @@ const settings: LLMSettings = {
 }
 
 describe('llm provider bridge', () => {
-  it('respects autoFreeOnly when preferFree is enabled', () => {
-    const ordered = selectProvidersForRequest(settings, { prompt: 'hello' })
+  it('respects autoFreeOnly when preferFree is enabled', async () => {
+    const ordered = await selectProvidersForRequest(settings, { prompt: 'hello' })
     expect(ordered[0]?.provider).toBe('openrouter')
     expect(toProviderCandidates(settings).filter((candidate) => candidate.free)).toHaveLength(1)
   })
 
-  it('prioritizes explicitly selected provider/model', () => {
-    const ordered = selectProvidersForRequest(settings, {
+  it('prioritizes explicitly selected provider/model', async () => {
+    const ordered = await selectProvidersForRequest(settings, {
       prompt: 'hello',
       preferredProvider: 'openai',
       preferredModel: 'gpt-5.6',
