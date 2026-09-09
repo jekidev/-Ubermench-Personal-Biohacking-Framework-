@@ -75,13 +75,7 @@ pub fn framework_search(query: String, limit: usize) -> Result<Vec<FileHit>, Str
     let max = limit.clamp(1, 100);
     let mut hits = Vec::new();
 
-    fn walk(
-        root: &Path,
-        current: &Path,
-        needle: &str,
-        max: usize,
-        hits: &mut Vec<FileHit>,
-    ) {
+    fn walk(root: &Path, current: &Path, needle: &str, max: usize, hits: &mut Vec<FileHit>) {
         if hits.len() >= max {
             return;
         }
