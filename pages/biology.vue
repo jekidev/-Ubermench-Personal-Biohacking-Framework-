@@ -2,6 +2,7 @@
 import { screenProfileSafety } from '~/services/profile-safety'
 import { biomarkersToPhenotypicInputs, computePhenotypicAge } from '~/services/phenotypic-age-engine'
 import { buildLongitudinalDashboard } from '~/services/longitudinal-dashboard'
+import { describeBackupStatus, loadBackupStatus } from '~/services/backup-status'
 import type { SafetySeverity } from '~/services/safety-engine'
 
 const { profile, initialize, interactionFlags, exportBackup, importBackup, previewImport, exportEncryptedBackup, importEncryptedBackup, exportBackupToFile, importBackupFromFile } = usePersonalBiology()
@@ -15,8 +16,15 @@ const backupError = ref('')
 const encryptedPassphrase = ref('')
 const encryptedImportPassphrase = ref('')
 const backupPreview = ref<Awaited<ReturnType<typeof previewImport>> | null>(null)
+const importPendingRaw = ref('')
+const importConfirmWarnings = ref(false)
+const lastExportChecksum = ref('')
+const backupStatusText = ref('')
 
-onMounted(initialize)
+onMounted(async () => {
+  await initialize()
+  backupStatusText.value = describeBackupStatus(loadBackupStatus())
+})
 
 const models = computed(() => ({
   genomics: selectModel('genomics')?.name ?? 'Unavailable',
@@ -43,14 +51,18 @@ function resetBackupStatus() {
 
 async function downloadBackup() {
   resetBackupStatus()
-  const blob = new Blob([await exportBackup()], { type: 'application/json' })
+  const raw = await exportBackup()
+  const parsed = JSON.parse(raw) as { checksum?: string; metadata?: { biomarkerCount?: number } }
+  lastExportChecksum.value = parsed.checksum ?? ''
+  backupStatusText.value = describeBackupStatus(loadBackupStatus())
+  const blob = new Blob([raw], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = `ubermench-biology-${new Date().toISOString().slice(0, 10)}.json`
   anchor.click()
   URL.revokeObjectURL(url)
-  backupMessage.value = 'Biology backup exported with checksum metadata.'
+  backupMessage.value = `Biology backup exported. Checksum ${parsed.checksum?.slice(0, 16)}… · ${parsed.metadata?.biomarkerCount ?? 0} biomarkers.`
 }
 
 async function downloadNativeBackup() {
@@ -102,14 +114,50 @@ async function handleBackupFile(event: Event) {
   if (!file) return
   try {
     const raw = await file.text()
+    importPendingRaw.value = raw
+    importConfirmWarnings.value = false
     backupPreview.value = await previewImport(raw)
-    await importBackup(raw, { force: true })
-    backupMessage.value = `Biology backup imported. Checksum ${backupPreview.value.checksum?.slice(0, 12)}…`
+    backupMessage.value = 'Import preview ready. Review checksum and warnings before confirming.'
   } catch (error) {
-    backupError.value = error instanceof Error ? error.message : 'Unable to import biology backup.'
+    backupPreview.value = null
+    importPendingRaw.value = ''
+    backupError.value = error instanceof Error ? error.message : 'Unable to preview biology backup.'
   } finally {
     input.value = ''
   }
+}
+
+async function confirmImport() {
+  resetBackupStatus()
+  if (!importPendingRaw.value || !backupPreview.value) {
+    backupError.value = 'Select a backup file to preview before importing.'
+    return
+  }
+  if (!backupPreview.value.valid) {
+    backupError.value = backupPreview.value.issues.map((issue) => issue.message).join(' ')
+    return
+  }
+  if (backupPreview.value.issues.length && !importConfirmWarnings.value) {
+    backupError.value = 'Confirm that you accept the import warnings before replacing your profile.'
+    return
+  }
+  try {
+    await importBackup(importPendingRaw.value)
+    backupMessage.value = `Biology backup imported. Checksum ${backupPreview.value.checksum?.slice(0, 16)}…`
+    importPendingRaw.value = ''
+    importConfirmWarnings.value = false
+    backupPreview.value = null
+  } catch (error) {
+    backupError.value = error instanceof Error ? error.message : 'Unable to import biology backup.'
+  }
+}
+
+function cancelImportPreview() {
+  backupPreview.value = null
+  importPendingRaw.value = ''
+  importConfirmWarnings.value = false
+  backupError.value = ''
+  backupMessage.value = ''
 }
 
 async function handleEncryptedBackupFile(event: Event) {
@@ -198,13 +246,48 @@ async function handleEncryptedBackupFile(event: Event) {
 
     <UCard>
       <h2 class="font-semibold">Portable biology backup</h2>
-      <p class="mt-1 text-sm text-muted">Export or restore the complete local biology profile as a versioned JSON backup.</p>
+      <p class="mt-1 text-sm text-muted">Export or restore the complete local biology profile as a versioned JSON backup with SHA-256 checksum validation.</p>
+      <p class="mt-2 text-xs text-muted">{{ backupStatusText }}</p>
+      <p v-if="lastExportChecksum" class="mt-1 font-mono text-xs text-muted">Last export checksum: {{ lastExportChecksum }}</p>
       <div class="mt-4 flex flex-wrap gap-2">
         <UButton @click="downloadBackup">Export backup</UButton>
-        <UButton variant="outline" @click="importInput?.click()">Import backup</UButton>
+        <UButton variant="outline" @click="importInput?.click()">Choose backup file</UButton>
         <UButton variant="outline" @click="downloadNativeBackup">Export (native dialog)</UButton>
         <UButton variant="outline" @click="importNativeBackup">Import (native dialog)</UButton>
         <input ref="importInput" class="hidden" type="file" accept="application/json,.json" @change="handleBackupFile">
+      </div>
+
+      <div v-if="backupPreview" class="mt-6 rounded border border-default p-4 text-sm">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 class="font-semibold">Import preview</h3>
+            <p class="mt-1 text-muted">Review metadata and validation before replacing the current profile.</p>
+          </div>
+          <UBadge :color="backupPreview.valid ? 'success' : 'error'" variant="subtle">
+            {{ backupPreview.valid ? 'valid' : 'blocked' }}
+          </UBadge>
+        </div>
+        <dl class="mt-4 grid gap-2 sm:grid-cols-2">
+          <div><dt class="text-muted">Exported</dt><dd>{{ backupPreview.exportedAt ?? 'unknown' }}</dd></div>
+          <div><dt class="text-muted">Checksum</dt><dd class="break-all font-mono text-xs">{{ backupPreview.checksum ?? 'missing' }}</dd></div>
+          <div><dt class="text-muted">Biomarkers</dt><dd>{{ backupPreview.metadata?.biomarkerCount ?? 0 }} (Δ {{ backupPreview.summary.biomarkerDelta }})</dd></div>
+          <div><dt class="text-muted">Medications</dt><dd>{{ backupPreview.metadata?.medicationCount ?? 0 }} (Δ {{ backupPreview.summary.medicationDelta }})</dd></div>
+          <div><dt class="text-muted">Supplements</dt><dd>{{ backupPreview.metadata?.supplementCount ?? 0 }} (Δ {{ backupPreview.summary.supplementDelta }})</dd></div>
+          <div><dt class="text-muted">Variants</dt><dd>{{ backupPreview.metadata?.variantCount ?? 0 }} (Δ {{ backupPreview.summary.variantDelta }})</dd></div>
+        </dl>
+        <ul v-if="backupPreview.issues.length" class="mt-4 space-y-2">
+          <li v-for="issue in backupPreview.issues" :key="`${issue.field}-${issue.message}`" class="text-amber-500">
+            {{ issue.field }}: {{ issue.message }}
+          </li>
+        </ul>
+        <label v-if="backupPreview.issues.length && backupPreview.valid" class="mt-4 flex items-center gap-2">
+          <input v-model="importConfirmWarnings" type="checkbox">
+          I understand this import will replace my current biology profile
+        </label>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <UButton :disabled="!backupPreview.valid" @click="confirmImport">Confirm import</UButton>
+          <UButton variant="outline" color="neutral" @click="cancelImportPreview">Cancel</UButton>
+        </div>
       </div>
 
       <div class="mt-6 border-t border-default pt-6">

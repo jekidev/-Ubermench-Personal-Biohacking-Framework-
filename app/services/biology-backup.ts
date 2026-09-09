@@ -1,4 +1,5 @@
 import type { PersonalBiologyProfile } from '~/types/biology'
+import { migrateBiologyProfile } from './biology-profile-migration'
 
 export const BIOLOGY_BACKUP_VERSION = 1 as const
 
@@ -61,11 +62,13 @@ export async function parseBiologyBackup(raw: string): Promise<BiologyBackup> {
   if (parsed.format !== 'ubermench-biology-backup' || parsed.version !== BIOLOGY_BACKUP_VERSION) {
     throw new Error('Unsupported Ubermench biology backup version')
   }
-  if (!isRecord(parsed.profile) || parsed.profile.version !== 1) {
-    throw new Error('Backup does not contain a version 1 biology profile')
+  if (!isRecord(parsed.profile)) {
+    throw new Error('Backup does not contain a biology profile')
   }
 
   const backup = parsed as unknown as BiologyBackup
+  backup.profile = migrateBiologyProfile(backup.profile)
+
   if (backup.checksum) {
     const expected = await computeBiologyBackupChecksum(backup.profile)
     if (expected !== backup.checksum) throw new Error('Biology backup checksum mismatch')
