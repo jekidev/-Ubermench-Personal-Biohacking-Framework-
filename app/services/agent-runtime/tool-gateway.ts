@@ -7,6 +7,7 @@ import { createDocumentsSearchTool } from './tools/documents-search'
 import { createConnectorTools } from './tools/connector-tools'
 import { createGoogleWorkspaceTools } from './tools/google-workspace-tools'
 import { createMcpInstallTools } from './tools/mcp-install-tools'
+import { createMcpSessionTools } from './tools/mcp-session-tools'
 import { createMcpHttpTools } from './tools/mcp-http-tools'
 import { createFrameworkTools } from './tools/framework-tools'
 import { assertToolPolicyAllowed } from './tool-policy-guard'
@@ -87,6 +88,9 @@ export function createDefaultToolGateway(): AgentToolGateway {
     gateway.register(tool)
   }
   for (const tool of createMcpInstallTools()) {
+    gateway.register(tool)
+  }
+  for (const tool of createMcpSessionTools()) {
     gateway.register(tool)
   }
   for (const tool of createMcpServerTools()) {
