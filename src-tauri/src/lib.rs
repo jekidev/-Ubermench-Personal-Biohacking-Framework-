@@ -33,6 +33,7 @@ fn app_name() -> &'static str {
 pub fn run() {
     tauri::Builder::default()
         .manage(mcp::McpApprovalRegistry::default())
+        .manage(mcp::McpSessionRegistry::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
@@ -60,6 +61,10 @@ pub fn run() {
             mcp::mcp_issue_approval,
             mcp::mcp_stdio_execute,
             mcp::mcp_stdio_jsonrpc,
+            mcp::mcp_stdio_session_start,
+            mcp::mcp_stdio_session_call,
+            mcp::mcp_stdio_session_close,
+            mcp::mcp_stdio_session_list,
             framework::framework_snapshot,
             framework::framework_search,
             framework::framework_read_file,

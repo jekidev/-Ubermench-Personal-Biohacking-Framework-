@@ -15,6 +15,9 @@ const MAX_STDIN_BYTES: usize = 1024 * 1024;
 const MAX_ARGS: usize = 64;
 const MAX_ARG_BYTES: usize = 8 * 1024;
 const APPROVAL_TTL_MS: u64 = 30_000;
+const SESSION_IDLE_MS: u64 = 5 * 60 * 1000;
+const SESSION_MAX_MS: u64 = 30 * 60 * 1000;
+const MAX_SESSIONS: usize = 8;
 const MAX_ENV_KEYS: usize = 16;
 const MAX_ENV_VALUE_BYTES: usize = 4096;
 
@@ -442,6 +445,284 @@ pub fn mcp_stdio_jsonrpc(
     Ok(result)
 }
 
+#[derive(Debug, Default)]
+pub struct McpSessionRegistry {
+    sessions: Mutex<HashMap<String, McpSessionRecord>>,
+}
+
+#[derive(Debug)]
+struct McpSessionRecord {
+    fingerprint: String,
+    created_at_ms: u64,
+    last_used_ms: u64,
+    next_rpc_id: u64,
+    child: Child,
+    stdin: std::process::ChildStdin,
+    stdout: std::process::ChildStdout,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct McpStdioSessionStartRequest {
+    pub command: String,
+    pub args: Vec<String>,
+    pub approval_token: String,
+    pub timeout_ms: Option<u64>,
+    pub env: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct McpStdioSessionStartResult {
+    pub session_id: String,
+    pub idle_timeout_ms: u64,
+    pub max_lifetime_ms: u64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct McpStdioSessionCallRequest {
+    pub session_id: String,
+    pub method: String,
+    pub params: serde_json::Value,
+    pub timeout_ms: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct McpStdioSessionCloseRequest {
+    pub session_id: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct McpStdioSessionStatus {
+    pub session_id: String,
+    pub command_fingerprint: String,
+    pub created_at_ms: u64,
+    pub last_used_ms: u64,
+    pub idle_timeout_ms: u64,
+    pub max_lifetime_ms: u64,
+}
+
+fn new_session_id(fingerprint: &str) -> String {
+    let seed = format!("{}:{}", fingerprint, now_ms());
+    let mut hasher = Sha256::new();
+    hasher.update(seed.as_bytes());
+    format!("mcp-session-{:x}", hasher.finalize())
+}
+
+fn session_is_expired(record: &McpSessionRecord, now: u64) -> bool {
+    session_timestamps_expired(record.created_at_ms, record.last_used_ms, now)
+}
+
+fn session_timestamps_expired(created_at_ms: u64, last_used_ms: u64, now: u64) -> bool {
+    now.saturating_sub(last_used_ms) > SESSION_IDLE_MS
+        || now.saturating_sub(created_at_ms) > SESSION_MAX_MS
+}
+
+fn close_session_record(mut record: McpSessionRecord) {
+    terminate(&mut record.child);
+}
+
+fn purge_expired_sessions(registry: &McpSessionRegistry) -> Result<(), String> {
+    let now = now_ms();
+    let mut sessions = registry
+        .sessions
+        .lock()
+        .map_err(|_| "MCP session registry poisoned.")?;
+    let expired: Vec<String> = sessions
+        .iter()
+        .filter(|(_, record)| session_is_expired(record, now))
+        .map(|(id, _)| id.clone())
+        .collect();
+    for id in expired {
+        if let Some(record) = sessions.remove(&id) {
+            close_session_record(record);
+        }
+    }
+    Ok(())
+}
+
+fn spawn_stdio_child(
+    command: &str,
+    args: &[String],
+    env: Option<&HashMap<String, String>>,
+) -> Result<(Child, std::process::ChildStdin, std::process::ChildStdout), String> {
+    let mut command_builder = Command::new(command);
+    command_builder
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    if let Some(env) = env {
+        validate_env(env)?;
+        for (key, value) in env {
+            command_builder.env(key, value);
+        }
+    }
+    let mut child = command_builder
+        .spawn()
+        .map_err(|error| format!("MCP stdio spawn failed: {error}"))?;
+    let stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "MCP stdio stdin unavailable.".to_string())?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "MCP stdio stdout unavailable.".to_string())?;
+    Ok((child, stdin, stdout))
+}
+
+fn initialize_stdio_session(
+    stdin: &mut std::process::ChildStdin,
+    stdout: &mut std::process::ChildStdout,
+    deadline: Instant,
+) -> Result<(), String> {
+    let init = jsonrpc_line(
+        1,
+        "initialize",
+        serde_json::json!({
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": { "name": "ubermensch", "version": "0.1.0" }
+        }),
+    );
+    stdin
+        .write_all(init.as_bytes())
+        .map_err(|error| format!("MCP stdio stdin failed: {error}"))?;
+    let _ = read_jsonrpc_response(stdout, 1, deadline)?;
+    let initialized = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n";
+    stdin
+        .write_all(initialized.as_bytes())
+        .map_err(|error| format!("MCP stdio stdin failed: {error}"))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn mcp_stdio_session_start(
+    request: McpStdioSessionStartRequest,
+    registry: tauri::State<'_, McpApprovalRegistry>,
+    sessions: tauri::State<'_, McpSessionRegistry>,
+) -> Result<McpStdioSessionStartResult, String> {
+    validate_command(&request.command)?;
+    validate_args(&request.args)?;
+    consume_approval(
+        &registry,
+        &request.approval_token,
+        &request.command,
+        &request.args,
+    )?;
+    purge_expired_sessions(&sessions)?;
+    let mut store = sessions
+        .sessions
+        .lock()
+        .map_err(|_| "MCP session registry poisoned.")?;
+    if store.len() >= MAX_SESSIONS {
+        return Err(format!(
+            "MCP stdio blocked: too many active sessions (max {MAX_SESSIONS}). Close an existing session first."
+        ));
+    }
+    let fingerprint = fingerprint(&request.command, &request.args);
+    let timeout = timeout_ms(request.timeout_ms);
+    let deadline = Instant::now() + Duration::from_millis(timeout);
+    let (child, mut stdin, mut stdout) =
+        spawn_stdio_child(&request.command, &request.args, request.env.as_ref())?;
+    initialize_stdio_session(&mut stdin, &mut stdout, deadline)?;
+    let now = now_ms();
+    let session_id = new_session_id(&fingerprint);
+    store.insert(
+        session_id.clone(),
+        McpSessionRecord {
+            fingerprint,
+            created_at_ms: now,
+            last_used_ms: now,
+            next_rpc_id: 2,
+            child,
+            stdin,
+            stdout,
+        },
+    );
+    Ok(McpStdioSessionStartResult {
+        session_id,
+        idle_timeout_ms: SESSION_IDLE_MS,
+        max_lifetime_ms: SESSION_MAX_MS,
+    })
+}
+
+#[tauri::command]
+pub fn mcp_stdio_session_call(
+    request: McpStdioSessionCallRequest,
+    sessions: tauri::State<'_, McpSessionRegistry>,
+) -> Result<serde_json::Value, String> {
+    if request.method.trim().is_empty() {
+        return Err("MCP session call requires a JSON-RPC method.".into());
+    }
+    purge_expired_sessions(&sessions)?;
+    let mut store = sessions
+        .sessions
+        .lock()
+        .map_err(|_| "MCP session registry poisoned.")?;
+    let record = store
+        .get_mut(&request.session_id)
+        .ok_or_else(|| "MCP session not found or expired.".to_string())?;
+    let now = now_ms();
+    if session_is_expired(record, now) {
+        let expired = store.remove(&request.session_id);
+        if let Some(record) = expired {
+            close_session_record(record);
+        }
+        return Err("MCP session expired due to idle or max lifetime.".into());
+    }
+    let rpc_id = record.next_rpc_id;
+    record.next_rpc_id += 1;
+    record.last_used_ms = now;
+    let deadline =
+        Instant::now() + Duration::from_millis(timeout_ms(request.timeout_ms));
+    let rpc = jsonrpc_line(rpc_id, &request.method, request.params);
+    record
+        .stdin
+        .write_all(rpc.as_bytes())
+        .map_err(|error| format!("MCP stdio stdin failed: {error}"))?;
+    read_jsonrpc_response(&mut record.stdout, rpc_id, deadline)
+}
+
+#[tauri::command]
+pub fn mcp_stdio_session_close(
+    request: McpStdioSessionCloseRequest,
+    sessions: tauri::State<'_, McpSessionRegistry>,
+) -> Result<bool, String> {
+    let mut store = sessions
+        .sessions
+        .lock()
+        .map_err(|_| "MCP session registry poisoned.")?;
+    let record = store.remove(&request.session_id);
+    if let Some(record) = record {
+        close_session_record(record);
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+#[tauri::command]
+pub fn mcp_stdio_session_list(
+    sessions: tauri::State<'_, McpSessionRegistry>,
+) -> Result<Vec<McpStdioSessionStatus>, String> {
+    purge_expired_sessions(&sessions)?;
+    let store = sessions
+        .sessions
+        .lock()
+        .map_err(|_| "MCP session registry poisoned.")?;
+    Ok(store
+        .iter()
+        .map(|(session_id, record)| McpStdioSessionStatus {
+            session_id: session_id.clone(),
+            command_fingerprint: record.fingerprint.clone(),
+            created_at_ms: record.created_at_ms,
+            last_used_ms: record.last_used_ms,
+            idle_timeout_ms: SESSION_IDLE_MS,
+            max_lifetime_ms: SESSION_MAX_MS,
+        })
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -502,5 +783,16 @@ mod tests {
             },
         );
         assert!(consume_approval(&registry, &token, "node", &["other.js".into()]).is_err());
+    }
+
+    #[test]
+    fn session_expires_after_idle_or_max_lifetime() {
+        let created = 1_000;
+        let idle_boundary = created + SESSION_IDLE_MS;
+        assert!(!session_timestamps_expired(created, created, idle_boundary));
+        assert!(session_timestamps_expired(created, created, idle_boundary + 1));
+        let max_boundary = created + SESSION_MAX_MS;
+        assert!(!session_timestamps_expired(created, max_boundary - 1, max_boundary - 1));
+        assert!(session_timestamps_expired(created, max_boundary - 1, max_boundary + 1));
     }
 }
