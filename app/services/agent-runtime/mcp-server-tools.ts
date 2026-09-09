@@ -1,15 +1,17 @@
-import { MCP_SERVER_REGISTRY, type McpServerRegistryEntry } from '../../../plugins/llm/mcp/servers'
+import type { McpServerRegistryEntry } from '../../../plugins/llm/mcp/servers'
+import { getInstalledMcpServer, listResolvedMcpServers } from '../../../plugins/llm/mcp/install-store'
 import { validateStdioCommand } from '../../../plugins/llm/mcp/stdio-allowlist'
 import { getSecret } from '../secret-vault'
 import type { AgentTool } from './types'
 import { nativeMcpExecute } from './native-mcp'
+import { isMcpLifecycleToolName } from './tools/mcp-install-tools'
 
 export function isMcpStdioToolName(name: string): boolean {
-  return name === 'mcp.stdio' || name.startsWith('mcp.stdio:')
+  return isMcpLifecycleToolName(name)
 }
 
 export function resolveMcpServer(serverId: string): McpServerRegistryEntry | undefined {
-  return MCP_SERVER_REGISTRY.find((entry) => entry.serverId === serverId)
+  return listResolvedMcpServers().find((entry) => entry.serverId === serverId)
 }
 
 export async function resolveMcpServerEnv(server: McpServerRegistryEntry): Promise<Record<string, string>> {
@@ -22,12 +24,16 @@ export async function resolveMcpServerEnv(server: McpServerRegistryEntry): Promi
 }
 
 export function createMcpServerTools(): AgentTool[] {
-  return MCP_SERVER_REGISTRY.map((server) => ({
+  return listResolvedMcpServers().map((server) => ({
     name: `mcp.stdio:${server.serverId}`,
     description: server.description,
     risk: 'high' as const,
     requiresApproval: true,
     async execute(args) {
+      const installed = getInstalledMcpServer(server.serverId)
+      if (installed && !installed.enabled) {
+        throw new Error(`MCP server ${server.serverId} is installed but disabled.`)
+      }
       const command = server.executable
       const commandArgs = server.allowedArgs ? [...server.allowedArgs] : []
       validateStdioCommand(server, command, commandArgs)

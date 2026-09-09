@@ -9,6 +9,11 @@ export default defineNuxtConfig({
   dir: {
     pages: '../pages',
   },
+  runtimeConfig: {
+    public: {
+      googleClientId: '',
+    },
+  },
   app: {
     head: {
       title: 'Ubermench',

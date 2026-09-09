@@ -20,5 +20,6 @@ describe('connector runtime', () => {
     const statuses = await listConnectorStatuses()
     expect(statuses.length).toBeGreaterThan(10)
     expect(statuses.find((item) => item.id === 'gmail')?.implementationStatus).toBe('live')
+    expect(statuses.find((item) => item.id === 'google-calendar')?.implementationStatus).toBe('live')
   })
 })

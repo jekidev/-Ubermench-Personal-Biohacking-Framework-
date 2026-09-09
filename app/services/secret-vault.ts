@@ -1,11 +1,11 @@
 import type { Client, Stronghold } from '@tauri-apps/plugin-stronghold'
+import { clearBrowserSecrets, getBrowserSecret, removeBrowserSecret, setBrowserSecret } from './browser-secret-store'
 
-const VAULT_PATH = 'ubermench-secrets.hold'
+const VAULT_PATH = 'ubermensch-secrets.hold'
 const CLIENT_NAME = 'llm-provider-secrets'
 
 let stronghold: Stronghold | null = null
 let client: Client | null = null
-const browserSecrets = new Map<string, string>()
 
 function isTauriRuntime(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
@@ -44,7 +44,7 @@ export async function setSecret(key: string, value: string): Promise<void> {
     await stronghold.save()
     return
   }
-  browserSecrets.set(key, value)
+  setBrowserSecret(key, value)
 }
 
 export async function getSecret(key: string): Promise<string | undefined> {
@@ -53,7 +53,7 @@ export async function getSecret(key: string): Promise<string | undefined> {
     const value = await client.getStore().get(key)
     return value ? new TextDecoder().decode(value) : undefined
   }
-  return browserSecrets.get(key)
+  return getBrowserSecret(key)
 }
 
 export async function removeSecret(key: string): Promise<void> {
@@ -63,12 +63,12 @@ export async function removeSecret(key: string): Promise<void> {
     await stronghold.save()
     return
   }
-  browserSecrets.delete(key)
+  removeBrowserSecret(key)
 }
 
 export async function lockSecretVault(): Promise<void> {
   if (isTauriRuntime() && stronghold) await stronghold.unload()
   stronghold = null
   client = null
-  browserSecrets.clear()
+  clearBrowserSecrets()
 }

@@ -1,6 +1,7 @@
 import { downloadDriveFile, listDrivePdfFiles } from './adapters/google-drive-adapter'
 import { extractPdfTextBlocks } from '../longevity/pdf/text-extractor'
 import { indexUploadedDocument } from '../longevity/rag/index-document'
+import { recordConnectorSync } from './sync-meta'
 
 export type DriveRagSyncStore = {
   schemaVersion: 1
@@ -91,5 +92,6 @@ export async function syncDrivePdfsToRag(options?: {
     lastError: undefined,
   }
   saveDriveRagSyncStore(store, storage)
+  recordConnectorSync('google-drive', store.lastSyncedAt, storage)
   return { indexed, skipped, files, store }
 }

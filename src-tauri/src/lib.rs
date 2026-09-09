@@ -1,3 +1,4 @@
+mod health_connect;
 mod http_fetch;
 mod mcp;
 mod ocr;
@@ -50,6 +51,10 @@ pub fn run() {
             ocr::ocr_pdf_lab_text,
             ocr::ocr_pdf_bytes,
             ocr::ocr_runtime_status,
+            health_connect::health_connect_is_available,
+            health_connect::health_connect_get_permission_status,
+            health_connect::health_connect_request_permissions,
+            health_connect::health_connect_sync_records,
             mcp::mcp_stdio_preflight,
             mcp::mcp_issue_approval,
             mcp::mcp_stdio_execute

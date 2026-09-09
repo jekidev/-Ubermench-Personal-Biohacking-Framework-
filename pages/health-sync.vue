@@ -5,9 +5,17 @@
       <h1 class="mt-2 text-2xl font-semibold">Garmin & Health Connect</h1>
       <p class="mt-2 text-sm text-zinc-500">
         Supported providers only. Garmin accepts a Wellness JSON export or a vault-stored access token.
-        The adapter never invents measurements. Health Connect still requires the native Android app.
+        The adapter never invents measurements. Health Connect requires the native Android app.
       </p>
     </div>
+
+    <UAlert
+      v-if="hcMode === 'browser-blocked'"
+      title="Android browser detected"
+      description="Health Connect cannot be accessed from Chrome or a PWA. Build and install the Android app with: npm run tauri:android:init then npm run tauri:android:dev"
+      color="warning"
+      variant="subtle"
+    />
 
     <div class="grid gap-4 lg:grid-cols-2">
       <UCard>
@@ -77,8 +85,16 @@
         <p class="text-sm text-zinc-400">
           Native Android/Tauri only. Browser preview cannot read Health Connect and will not invent step counts.
         </p>
-        <UButton class="mt-3" :loading="healthConnectBusy" @click="connectAndSync('health-connect')">Connect & sync</UButton>
+        <UButton
+          class="mt-3"
+          :loading="healthConnectBusy"
+          :disabled="hcMode === 'browser-blocked'"
+          @click="connectAndSync('health-connect')"
+        >
+          Connect & sync
+        </UButton>
         <p v-if="healthConnectStatus" class="mt-3 text-sm text-zinc-400">{{ healthConnectStatus }}</p>
+        <p class="mt-3 text-xs text-zinc-500">Runtime mode: {{ hcMode }}</p>
       </UCard>
 
       <UCard>
@@ -88,17 +104,30 @@
         <p v-if="persistedCount" class="mt-3 text-sm text-zinc-400">Last sync wrote {{ persistedCount }} canonical observation(s).</p>
       </UCard>
     </div>
+
+    <UCard>
+      <template #header><div class="font-medium">Google Drive (lab PDFs)</div></template>
+      <p class="text-sm text-zinc-400">
+        Drive sync works in Android Chrome. Use the same redirect URI in Google Cloud Console:
+        <code class="break-all">{{ redirectUri }}</code>
+      </p>
+      <NuxtLink to="/connectors" class="mt-3 inline-block">
+        <UButton variant="outline">Open Connectors</UButton>
+      </NuxtLink>
+    </UCard>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { ExternalHealthSample } from '~/services/health-data-adapters'
+import { detectHealthConnectRuntimeMode } from '~/services/health-adapters/health-connect-adapter'
 import {
   createHealthSyncOrchestrator,
   importGarminWellnessAndPersist,
   storeGarminAccessToken,
   syncAndPersistAllHealth,
 } from '~/services/health-sync-runtime'
+import { defaultGoogleRedirectUri } from '~~/plugins/connectors/oauth/google-oauth'
 
 const garminJson = ref('')
 const garminToken = ref('')
@@ -111,6 +140,12 @@ const importedSamples = ref<ExternalHealthSample[]>([])
 const garminBusy = ref(false)
 const healthConnectBusy = ref(false)
 const persistBusy = ref(false)
+const hcMode = ref<Awaited<ReturnType<typeof detectHealthConnectRuntimeMode>>>('unavailable')
+const redirectUri = defaultGoogleRedirectUri()
+
+onMounted(async () => {
+  hcMode.value = await detectHealthConnectRuntimeMode()
+})
 
 async function onGarminFile(event: Event) {
   const input = event.target as HTMLInputElement
