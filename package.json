@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "oxc-parser": "^0.149.0",
     "typescript": "^5.0.0",
     "vitest": "^3.2.4",
     "vue-tsc": "^3.0.0"
