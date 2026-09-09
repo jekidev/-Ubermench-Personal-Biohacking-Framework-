@@ -27,6 +27,29 @@
       <p class="mt-2 text-xs text-zinc-500">Framework write and command tools stay disabled unless explicitly enabled. MCP stdio always requires Tauri plus human approval.</p>
     </UCard>
 
+    <UCard v-if="openRouterProvider">
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <span class="font-medium">OpenRouter free-model catalog</span>
+          <UButton size="sm" variant="outline" :loading="catalogBusy" :disabled="!vaultUnlocked" @click="refreshCatalog">Refresh catalog</UButton>
+        </div>
+      </template>
+      <p class="text-sm text-zinc-400">
+        When <code>preferFree</code> is on, rotation expands to live free models from OpenRouter (cached 15 minutes).
+      </p>
+      <div class="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+        <div><span class="text-zinc-500">Cached models:</span> {{ catalogStatus.modelCount }}</div>
+        <div><span class="text-zinc-500">Cache state:</span> {{ catalogStatus.stale ? 'stale / empty' : 'fresh' }}</div>
+        <div><span class="text-zinc-500">Last refresh:</span> {{ catalogFetchedLabel }}</div>
+      </div>
+      <p v-if="catalogStatus.error" class="mt-3 text-sm text-red-500">{{ catalogStatus.error }}</p>
+      <ul v-if="catalogStatus.models.length" class="mt-4 space-y-1 font-mono text-xs text-zinc-400">
+        <li v-for="model in catalogStatus.models" :key="model">{{ model }}</li>
+      </ul>
+      <p v-else-if="vaultUnlocked && !catalogBusy" class="mt-3 text-sm text-zinc-500">No cached free models yet. Refresh after adding an OpenRouter key.</p>
+      <p v-if="!vaultUnlocked" class="mt-3 text-xs text-zinc-500">Unlock the vault to refresh the catalog.</p>
+    </UCard>
+
     <div class="grid gap-4 lg:grid-cols-2">
       <UCard v-for="provider in settings.providers" :key="provider.provider">
         <template #header><div class="flex items-center justify-between"><span class="font-medium capitalize">{{ provider.provider }}</span><span class="text-xs text-zinc-500">priority {{ provider.priority }}</span></div></template>
@@ -55,10 +78,28 @@
 </template>
 
 <script setup lang="ts">
+import {
+  getOpenRouterCatalogStatus,
+  refreshOpenRouterCatalog,
+  type OpenRouterCatalogStatus,
+} from '~/services/llm-provider-bridge'
+
 const { settings, vaultUnlocked, unlockVault: unlock, lockVault: lock, update, setProviderKey, clearKeys: clearProviderKeys, reset: resetSettings } = useLLM()
 const vaultPassword = ref('')
 const vaultBusy = ref(false)
 const vaultError = ref('')
+const catalogBusy = ref(false)
+const catalogStatus = ref<OpenRouterCatalogStatus>(getOpenRouterCatalogStatus(settings.value))
+
+const openRouterProvider = computed(() => settings.value.providers.find((provider) => provider.provider === 'openrouter'))
+const catalogFetchedLabel = computed(() => {
+  if (!catalogStatus.value.fetchedAt) return 'Never'
+  return new Date(catalogStatus.value.fetchedAt).toLocaleString()
+})
+
+watch(settings, (value) => {
+  catalogStatus.value = getOpenRouterCatalogStatus(value)
+}, { deep: true })
 
 function save() {
   update({
@@ -89,7 +130,16 @@ async function lockVault() {
 }
 
 async function saveKey(provider: typeof settings.value.providers[number]['provider'], apiKey: string) {
-  try { await setProviderKey(provider, apiKey) } catch (error) { vaultError.value = error instanceof Error ? error.message : String(error) }
+  try {
+    await setProviderKey(provider, apiKey)
+    if (provider === 'openrouter') catalogStatus.value = getOpenRouterCatalogStatus(settings.value)
+  } catch (error) { vaultError.value = error instanceof Error ? error.message : String(error) }
+}
+
+async function refreshCatalog() {
+  catalogBusy.value = true
+  catalogStatus.value = await refreshOpenRouterCatalog(settings.value)
+  catalogBusy.value = false
 }
 
 async function clearKeys() {
