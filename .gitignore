@@ -1,6 +1,9 @@
 node_modules/
 .nuxt/
 .output/
+plugins/fearprime/app/dist/
+plugins/fearprime/app/.output/
+plugins/fearprime/app/eslint.config.mjs
 .runtime/
 .DS_Store
 .env
