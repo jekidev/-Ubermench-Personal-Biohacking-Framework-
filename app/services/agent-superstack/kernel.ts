@@ -25,8 +25,12 @@ export class AgentKernel {
     if (this.runtime.state === 'idle' || this.runtime.state === 'completed') this.runtime.transition('planning')
     const policy = evaluateTask(task)
     const memories = this.memory.search(task.prompt)
-    const matched = this.skills.match(task.prompt)
-    const skills = matched.length ? matched : this.skills.list().slice(0, 3)
+    const enabledSkillIds = task.chatOptions?.enabledSkillIds
+    const available = enabledSkillIds?.length
+      ? this.skills.list().filter((skill) => enabledSkillIds.includes(skill.id))
+      : this.skills.list()
+    const matched = this.skills.match(task.prompt).filter((skill) => available.some((item) => item.id === skill.id))
+    const skills = matched.length ? matched : available.slice(0, 3)
     const selectedModel = this.router.select(task)
     return { task, memories, skills, selectedModel, policy }
   }

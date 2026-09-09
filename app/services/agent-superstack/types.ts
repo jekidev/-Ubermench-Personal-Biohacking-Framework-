@@ -21,6 +21,13 @@ export interface AgentTask {
   requiredCapabilities?: ModelCapability[]
   allowTools?: boolean
   riskLevel?: 'low' | 'medium' | 'high'
+  chatOptions?: {
+    enabledSkillIds?: string[]
+    enabledRuleIds?: string[]
+    enabledWorkflowIds?: string[]
+    showStackSynergy?: boolean
+    workflowId?: string
+  }
 }
 
 export interface MemoryRecord {

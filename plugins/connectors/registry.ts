@@ -265,7 +265,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     id: 'transcriptor',
     name: 'Transcriptor MCP',
     category: 'research',
-    description: 'Optional MCP sidecar for YouTube playlists, chapters, and videos without captions (Whisper).',
+    description: 'Optional MCP sidecar for YouTube playlists, channel search, chapters, and caption-less videos (Whisper). Supports Netscape cookies for logged-in/private videos via COOKIES_FILE_PATH.',
     transport: 'mcp-stdio',
     mcpServerId: 'transcriptor',
     auth: { type: 'none', vaultKeyPrefix: 'connector:transcriptor' },

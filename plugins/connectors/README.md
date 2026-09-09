@@ -23,7 +23,16 @@ Agent tool: `connector.drive.sync` (requires approval).
 - Desktop: Tauri command `fetch_url_text` avoids browser CORS limits
 - Agent tool: `connector.youtube.index` (requires approval)
 
-Videos must have captions/subtitles. For playlists, channel search, or Whisper fallback on caption-less videos, optionally enable the `transcriptor` MCP connector (Docker image `artsamsonov/transcriptor-mcp`).
+Videos must have captions/subtitles. For automation beyond single URLs:
+
+| Need | Option |
+| --- | --- |
+| Playlists / channel search / no captions | `transcriptor` MCP (`get_playlist_transcripts`, `search_videos`, Whisper) |
+| Logged-in / members-only videos | Transcriptor self-host with `COOKIES_FILE_PATH` (Netscape cookies export) |
+| Subscription graph in vault | `EfficientStreet/youtube-subscriptions-ingest` (approved adapter candidate) |
+| Hosted MCP (no Docker) | `https://transcriptor.gateway.mcpal.io/mcp` |
+
+Enable Transcriptor on `/connectors`, then use `/youtube` in chat or `connector.youtube.index`.
 
 ## Tauri Tesseract OCR (live)
 
