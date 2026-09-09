@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
-    "generate": "nuxt generate",
+    "generate": "node scripts/ensure-tsconfig-shim.mjs && nuxt generate",
     "lint": "eslint .",
     "typecheck": "nuxt prepare && vue-tsc --noEmit -p .nuxt/tsconfig.json",
     "tauri": "tauri",
