@@ -25,6 +25,7 @@ export type ChatMessage = {
   content: string
   createdAt: string
   workflowId?: string
+  modelLabel?: string
 }
 
 export type ChatSessionPreferences = {

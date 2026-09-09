@@ -34,6 +34,9 @@ export interface AgentRun {
   observations: AgentObservation[]
   toolCalls: AgentToolCall[]
   selectedModel?: ModelEndpoint
+  activeProvider?: string
+  activeModel?: string
+  fallbackUsed?: boolean
   startedAt: string
   completedAt?: string
   error?: string

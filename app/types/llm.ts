@@ -38,6 +38,8 @@ export interface LLMSettings {
   preferFree: boolean
   autoRotate: boolean
   showModel: boolean
+  /** Framework filesystem writes stay disabled until explicitly enabled in Settings. */
+  allowFrameworkWrite: boolean
 }
 
 export const DEFAULT_LLM_SETTINGS: LLMSettings = {
@@ -50,4 +52,5 @@ export const DEFAULT_LLM_SETTINGS: LLMSettings = {
   preferFree: true,
   autoRotate: true,
   showModel: true,
+  allowFrameworkWrite: false,
 }

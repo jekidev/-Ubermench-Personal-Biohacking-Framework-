@@ -6,7 +6,7 @@ import type { DailyPlanRequest, PolicyRule } from '~/types/adaptive'
 import { routeHFModel } from '~/services/hf-router'
 import { runHFInference } from '~/services/inference-engine'
 import { buildEvidenceQuery } from '~/services/evidence-engine'
-import { buildResearchQuery } from '~/services/research-engine'
+import { buildLocalResearchContext } from '~/services/research-engine'
 import { runResearchWorkflow } from '~/services/research-workflow'
 import { screenInterventionSafety } from '~/services/safety-engine'
 import { compileProtocol } from '~/services/protocol-compiler'
@@ -53,7 +53,7 @@ export function useBiohackingAI() {
 
   function buildResearchQueryForGoal(goal: string) {
     const profile = biology.profile.value
-    return buildResearchQuery(goal, profile.biomarkers.slice(-8).map((x) => `${x.name} ${x.value} ${x.unit}`), profile.variants.slice(0, 8).map((x) => x.rsId ?? x.gene ?? x.genotype))
+    return buildLocalResearchContext(goal, profile.biomarkers.slice(-8).map((x) => `${x.name} ${x.value} ${x.unit}`), profile.variants.slice(0, 8).map((x) => x.rsId ?? x.gene ?? x.genotype))
   }
 
   function safetyCheck(intervention: string) { return screenInterventionSafety(intervention, biology.profile.value.medications, biology.profile.value.supplements) }
