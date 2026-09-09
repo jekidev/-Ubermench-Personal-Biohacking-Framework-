@@ -8,6 +8,7 @@ import {
   GOOGLE_SECRET_KEYS,
   loadOAuthState,
 } from '../../plugins/connectors/oauth/google-oauth'
+import { YOUTUBE_SCOPES } from '../../plugins/connectors/oauth/youtube-oauth'
 import { completeGoogleOAuth, isGoogleConnected, loadGoogleCredentials } from '../../plugins/connectors/oauth/google-token-store'
 import { getSecret, setSecret } from '../services/secret-vault'
 
@@ -31,6 +32,27 @@ export function useGoogleOAuth() {
 
   async function saveDriveFolderId(folderId: string) {
     await setSecret(GOOGLE_SECRET_KEYS.driveFolderId, folderId.trim())
+  }
+
+  async function connectYouTube() {
+    busy.value = true
+    error.value = ''
+    try {
+      const creds = await loadGoogleCredentials()
+      if (!creds.clientId) throw new Error('Add your Google Client ID before connecting YouTube.')
+      const url = await buildGoogleAuthorizeUrl({
+        clientId: creds.clientId,
+        redirectUri: defaultGoogleRedirectUri(),
+        scopes: YOUTUBE_SCOPES,
+        connectorIds: ['youtube'],
+      })
+      if (typeof window !== 'undefined') window.location.href = url
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : 'YouTube OAuth start failed'
+      throw cause
+    } finally {
+      busy.value = false
+    }
   }
 
   async function startOAuth(connectorIds: Array<'google-drive' | 'gmail'>) {
@@ -94,6 +116,7 @@ export function useGoogleOAuth() {
     saveClientSecret,
     saveDriveFolderId,
     startOAuth,
+    connectYouTube,
     handleCallback,
     loadClientId,
   }

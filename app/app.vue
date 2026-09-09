@@ -53,6 +53,8 @@ const route = useRoute()
 
 const navigation = [
   { label: 'Overview', to: '/' },
+  { label: 'Chat', to: '/chat' },
+  { label: 'Agent', to: '/agent' },
   { label: 'Biology', to: '/biology' },
   { label: 'Health Sync', to: '/health-sync' },
   { label: 'Experiments', to: '/experiments' },

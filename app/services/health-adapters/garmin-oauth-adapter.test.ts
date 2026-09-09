@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { lockSecretVault } from '../secret-vault'
 import { GarminOAuthAdapter } from './garmin-oauth-adapter'
 
@@ -21,6 +21,10 @@ const DAILY_PAYLOAD = {
     { calendarDate: '2026-09-06', restingHeartRate: 52, steps: 8432 },
   ],
 }
+
+beforeEach(() => {
+  Object.defineProperty(globalThis, 'localStorage', { value: memoryStorage(), configurable: true })
+})
 
 afterEach(async () => {
   await lockSecretVault()

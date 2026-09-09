@@ -11,6 +11,8 @@ import { executeApprovedToolCalls } from './tool-loop'
 import { extractToolCalls } from './tool-plan'
 import { auditTaskSecurity } from './security-audit'
 import { isMcpStdioToolName } from './mcp-server-tools'
+import { listAllChatRules, listEnabledChatRules } from '~/services/chat-session/rule-registry'
+import { buildStackSynergySnapshot, formatStackSynergyContext } from '~/services/chat-session/stack-synergy'
 
 const skillEvolution = new SkillEvolutionEngine()
 
@@ -61,15 +63,37 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     }
     const memoryContext = context.memories.map((m) => `- ${m.text}`).join('\n')
     const skillContext = context.skills.map((s) => `- ${s.name}: ${s.description}`).join('\n')
+    const enabledRuleIds = task.chatOptions?.enabledRuleIds
+      ?? listAllChatRules().filter((rule) => rule.enabled).map((rule) => rule.id)
+    const ruleContext = listEnabledChatRules(enabledRuleIds)
+      .map((rule) => `- ${rule.name}: ${rule.prompt}`)
+      .join('\n')
+    const stackContext = task.chatOptions?.showStackSynergy
+      ? formatStackSynergyContext(buildStackSynergySnapshot({
+        enabledSkillIds: task.chatOptions?.enabledSkillIds,
+        enabledRuleIds,
+        enabledWorkflowIds: task.chatOptions?.enabledWorkflowIds,
+        showStackSynergy: true,
+        workflowId: task.chatOptions?.workflowId,
+      }))
+      : ''
     const system = [
       'You are the Uberm3nch agent kernel. Follow policy and never bypass approval gates.',
       'When a tool would materially help, return a JSON object with a toolCalls array and do not claim the tool ran.',
       'Each tool call must contain id, name and args. Set requiresApproval for risky actions. Never invent approval tokens.',
+      task.chatOptions?.workflowId === 'stack' || task.kind === 'biohacking'
+        ? 'When discussing supplements, protocols, or interventions, explain synergies, timing interactions, and conflicts between stacks. Separate evidence quality from personal N-of-1 data.'
+        : '',
       `Task kind: ${task.kind}`,
+      task.chatOptions?.workflowId ? `Workflow: ${task.chatOptions.workflowId}` : '',
       `Selected model: ${context.selectedModel?.provider ?? 'unavailable'}/${context.selectedModel?.model ?? 'unavailable'}`,
       memoryContext ? `Relevant memory:\n${memoryContext}` : 'Relevant memory: none',
-      skillContext ? `Available skills:\n${skillContext}` : 'Available skills: none',
-    ].join('\n\n')
+      skillContext ? `Active skills:\n${skillContext}` : 'Active skills: none',
+      ruleContext ? `Active rules:\n${ruleContext}` : 'Active rules: none',
+      task.chatOptions?.conversationHistory ? `Conversation history:\n${task.chatOptions.conversationHistory}` : '',
+      task.chatOptions?.ragContext ? `Indexed document excerpts:\n${task.chatOptions.ragContext}` : '',
+      stackContext,
+    ].filter(Boolean).join('\n\n')
     run.status = 'executing'
     const response = await withRecovery(
       () => orchestrateLLM({

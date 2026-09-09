@@ -18,6 +18,8 @@ export type ConnectorId =
   | 'paper-qa'
   | 'local-deep-research'
   | 'pdf-inspector'
+  | 'youtube-rag'
+  | 'transcriptor'
 
 export type ConnectorCategory = 'communication' | 'storage' | 'research' | 'ai' | 'devtools' | 'health' | 'payments'
 export type ConnectorTransport = 'mcp-stdio' | 'api' | 'oauth' | 'hybrid'
