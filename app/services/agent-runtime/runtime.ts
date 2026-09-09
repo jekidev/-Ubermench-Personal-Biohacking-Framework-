@@ -11,7 +11,7 @@ import { executeApprovedToolCalls } from './tool-loop'
 import { extractToolCalls } from './tool-plan'
 import { auditTaskSecurity } from './security-audit'
 import { isMcpStdioToolName } from './mcp-server-tools'
-import { CHAT_RULES } from '~/services/chat-session/rules'
+import { listAllChatRules, listEnabledChatRules } from '~/services/chat-session/rule-registry'
 import { buildStackSynergySnapshot, formatStackSynergyContext } from '~/services/chat-session/stack-synergy'
 
 const skillEvolution = new SkillEvolutionEngine()
@@ -63,9 +63,9 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     }
     const memoryContext = context.memories.map((m) => `- ${m.text}`).join('\n')
     const skillContext = context.skills.map((s) => `- ${s.name}: ${s.description}`).join('\n')
-    const enabledRuleIds = task.chatOptions?.enabledRuleIds ?? CHAT_RULES.filter((rule) => rule.enabled).map((rule) => rule.id)
-    const ruleContext = CHAT_RULES
-      .filter((rule) => enabledRuleIds.includes(rule.id))
+    const enabledRuleIds = task.chatOptions?.enabledRuleIds
+      ?? listAllChatRules().filter((rule) => rule.enabled).map((rule) => rule.id)
+    const ruleContext = listEnabledChatRules(enabledRuleIds)
       .map((rule) => `- ${rule.name}: ${rule.prompt}`)
       .join('\n')
     const stackContext = task.chatOptions?.showStackSynergy
@@ -90,6 +90,8 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       memoryContext ? `Relevant memory:\n${memoryContext}` : 'Relevant memory: none',
       skillContext ? `Active skills:\n${skillContext}` : 'Active skills: none',
       ruleContext ? `Active rules:\n${ruleContext}` : 'Active rules: none',
+      task.chatOptions?.conversationHistory ? `Conversation history:\n${task.chatOptions.conversationHistory}` : '',
+      task.chatOptions?.ragContext ? `Indexed document excerpts:\n${task.chatOptions.ragContext}` : '',
       stackContext,
     ].filter(Boolean).join('\n\n')
     run.status = 'executing'

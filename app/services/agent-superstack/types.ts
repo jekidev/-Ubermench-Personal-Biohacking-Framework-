@@ -26,7 +26,10 @@ export interface AgentTask {
     enabledRuleIds?: string[]
     enabledWorkflowIds?: string[]
     showStackSynergy?: boolean
+    includeRagContext?: boolean
     workflowId?: string
+    conversationHistory?: string
+    ragContext?: string
   }
 }
 

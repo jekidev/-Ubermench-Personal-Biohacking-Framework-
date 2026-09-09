@@ -8,11 +8,12 @@ const STORAGE_KEY = 'ubermensch:chat-session:v1'
 function defaultPreferences(): ChatSessionPreferences {
   const skills = createDefaultSkillRegistry().list()
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     enabledSkillIds: skills.map((skill) => skill.id),
     enabledRuleIds: CHAT_RULES.filter((rule) => rule.enabled).map((rule) => rule.id),
     enabledWorkflowIds: CHAT_WORKFLOWS.filter((workflow) => workflow.enabled).map((workflow) => workflow.id),
     showStackSynergy: true,
+    includeRagContext: true,
   }
 }
 
@@ -21,8 +22,8 @@ export function loadChatPreferences(storage: Pick<Storage, 'getItem'> = localSto
     const raw = storage.getItem(STORAGE_KEY)
     if (!raw) return defaultPreferences()
     const parsed = JSON.parse(raw) as Partial<ChatSessionPreferences>
-    if (parsed.schemaVersion !== 1) return defaultPreferences()
-    return { ...defaultPreferences(), ...parsed }
+    if (!parsed.schemaVersion || parsed.schemaVersion < 1) return defaultPreferences()
+    return { ...defaultPreferences(), ...parsed, schemaVersion: 2 }
   } catch {
     return defaultPreferences()
   }
@@ -82,6 +83,15 @@ export function setShowStackSynergy(
   storage: Pick<Storage, 'getItem' | 'setItem'> = localStorage,
 ): ChatSessionPreferences {
   const next = { ...loadChatPreferences(storage), showStackSynergy: show }
+  saveChatPreferences(next, storage)
+  return next
+}
+
+export function setIncludeRagContext(
+  include: boolean,
+  storage: Pick<Storage, 'getItem' | 'setItem'> = localStorage,
+): ChatSessionPreferences {
+  const next = { ...loadChatPreferences(storage), includeRagContext: include }
   saveChatPreferences(next, storage)
   return next
 }

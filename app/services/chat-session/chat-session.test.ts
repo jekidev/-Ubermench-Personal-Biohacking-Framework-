@@ -19,6 +19,11 @@ describe('chat-session slash commands', () => {
     expect(result.prompt).toContain('abc12345678')
   })
 
+  it('parses /youtube-sync workflow', () => {
+    const result = parseSlashCommand('/youtube-sync', enabled)
+    expect(result.workflowId).toBe('youtube-schedule')
+  })
+
   it('lists enabled slash commands', () => {
     expect(listSlashCommands(enabled).some((line) => line.startsWith('/help'))).toBe(true)
   })

@@ -54,6 +54,15 @@ export function parseSlashCommand(input: string, enabledWorkflowIds: string[]): 
     }
   }
 
+  if (workflow.id === 'youtube-schedule') {
+    return {
+      prompt: args || 'Run the YouTube scheduler and report what was indexed into RAG.',
+      workflowId: workflow.id,
+      kind: workflow.kind,
+      handled: true,
+    }
+  }
+
   if (workflow.id === 'drive-rag') {
     return {
       prompt: args

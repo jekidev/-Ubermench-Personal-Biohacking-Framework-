@@ -49,6 +49,16 @@ export const CHAT_WORKFLOWS: ChatWorkflow[] = [
     synergy: ['google-drive', 'paper-qa'],
   },
   {
+    id: 'youtube-schedule',
+    name: 'YouTube scheduler',
+    description: 'Run scheduled playlist/channel/subscription sync into RAG.',
+    slash: '/youtube-sync',
+    kind: 'automation',
+    enabled: true,
+    requiresConnector: 'youtube-rag',
+    synergy: ['youtube-rag', 'transcriptor'],
+  },
+  {
     id: 'help',
     name: 'Chat help',
     description: 'List slash commands, toggles, and active stack components.',

@@ -61,6 +61,57 @@
     </UCard>
 
     <UCard>
+      <template #header><div class="font-medium">YouTube OAuth + scheduler</div></template>
+      <p class="text-sm text-zinc-400">
+        Connect YouTube (Google OAuth with youtube.readonly) to sync subscriptions. Schedule playlists/channels for automatic RAG ingest.
+      </p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <UButton :loading="google.busy.value" @click="connectYouTube">Connect YouTube</UButton>
+        <UButton variant="outline" :loading="scheduler.running.value" @click="runSchedulerNow">Run scheduler now</UButton>
+      </div>
+      <div class="mt-4 grid gap-3 md:grid-cols-3">
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" :checked="scheduler.store.value.enabled" @change="scheduler.setEnabled(($event.target as HTMLInputElement).checked)" />
+          Scheduler enabled
+        </label>
+        <UInput
+          :model-value="String(scheduler.store.value.intervalHours)"
+          type="number"
+          min="1"
+          placeholder="Interval hours"
+          @update:model-value="scheduler.setIntervalHours(Number($event) || 168)"
+        />
+        <span class="text-xs text-zinc-500 self-center">Default: 168h (weekly)</span>
+      </div>
+      <div class="mt-4 grid gap-3 md:grid-cols-4">
+        <UInput v-model="scheduleLabel" placeholder="Label" />
+        <select v-model="scheduleType" class="rounded-md border border-zinc-800 bg-transparent px-3 py-2 text-sm">
+          <option value="playlist">Playlist</option>
+          <option value="channel">Channel</option>
+          <option value="subscriptions">Subscriptions (OAuth)</option>
+        </select>
+        <UInput v-model="scheduleUrl" placeholder="Playlist/channel URL" class="md:col-span-2" />
+      </div>
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+        <UInput v-model="scheduleMaxVideos" type="number" min="1" max="25" placeholder="Max videos" class="w-32" />
+        <UButton size="sm" @click="addScheduleSource">Add source</UButton>
+        <span v-if="scheduler.lastResult.value" class="text-sm text-zinc-400">{{ scheduler.lastResult.value }}</span>
+      </div>
+      <ul v-if="scheduler.store.value.sources.length" class="mt-3 space-y-2 text-sm">
+        <li v-for="source in scheduler.store.value.sources" :key="source.id" class="flex flex-wrap items-center justify-between gap-2 rounded border border-zinc-800 p-2">
+          <div>
+            <div class="font-medium">{{ source.label }} · {{ source.type }}</div>
+            <div class="text-xs text-zinc-500">{{ source.url || 'OAuth subscriptions' }} · max {{ source.maxVideos }}</div>
+          </div>
+          <UButton size="xs" variant="ghost" @click="scheduler.removeSource(source.id)">Remove</UButton>
+        </li>
+      </ul>
+      <p v-if="scheduler.store.value.lastRunAt" class="mt-3 text-xs text-zinc-500">
+        Last run: {{ scheduler.store.value.lastRunAt }} — {{ scheduler.store.value.lastRunSummary }}
+      </p>
+    </UCard>
+
+    <UCard>
       <template #header><div class="font-medium">Google Drive → RAG sync</div></template>
       <p class="text-sm text-zinc-400">Downloads new PDFs from Drive, extracts text, and indexes chunks for document Q&A.</p>
       <div class="mt-4 flex flex-wrap items-center gap-3">
@@ -139,6 +190,11 @@ const googleClientId = ref('')
 const googleClientSecret = ref('')
 const driveFolderId = ref('')
 const redirectUri = defaultGoogleRedirectUri()
+const scheduler = useYouTubeScheduler()
+const scheduleLabel = ref('')
+const scheduleType = ref<'playlist' | 'channel' | 'subscriptions'>('playlist')
+const scheduleUrl = ref('')
+const scheduleMaxVideos = ref('5')
 const youtubeInput = ref('')
 const youtubeLanguage = ref('en')
 const youtubeSyncBusy = ref(false)
@@ -154,6 +210,8 @@ const gmailMessages = ref<GmailMessageSummary[]>([])
 onMounted(async () => {
   googleClientId.value = await google.loadClientId()
   await google.refreshStatus()
+  scheduler.refresh()
+  await scheduler.tickIfDue()
   await refresh()
 })
 
@@ -183,6 +241,27 @@ async function saveGoogleConfig() {
 async function connectGoogle(connectorIds: Array<'google-drive' | 'gmail'>) {
   await saveGoogleConfig()
   await google.startOAuth(connectorIds)
+}
+
+async function connectYouTube() {
+  await saveGoogleConfig()
+  await google.connectYouTube()
+}
+
+async function runSchedulerNow() {
+  await scheduler.runNow(true)
+}
+
+function addScheduleSource() {
+  scheduler.addSource({
+    type: scheduleType.value,
+    url: scheduleUrl.value,
+    label: scheduleLabel.value || scheduleType.value,
+    enabled: true,
+    maxVideos: Number(scheduleMaxVideos.value) || 5,
+  })
+  scheduleLabel.value = ''
+  scheduleUrl.value = ''
 }
 
 async function runYouTubeSync(force: boolean) {

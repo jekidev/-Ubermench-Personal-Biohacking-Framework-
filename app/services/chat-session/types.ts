@@ -5,6 +5,7 @@ export type ChatRule = {
   prompt: string
   enabled: boolean
   category: 'safety' | 'evidence' | 'privacy' | 'style'
+  custom?: boolean
 }
 
 export type ChatWorkflow = {
@@ -27,11 +28,12 @@ export type ChatMessage = {
 }
 
 export type ChatSessionPreferences = {
-  schemaVersion: 1
+  schemaVersion: 2
   enabledSkillIds: string[]
   enabledRuleIds: string[]
   enabledWorkflowIds: string[]
   showStackSynergy: boolean
+  includeRagContext: boolean
 }
 
 export type ChatRunOptions = {
@@ -39,7 +41,10 @@ export type ChatRunOptions = {
   enabledRuleIds?: string[]
   enabledWorkflowIds?: string[]
   showStackSynergy?: boolean
+  includeRagContext?: boolean
   workflowId?: string
+  conversationHistory?: string
+  ragContext?: string
 }
 
 export type SlashCommandResult = {

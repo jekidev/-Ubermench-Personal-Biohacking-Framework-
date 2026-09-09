@@ -33,7 +33,7 @@ export type GoogleTokenResponse = {
 }
 
 export type GoogleOAuthState = {
-  connectorIds: Array<'google-drive' | 'gmail'>
+  connectorIds: Array<'google-drive' | 'gmail' | 'youtube'>
   codeVerifier: string
   redirectUri: string
   createdAt: string
@@ -86,7 +86,7 @@ export async function buildGoogleAuthorizeUrl(input: {
   clientId: string
   redirectUri: string
   scopes: string[]
-  connectorIds: Array<'google-drive' | 'gmail'>
+  connectorIds: Array<'google-drive' | 'gmail' | 'youtube'>
 }): Promise<string> {
   const { verifier, challenge } = await createPkcePair()
   saveOAuthState({
