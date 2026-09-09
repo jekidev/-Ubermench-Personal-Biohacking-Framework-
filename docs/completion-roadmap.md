@@ -60,9 +60,9 @@ Apple Health, Oura, WHOOP, Fitbit and Polar are intentionally excluded from the 
 
 1. Normalize Europe PMC results into durable evidence records automatically.
 2. Add DOI/PMID identity resolution and duplicate detection.
-3. Add citation-level claim extraction with explicit uncertainty.
+3. Citation-level claim extraction is implemented from stored title/abstract text with polarity, hedges and explicit uncertainty. Numeric effects are copied only when present in the source text.
 4. Separate mechanistic plausibility from human outcome evidence in intervention ranking.
-5. Add evidence freshness/retraction checks and an auditable research snapshot.
+5. Freshness bands, retraction/expression-of-concern checks (record flags, local registry and Crossref `update-to` payloads) and checksummed research snapshots are implemented and visible on `/longevity/evidence`. Nuxt 4 is configured to serve the repo-root `pages/` directory so those product routes resolve.
 6. Optional paper-search MCP and PaperQA sidecars are registered; they stay disabled until the local tools are installed. Sci-Hub remains off.
 
 ### P1 — experiment engine maturity
@@ -76,14 +76,14 @@ Apple Health, Oura, WHOOP, Fitbit and Polar are intentionally excluded from the 
 ### P1 — safety layer
 
 1. Expand medication/supplement interaction coverage with provenance.
-2. Add contraindication and monitoring requirements as structured rules.
+2. Contraindication and monitoring requirements are structured local rules (`app/services/safety-rules.ts`) evaluated against the profile and shown on `/safety`. They are conservative heuristics, not clinical guidelines.
 3. Add duplicate-ingredient and cumulative-dose detection.
 4. Require explicit user confirmation for high-risk interventions.
 5. Keep safety output separate from efficacy ranking.
 
 ### P2 — product completeness
 
-1. Complete Biology, Experiments, Evidence, Fearprime, Longevity and Agent dashboards.
+1. Complete Biology, Experiments, Evidence, Fearprime, Longevity and Agent dashboards. Longitudinal series and evidence-to-state overlay live at `/longevity/timeline`.
 2. Add import/export UX and visible data-health diagnostics.
 3. Add offline/online sync state and conflict resolution.
 4. Add accessibility and keyboard navigation pass.

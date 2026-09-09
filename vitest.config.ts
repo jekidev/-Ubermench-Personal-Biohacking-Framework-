@@ -10,6 +10,7 @@ export default defineConfig({
     alias: {
       '~': fileURLToPath(new URL('./app', import.meta.url)),
       '@': fileURLToPath(new URL('./app', import.meta.url)),
+      '~/plugins': fileURLToPath(new URL('./plugins', import.meta.url)),
     },
   },
 })

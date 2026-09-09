@@ -4,12 +4,17 @@ import { detectDuplicateIngredients } from './ingredient-normalizer'
 
 export type SafetySeverity = 'green' | 'yellow' | 'orange' | 'red'
 
+export type SafetyFlagKind = 'interaction' | 'contraindication' | 'monitoring' | 'info'
+
 export interface SafetyFlag {
   severity: SafetySeverity
   code: string
   title: string
   detail: string
   requiresReview: boolean
+  kind?: SafetyFlagKind
+  provenance?: string
+  monitoringMetrics?: string[]
 }
 
 const HIGH_RISK_TERMS = ['warfarin', 'apixaban', 'rivaroxaban', 'heparin', 'clopidogrel', 'insulin', 'opioid', 'benzodiazepine']

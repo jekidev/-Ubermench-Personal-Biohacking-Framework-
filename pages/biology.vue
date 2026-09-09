@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { screenProfileSafety } from '~/services/profile-safety'
+import { biomarkersToPhenotypicInputs, computePhenotypicAge } from '~/services/phenotypic-age-engine'
+import { buildLongitudinalDashboard } from '~/services/longitudinal-dashboard'
 import type { SafetySeverity } from '~/services/safety-engine'
 
-const { profile, initialize, biomarkerNames, trend, interactionFlags, exportBackup, importBackup, previewImport, exportEncryptedBackup, importEncryptedBackup, exportBackupToFile, importBackupFromFile } = usePersonalBiology()
+const { profile, initialize, interactionFlags, exportBackup, importBackup, previewImport, exportEncryptedBackup, importEncryptedBackup, exportBackupToFile, importBackupFromFile } = usePersonalBiology()
 const { selectModel, evidenceQuery } = useBiohackingAI()
 const chronologicalAge = ref(35)
 
@@ -22,9 +24,9 @@ const models = computed(() => ({
   molecular: selectModel('molecular')?.name ?? 'Unavailable',
 }))
 
-const trends = computed(() => biomarkerNames().map((name) => trend(name)))
 const flags = computed(() => interactionFlags())
 const safetyFlags = computed(() => screenProfileSafety(profile.value))
+const longitudinal = computed(() => buildLongitudinalDashboard(profile.value))
 const goalQuery = computed(() => evidenceQuery(profile.value.goals[0] ?? 'personal health optimization'))
 
 function safetyColor(severity: SafetySeverity) {
@@ -224,11 +226,20 @@ async function handleEncryptedBackupFile(event: Event) {
     </UCard>
 
     <UCard>
-      <h2 class="font-semibold">Biomarker trends</h2>
-      <div v-if="trends.length" class="mt-4 divide-y divide-default">
-        <div v-for="item in trends" :key="item.name" class="flex items-center justify-between py-3 text-sm">
-          <span>{{ item.name }}</span>
-          <span class="text-muted">{{ item.direction }} · {{ item.percentChange === undefined ? '—' : `${item.percentChange.toFixed(1)}%` }}</span>
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Biomarker trends</h2>
+        <NuxtLink to="/longevity/timeline"><UButton size="sm" variant="outline">Open timeline</UButton></NuxtLink>
+      </div>
+      <p class="mt-1 text-sm text-muted">Direction is first-to-last change only. Rising or falling is not clinical improvement or harm.</p>
+      <div v-if="longitudinal.cards.length" class="mt-4 space-y-3">
+        <div v-for="card in longitudinal.cards" :key="card.key" class="flex flex-wrap items-center justify-between gap-3 border-b border-default py-3 text-sm">
+          <div>
+            <div>{{ card.label }}</div>
+            <div class="text-xs text-muted">{{ card.summary?.direction ?? 'insufficient-data' }} · {{ card.latestLabel }}</div>
+          </div>
+          <svg :width="card.sparkline.width" :height="card.sparkline.height" class="text-primary" role="img" :aria-label="`${card.label} sparkline`">
+            <path :d="card.sparkline.path" fill="none" stroke="currentColor" stroke-width="1.5" />
+          </svg>
         </div>
       </div>
       <p v-else class="mt-3 text-sm text-muted">No biomarker records yet. Import or enter laboratory data to activate longitudinal analysis.</p>

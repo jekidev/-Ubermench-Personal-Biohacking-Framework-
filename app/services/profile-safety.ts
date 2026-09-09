@@ -4,6 +4,7 @@ import { detectDuplicateIngredients } from './ingredient-normalizer'
 import { screenInteractions } from './interaction-engine'
 import { checkPharmacologyInteractions } from './pharmacology-engine'
 import { highestSafetySeverity, type SafetyFlag, type SafetySeverity } from './safety-engine'
+import { evaluateStructuredSafetyRules } from './safety-rules'
 
 function includesTerm(value: string, terms: string[]) {
   const normalized = value.toLowerCase()
@@ -88,7 +89,10 @@ export function screenRegimenSafety(
 }
 
 export function screenProfileSafety(profile: PersonalBiologyProfile): SafetyFlag[] {
-  const flags = screenRegimenSafety(profile.medications, profile.supplements)
+  const flags = [
+    ...evaluateStructuredSafetyRules(profile),
+    ...screenRegimenSafety(profile.medications, profile.supplements),
+  ]
   if (!flags.length) {
     return [{
       severity: 'green',

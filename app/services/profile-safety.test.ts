@@ -37,4 +37,13 @@ describe('profile safety', () => {
     expect(requiresHighRiskConfirmation(flags)).toBe(false)
     expect(confirmHighRiskFlags(flags, false).allowed).toBe(true)
   })
+
+  it('surfaces structured monitoring rules separately from efficacy ranking', () => {
+    const flags = screenProfileSafety({
+      ...emptyBiologyProfile(),
+      medications: [{ id: '1', name: 'Apixaban 5mg', active: true }],
+    })
+    expect(flags.some((flag) => flag.kind === 'monitoring' && flag.requiresReview)).toBe(true)
+    expect(requiresHighRiskConfirmation(flags)).toBe(true)
+  })
 })
