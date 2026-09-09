@@ -20,7 +20,8 @@ export function selectNextProvider(candidates: readonly ProviderCandidate[], pol
     .filter((candidate) => !failed.has(candidate.provider))
     .sort((a, b) => (order.get(a.provider) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.provider) ?? Number.MAX_SAFE_INTEGER))
 
-  if (!available.length) return null
-  const { provider, model, free } = available[0]
+  const first = available[0]
+  if (!first) return null
+  const { provider, model, free } = first
   return { provider, model, free }
 }

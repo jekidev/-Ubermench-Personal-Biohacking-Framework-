@@ -8,6 +8,7 @@ describe('agent runtime LLM routing', () => {
       preferFree: true,
       autoRotate: true,
       showModel: true,
+      allowFrameworkWrite: false,
       providers: [
         { provider: 'openrouter', model: 'openrouter/free', enabled: true, priority: 1, apiKey: 'test-openrouter' },
         { provider: 'openai', model: 'gpt-5.6', enabled: true, priority: 2, apiKey: 'test-openai' },

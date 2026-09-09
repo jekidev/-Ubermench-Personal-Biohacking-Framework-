@@ -1,7 +1,7 @@
 import type { InterventionCandidate, PersonalBiologyProfile } from '~/types/biology'
 import type { CompiledProtocol, GoalSpec, ObjectiveWeight } from '~/types/core'
 import { deriveBiologicalState } from './digital-twin'
-import { buildResearchQuery } from './research-engine'
+import { buildLocalResearchContext } from './research-engine'
 import { rankByObjectives } from './objective-engine'
 import { screenInterventionSafety } from './safety-engine'
 
@@ -21,7 +21,7 @@ export function compileProtocol(profile: PersonalBiologyProfile, request: Protoc
   const createdAt = new Date().toISOString()
   const objectives = normalizeObjectives(request.objectives)
   const goal: GoalSpec = { id: crypto.randomUUID(), title: request.goal.trim() || 'Personal health optimization', objectives, createdAt }
-  const researchQuery = buildResearchQuery(
+  const researchQuery = buildLocalResearchContext(
     goal.title,
     profile.biomarkers.slice(-8).map((item) => `${item.name} ${item.value} ${item.unit}`),
     profile.variants.slice(0, 8).map((item) => item.rsId ?? item.gene ?? item.genotype),

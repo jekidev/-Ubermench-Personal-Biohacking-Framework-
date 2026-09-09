@@ -3,8 +3,9 @@ import { buildResearchQuery } from './research-engine'
 import { getResearchProvider } from './external-research-providers'
 
 describe('research integration', () => {
-  it('builds a deterministic, structured biology research query', () => {
-    expect(buildResearchQuery('inflammation', ['CRP 2 mg/L'], ['rs123'])).toBe('(inflammation) AND (CRP 2 mg/L OR rs123)')
+  it('builds a literature-only external research query', () => {
+    expect(buildResearchQuery('inflammation')).toBe('(inflammation)')
+    expect(buildResearchQuery('inflammation')).not.toContain('CRP')
   })
 
   it('exposes permissive and local research provider capabilities without enabling unconfigured adapters', () => {

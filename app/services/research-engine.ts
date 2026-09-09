@@ -66,13 +66,24 @@ export async function searchEuropePMC(query: string, pageSize = 20, signal?: Abo
   return { query: cleanQuery, hits, retrievedAt: new Date().toISOString() }
 }
 
-export function buildResearchQuery(goal: string, biomarkers: string[] = [], variants: string[] = []) {
-  const clean = (value: string) => value.trim().replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ')
-  const goalTerm = clean(goal)
-  const biomarkerTerms = biomarkers.map(clean).filter(Boolean).slice(-8)
-  const variantTerms = variants.map(clean).filter(Boolean).slice(0, 8)
+function sanitizeLiteratureTerm(value: string): string {
+  return value.trim().replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ')
+}
 
-  if (!goalTerm && biomarkerTerms.length === 0 && variantTerms.length === 0) return ''
+/**
+ * External literature search query — goal text only.
+ * Personal biomarkers and genetics must stay outside public research APIs.
+ */
+export function buildResearchQuery(goal: string): string {
+  const goalTerm = sanitizeLiteratureTerm(goal)
+  return goalTerm ? `(${goalTerm})` : ''
+}
+
+/** Local-only context for protocol compilation; never sent to external research APIs. */
+export function buildLocalResearchContext(goal: string, biomarkers: string[] = [], variants: string[] = []) {
+  const goalTerm = sanitizeLiteratureTerm(goal)
+  const biomarkerTerms = biomarkers.map(sanitizeLiteratureTerm).filter(Boolean).slice(-8)
+  const variantTerms = variants.map(sanitizeLiteratureTerm).filter(Boolean).slice(0, 8)
   const context = [...biomarkerTerms, ...variantTerms]
   return [goalTerm ? `(${goalTerm})` : '', context.length ? `(${context.join(' OR ')})` : ''].filter(Boolean).join(' AND ')
 }

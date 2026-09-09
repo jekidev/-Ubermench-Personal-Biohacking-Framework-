@@ -27,7 +27,10 @@
             class="rounded-md border border-zinc-800 p-3 text-sm"
             :class="message.role === 'user' ? 'bg-zinc-900' : message.role === 'system' ? 'bg-zinc-950/70' : 'bg-zinc-950'"
           >
-            <div class="mb-1 text-xs uppercase tracking-wide text-zinc-500">{{ message.role }}</div>
+            <div class="mb-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+              <span>{{ message.role }}</span>
+              <span v-if="message.modelLabel" class="normal-case text-zinc-400">{{ message.modelLabel }}</span>
+            </div>
             <div class="whitespace-pre-wrap">{{ message.content }}</div>
           </div>
           <p v-if="!chat.messages.length" class="text-sm text-zinc-500">Start with a question or try /help.</p>
@@ -136,6 +139,7 @@ import { runYouTubeScheduler } from '../plugins/connectors/youtube-scheduler'
 
 const chat = useChatSession()
 const runtime = useAgentRuntime()
+const llm = useLLM()
 const scheduler = useYouTubeScheduler()
 const draft = ref('')
 const newRuleName = ref('')
@@ -192,7 +196,10 @@ async function submit() {
     chatOptions: task.chatOptions,
   })
   const latest = run.observations.at(-1)?.text ?? 'No response.'
-  chat.pushMessage({ role: 'assistant', content: latest, workflowId: task.parsed.workflowId })
+  const modelLabel = llm.settings.value.showModel && run.activeProvider && run.activeModel
+    ? `${run.activeProvider}/${run.activeModel}${run.fallbackUsed ? ' (fallback)' : ''}`
+    : undefined
+  chat.pushMessage({ role: 'assistant', content: latest, workflowId: task.parsed.workflowId, modelLabel })
 }
 
 function onKeydown(event: KeyboardEvent) {

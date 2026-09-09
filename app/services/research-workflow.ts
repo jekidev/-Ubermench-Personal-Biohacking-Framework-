@@ -1,4 +1,5 @@
 import type { EvidencePreview } from '../../plugins/longevity/evidence/live-lookup'
+import { toResearchPayload } from '../../plugins/llm/research-data-boundary'
 import { buildResearchQuery, searchEuropePMC } from './research-engine'
 import { normalizeEuropePmcResults, persistNormalizedEvidence } from './evidence-normalizer'
 
@@ -19,8 +20,9 @@ export interface ResearchWorkflowResult {
 }
 
 export async function runResearchWorkflow(request: ResearchWorkflowRequest): Promise<ResearchWorkflowResult> {
-  const query = buildResearchQuery(request.goal, request.biomarkers, request.variants)
-  const research = await searchEuropePMC(query, request.pageSize ?? 20, request.signal)
+  const payload = toResearchPayload(buildResearchQuery(request.goal), 'europe-pmc')
+  const research = await searchEuropePMC(payload.query, request.pageSize ?? 20, request.signal)
+  const query = payload.query
   const evidenceCandidates: EvidencePreview[] = research.hits.map((hit) => ({
     metadata: {
       identifier: hit.doi ? `doi:${hit.doi}` : `pmid:${hit.id}`,

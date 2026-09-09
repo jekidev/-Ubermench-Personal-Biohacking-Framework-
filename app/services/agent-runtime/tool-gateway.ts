@@ -7,6 +7,8 @@ import { createDocumentsSearchTool } from './tools/documents-search'
 import { createConnectorTools } from './tools/connector-tools'
 import { createGoogleWorkspaceTools } from './tools/google-workspace-tools'
 import { createMcpInstallTools } from './tools/mcp-install-tools'
+import { createMcpHttpTools } from './tools/mcp-http-tools'
+import { assertToolPolicyAllowed } from './tool-policy-guard'
 import type { AgentTool, AgentToolCall } from './types'
 
 export class AgentToolGateway {
@@ -22,6 +24,7 @@ export class AgentToolGateway {
     const policy = evaluateTask({ ...task, allowTools: true, riskLevel: tool.risk })
     if (!policy.allowed) throw new Error(`Tool execution blocked: ${policy.reason}`)
     if (policy.requiresConfirmation || tool.requiresApproval || call.requiresApproval) throw new Error(`Tool execution requires explicit approval: ${tool.name}`)
+    assertToolPolicyAllowed(tool, false)
     return tool.execute(call.args)
   }
 
@@ -33,6 +36,7 @@ export class AgentToolGateway {
     if (tool.requiresApproval || call.requiresApproval || policy.requiresConfirmation) {
       if (!call.approvalToken?.trim()) throw new Error(`Tool execution requires explicit approval token: ${tool.name}`)
     }
+    assertToolPolicyAllowed(tool, Boolean(call.approvalToken?.trim()))
     return tool.execute({ ...call.args, __approvalToken: call.approvalToken })
   }
 }
@@ -85,6 +89,9 @@ export function createDefaultToolGateway(): AgentToolGateway {
     gateway.register(tool)
   }
   for (const tool of createMcpServerTools()) {
+    gateway.register(tool)
+  }
+  for (const tool of createMcpHttpTools()) {
     gateway.register(tool)
   }
   return gateway

@@ -18,11 +18,13 @@
 
     <UCard>
       <template #header><div class="font-medium">LLM orchestration</div></template>
-      <div class="grid gap-4 sm:grid-cols-3">
-        <label class="flex items-center gap-2 text-sm"><input v-model="settings.preferFree" type="checkbox" @change="save" /> Prefer free models</label>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <label class="flex items-center gap-2 text-sm"><input v-model="settings.preferFree" type="checkbox" @change="save" /> Prefer free models (autoFreeOnly)</label>
         <label class="flex items-center gap-2 text-sm"><input v-model="settings.autoRotate" type="checkbox" @change="save" /> Automatic fallback / rotation</label>
         <label class="flex items-center gap-2 text-sm"><input v-model="settings.showModel" type="checkbox" @change="save" /> Show active model</label>
+        <label class="flex items-center gap-2 text-sm"><input v-model="settings.allowFrameworkWrite" type="checkbox" @change="save" /> Allow framework file writes (Tauri only)</label>
       </div>
+      <p class="mt-2 text-xs text-zinc-500">Framework write and command tools stay disabled unless explicitly enabled. MCP stdio always requires Tauri plus human approval.</p>
     </UCard>
 
     <div class="grid gap-4 lg:grid-cols-2">
@@ -59,7 +61,13 @@ const vaultBusy = ref(false)
 const vaultError = ref('')
 
 function save() {
-  update({ providers: settings.value.providers, preferFree: settings.value.preferFree, autoRotate: settings.value.autoRotate, showModel: settings.value.showModel })
+  update({
+    providers: settings.value.providers,
+    preferFree: settings.value.preferFree,
+    autoRotate: settings.value.autoRotate,
+    showModel: settings.value.showModel,
+    allowFrameworkWrite: settings.value.allowFrameworkWrite,
+  })
 }
 
 async function unlockVault() {

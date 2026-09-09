@@ -110,6 +110,9 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
         await recordAudit(store, auditEvent(id, 'recovery.retry', 'Retrying LLM execution', { attempt, delayMs, error: error instanceof Error ? error.message : String(error) }))
       },
     )
+    run.activeProvider = response.provider
+    run.activeModel = response.model
+    run.fallbackUsed = response.fallbackUsed
     run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() } as AgentObservation)
     const calls = extractToolCalls(response.text)
     for (const call of calls) await recordAudit(store, auditEvent(id, 'tool.requested', `Tool requested: ${call.name}`, { toolCallId: call.id, requiresApproval: call.requiresApproval === true || call.name === 'mcp.stdio' }))
