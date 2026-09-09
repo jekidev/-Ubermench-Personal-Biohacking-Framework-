@@ -1,5 +1,5 @@
-import type { NextBestTestCandidate, FearPhenotypeId } from "../domain/ptsd";
-import type { LearningEventForPhenotype, PhenotypeAssessment } from "./phenotype";
+import type { NextBestTestCandidate, FearPhenotypeId, PhenotypeAssessment } from "../domain/ptsd";
+import type { LearningEventForPhenotype } from "./phenotype";
 
 export type TestRecommendation = NextBestTestCandidate & {
   testId:

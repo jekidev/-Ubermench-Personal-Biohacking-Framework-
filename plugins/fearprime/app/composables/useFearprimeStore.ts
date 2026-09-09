@@ -1,3 +1,4 @@
+import { isTauri } from "@tauri-apps/api/core";
 import { Store } from "@tauri-apps/plugin-store";
 import { z } from "zod";
 
@@ -35,6 +36,13 @@ export type Prediction = z.infer<typeof PredictionSchema>;
 export type LearningInput = z.infer<typeof LearningInputSchema>;
 export type FollowUpInput = z.infer<typeof FollowUpInputSchema>;
 export type ClinicalInput = z.infer<typeof ClinicalInputSchema>;
+export type PendingFollowUp = {
+  id: string;
+  timestamp: string;
+  sourceEventId?: string;
+  timepoint?: "24h" | "7d" | "30d" | "custom" | string;
+  status?: string;
+};
 
 const EVENTS_KEY = "events";
 const MEMORY_KEY = "memoryTargets";
@@ -46,18 +54,18 @@ function browserSet<T>(key: string, value: T) { if (typeof localStorage !== "und
 async function getStore() { return Store.load(DB_NAME); }
 
 export function useFearprimeStore() {
-  const isTauri = computed(() => import.meta.client && Boolean(window.__TAURI_INTERNALS__));
+  const isTauriRuntime = computed(() => import.meta.client && isTauri());
 
-  async function loadEvents(): Promise<FearprimeEvent[]> { if (!isTauri.value) return browserGet<FearprimeEvent[]>(EVENTS_KEY, []); const store = await getStore(); return (await store.get<FearprimeEvent[]>(EVENTS_KEY)) ?? []; }
-  async function saveEvents(events: FearprimeEvent[]) { if (!isTauri.value) { browserSet(EVENTS_KEY, events); return; } const store = await getStore(); await store.set(EVENTS_KEY, events); await store.save(); }
+  async function loadEvents(): Promise<FearprimeEvent[]> { if (!isTauriRuntime.value) return browserGet<FearprimeEvent[]>(EVENTS_KEY, []); const store = await getStore(); return (await store.get<FearprimeEvent[]>(EVENTS_KEY)) ?? []; }
+  async function saveEvents(events: FearprimeEvent[]) { if (!isTauriRuntime.value) { browserSet(EVENTS_KEY, events); return; } const store = await getStore(); await store.set(EVENTS_KEY, events); await store.save(); }
   async function appendEvent(event: FearprimeEvent) { const parsed = EventSchema.parse(event); const events = await loadEvents(); await saveEvents([...events, parsed]); return parsed; }
 
-  async function listMemoryTargets(): Promise<MemoryTarget[]> { if (!isTauri.value) return browserGet<MemoryTarget[]>(MEMORY_KEY, []); const store = await getStore(); return (await store.get<MemoryTarget[]>(MEMORY_KEY)) ?? []; }
+  async function listMemoryTargets(): Promise<MemoryTarget[]> { if (!isTauriRuntime.value) return browserGet<MemoryTarget[]>(MEMORY_KEY, []); const store = await getStore(); return (await store.get<MemoryTarget[]>(MEMORY_KEY)) ?? []; }
 
   async function createMemoryTarget(input: Omit<MemoryTarget, "id" | "createdAt">) {
     const target = MemoryTargetSchema.parse({ ...input, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
     const targets = await listMemoryTargets();
-    if (!isTauri.value) browserSet(MEMORY_KEY, [...targets, target]); else { const store = await getStore(); await store.set(MEMORY_KEY, [...targets, target]); await store.save(); }
+    if (!isTauriRuntime.value) browserSet(MEMORY_KEY, [...targets, target]); else { const store = await getStore(); await store.set(MEMORY_KEY, [...targets, target]); await store.save(); }
     await appendEvent({ id: crypto.randomUUID(), type: "memory_target", timestamp: target.createdAt, payload: target, schemaVersion: SCHEMA_VERSION });
     return target;
   }
@@ -87,10 +95,23 @@ export function useFearprimeStore() {
     return saved;
   }
 
-  async function listPendingFollowUps() {
+  async function listPendingFollowUps(): Promise<PendingFollowUp[]> {
     const events = await loadEvents();
     const completedIds = new Set(events.filter((event) => event.type === "follow_up" && (event.payload as Record<string, unknown>).status === "completed" && typeof (event.payload as Record<string, unknown>).followUpId === "string").map((event) => String((event.payload as Record<string, unknown>).followUpId)));
-    return events.filter((event) => event.type === "follow_up").map((event) => ({ id: event.id, timestamp: event.timestamp, ...(event.payload as Record<string, unknown>) })).filter((followUp) => followUp.status === "pending" && !completedIds.has(String(followUp.id))).sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
+    return events
+      .filter((event) => event.type === "follow_up")
+      .map((event) => {
+        const payload = event.payload as Record<string, unknown>;
+        return {
+          id: event.id,
+          timestamp: event.timestamp,
+          sourceEventId: typeof payload.sourceEventId === "string" ? payload.sourceEventId : undefined,
+          timepoint: typeof payload.timepoint === "string" ? payload.timepoint : undefined,
+          status: typeof payload.status === "string" ? payload.status : undefined,
+        } satisfies PendingFollowUp;
+      })
+      .filter((followUp) => followUp.status === "pending" && !completedIds.has(String(followUp.id)))
+      .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   }
 
   async function completeFollowUp(input: FollowUpInput) {

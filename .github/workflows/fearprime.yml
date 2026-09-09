@@ -32,7 +32,7 @@ jobs:
         run: bunx nuxt prepare
 
       - name: Typecheck
-        run: bunx nuxi typecheck
+        run: bunx vue-tsc --noEmit -p .nuxt/tsconfig.json
 
       - name: Generate
         run: bun run generate

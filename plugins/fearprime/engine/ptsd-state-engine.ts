@@ -69,11 +69,15 @@ export function assessPTSDStatePhenotypes(
 
   if (clinical.length >= 2) {
     const ordered = [...clinical].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-    const latest = ordered[ordered.length - 1];
-    const previous = ordered[ordered.length - 2];
-    const pclDelta = typeof latest.pcl5Total === "number" && typeof previous.pcl5Total === "number" ? latest.pcl5Total - previous.pcl5Total : undefined;
-    const functionDelta = typeof latest.function === "number" && typeof previous.function === "number" ? latest.function - previous.function : undefined;
-    result.push(make("F11", pclDelta === undefined && functionDelta === undefined ? "insufficient_data" : "possible", clamp(clinical.length / 4), clinical.length, ["F11 er et langsigtet clinical-state signal og kræver gentagne kliniske outcomes."], [pclDelta === undefined ? "PCL-5 delta: mangler" : `PCL-5 delta: ${pclDelta.toFixed(1)}`, functionDelta === undefined ? "Funktion delta: mangler" : `Funktion delta: ${functionDelta.toFixed(1)}`]));
+    const latest = ordered.at(-1);
+    const previous = ordered.at(-2);
+    if (!latest || !previous) {
+      result.push(make("F11", "not_assessed", 0, 0, ["Der mangler mindst to kliniske vurderinger for en trend."], []));
+    } else {
+      const pclDelta = typeof latest.pcl5Total === "number" && typeof previous.pcl5Total === "number" ? latest.pcl5Total - previous.pcl5Total : undefined;
+      const functionDelta = typeof latest.function === "number" && typeof previous.function === "number" ? latest.function - previous.function : undefined;
+      result.push(make("F11", pclDelta === undefined && functionDelta === undefined ? "insufficient_data" : "possible", clamp(clinical.length / 4), clinical.length, ["F11 er et langsigtet clinical-state signal og kræver gentagne kliniske outcomes."], [pclDelta === undefined ? "PCL-5 delta: mangler" : `PCL-5 delta: ${pclDelta.toFixed(1)}`, functionDelta === undefined ? "Funktion delta: mangler" : `Funktion delta: ${functionDelta.toFixed(1)}`]));
+    }
   } else {
     result.push(make("F11", "not_assessed", 0, 0, ["Der mangler mindst to kliniske vurderinger for en trend."], []));
   }

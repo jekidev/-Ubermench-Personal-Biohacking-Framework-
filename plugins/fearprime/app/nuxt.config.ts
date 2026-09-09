@@ -43,5 +43,16 @@ export default defineNuxtConfig({
   router: { options: { scrollBehaviorType: "smooth" } },
   devtools: { enabled: false },
   experimental: { typedPages: true },
-  compatibilityDate: "2026-01-01"
+  compatibilityDate: "2026-01-01",
+  typescript: {
+    tsConfig: {
+      include: [
+        "../engine/**/*.ts",
+        "../domain/**/*.ts",
+        "../analytics/**/*.ts",
+        "../interventions/**/*.ts",
+        "../env.d.ts",
+      ],
+    },
+  },
 });
