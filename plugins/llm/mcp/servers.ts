@@ -96,6 +96,15 @@ export const MCP_SERVER_REGISTRY: McpServerRegistryEntry[] = [
     auth: 'env',
     envKeys: ['LDR_LLM_PROVIDER', 'LDR_LLM_OLLAMA_URL'],
   },
+  {
+    serverId: 'transcriptor',
+    connectorId: 'transcriptor',
+    executable: 'docker',
+    allowedArgs: ['run', '--rm', '-i', 'artsamsonov/transcriptor-mcp:latest', 'npm', 'run', 'start:mcp'],
+    description: 'YouTube/podcast transcripts via transcriptor-mcp (Docker sidecar). Hosted HTTP endpoint also available.',
+    enabledByDefault: false,
+    auth: 'none',
+  },
 ]
 
 export function getMcpServer(serverId: string): McpServerRegistryEntry | undefined {

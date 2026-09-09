@@ -18,19 +18,19 @@ export type DocumentChunk = {
 
 const MAX_CHUNK_CHARS = 1200
 
-export function chunkDocumentPages(input: {
+function chunkTextBlocks(input: {
   documentId: string
   sha256: string
   filename: string
-  pages: DocumentPageText[]
-  extractionMethod?: DocumentChunk['extractionMethod']
+  blocks: Array<{ page?: number; text: string }>
+  tags: string[]
+  extractionMethod: DocumentChunk['extractionMethod']
 }): DocumentChunk[] {
-  const method = input.extractionMethod ?? 'native-text'
   const chunks: DocumentChunk[] = []
   let chunkIndex = 0
 
-  for (const page of input.pages) {
-    const paragraphs = page.text
+  for (const block of input.blocks) {
+    const paragraphs = block.text
       .split(/\n{2,}/)
       .map((part) => part.trim())
       .filter(Boolean)
@@ -43,11 +43,11 @@ export function chunkDocumentPages(input: {
           documentId: input.documentId,
           sha256: input.sha256,
           filename: input.filename,
-          page: page.page,
+          page: block.page,
           content: buffer.trim(),
-          tags: ['lab-document', 'blood-report'],
+          tags: input.tags,
           indexedAt: new Date().toISOString(),
-          extractionMethod: method,
+          extractionMethod: input.extractionMethod,
         })
         buffer = paragraph
       } else {
@@ -61,14 +61,59 @@ export function chunkDocumentPages(input: {
         documentId: input.documentId,
         sha256: input.sha256,
         filename: input.filename,
-        page: page.page,
+        page: block.page,
         content: buffer.trim(),
-        tags: ['lab-document', 'blood-report'],
+        tags: input.tags,
         indexedAt: new Date().toISOString(),
-        extractionMethod: method,
+        extractionMethod: input.extractionMethod,
       })
     }
   }
 
   return chunks
+}
+
+export function chunkDocumentPages(input: {
+  documentId: string
+  sha256: string
+  filename: string
+  pages: DocumentPageText[]
+  extractionMethod?: DocumentChunk['extractionMethod']
+  tags?: string[]
+}): DocumentChunk[] {
+  const method = input.extractionMethod ?? 'native-text'
+  const tags = input.tags ?? ['lab-document', 'blood-report']
+  return chunkTextBlocks({
+    documentId: input.documentId,
+    sha256: input.sha256,
+    filename: input.filename,
+    blocks: input.pages.map((page) => ({ page: page.page, text: page.text })),
+    tags,
+    extractionMethod: method,
+  })
+}
+
+export function chunkTranscriptText(input: {
+  documentId: string
+  sha256: string
+  filename: string
+  text: string
+  tags?: string[]
+  metadata?: { channel?: string; url?: string; language?: string }
+}): DocumentChunk[] {
+  const prefix = [
+    input.metadata?.channel ? `Channel: ${input.metadata.channel}` : '',
+    input.metadata?.url ? `Source: ${input.metadata.url}` : '',
+    input.metadata?.language ? `Language: ${input.metadata.language}` : '',
+  ].filter(Boolean).join('\n')
+
+  const text = prefix ? `${prefix}\n\n${input.text}` : input.text
+  return chunkTextBlocks({
+    documentId: input.documentId,
+    sha256: input.sha256,
+    filename: input.filename,
+    blocks: [{ text }],
+    tags: input.tags ?? ['transcript', 'biohacking'],
+    extractionMethod: 'native-text',
+  })
 }

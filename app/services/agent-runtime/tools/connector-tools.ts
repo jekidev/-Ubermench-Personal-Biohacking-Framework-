@@ -2,6 +2,7 @@ import type { AgentTool } from '../types'
 import { listConnectorStatuses } from '../../../../plugins/connectors/connector-runtime'
 import { CONNECTOR_REGISTRY, getConnector } from '../../../../plugins/connectors/registry'
 import { syncDrivePdfsToRag } from '../../../../plugins/connectors/drive-rag-sync'
+import { indexYouTubeUrlsToRag } from '../../../../plugins/connectors/youtube-rag-sync'
 import type { ConnectorId } from '../../../../plugins/connectors/types'
 
 export function createConnectorTools(): AgentTool[] {
@@ -66,6 +67,21 @@ export function createConnectorTools(): AgentTool[] {
         const folderId = typeof args.folderId === 'string' ? args.folderId : undefined
         const limit = typeof args.limit === 'number' ? args.limit : undefined
         return syncDrivePdfsToRag({ folderId, limit })
+      },
+    },
+    {
+      name: 'connector.youtube.index',
+      description: 'Fetch YouTube/podcast transcripts and index them into the local document RAG store.',
+      risk: 'medium',
+      requiresApproval: true,
+      async execute(args) {
+        const text = typeof args.text === 'string' ? args.text : undefined
+        const urls = Array.isArray(args.urls)
+          ? args.urls.filter((item): item is string => typeof item === 'string')
+          : undefined
+        const language = typeof args.language === 'string' ? args.language : undefined
+        const force = args.force === true
+        return indexYouTubeUrlsToRag({ text, urls, language, force })
       },
     },
   ]

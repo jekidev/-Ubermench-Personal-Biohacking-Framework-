@@ -31,6 +31,36 @@
     </UCard>
 
     <UCard>
+      <template #header><div class="font-medium">YouTube / podcast → RAG</div></template>
+      <p class="text-sm text-zinc-400">
+        Paste YouTube links (or video IDs) from biohacking podcasts. Captions are fetched locally and chunked into your document RAG index.
+      </p>
+      <UTextarea
+        v-model="youtubeInput"
+        :rows="4"
+        placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/..."
+        class="mt-3"
+      />
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <UInput v-model="youtubeLanguage" placeholder="Caption language (default: en)" class="w-48" />
+        <UButton :loading="youtubeSyncBusy" @click="runYouTubeSync(false)">Index transcripts</UButton>
+        <UButton variant="outline" :loading="youtubeSyncBusy" @click="runYouTubeSync(true)">Re-index all</UButton>
+        <span v-if="youtubeSyncSummary" class="text-sm text-zinc-400">{{ youtubeSyncSummary }}</span>
+      </div>
+      <ul v-if="youtubeSyncVideos.length" class="mt-3 space-y-1 text-sm text-zinc-300">
+        <li v-for="video in youtubeSyncVideos" :key="video.videoId">
+          {{ video.title }} · {{ video.chunks }} chunks
+        </li>
+      </ul>
+      <ul v-if="youtubeSyncErrors.length" class="mt-2 space-y-1 text-sm text-amber-400">
+        <li v-for="error in youtubeSyncErrors" :key="error.videoId">{{ error.videoId }}: {{ error.message }}</li>
+      </ul>
+      <p class="mt-3 text-xs text-zinc-500">
+        Videos need captions/subtitles. For playlists or Whisper fallback, enable the optional Transcriptor MCP connector (Docker).
+      </p>
+    </UCard>
+
+    <UCard>
       <template #header><div class="font-medium">Google Drive → RAG sync</div></template>
       <p class="text-sm text-zinc-400">Downloads new PDFs from Drive, extracts text, and indexes chunks for document Q&A.</p>
       <div class="mt-4 flex flex-wrap items-center gap-3">
@@ -99,6 +129,7 @@
 import { defaultGoogleRedirectUri } from '~~/plugins/connectors/oauth/google-oauth'
 import { listGmailMessages, type GmailMessageSummary } from '~~/plugins/connectors/adapters/gmail-adapter'
 import { syncDrivePdfsToRag } from '~~/plugins/connectors/drive-rag-sync'
+import { indexYouTubeUrlsToRag } from '~~/plugins/connectors/youtube-rag-sync'
 import type { ConnectorConnectionStatus, ConnectorId } from '~~/plugins/connectors/types'
 
 const { catalog, statuses, busy, error, refresh, toggle, saveCredential, isEnabled } = useConnectors()
@@ -108,6 +139,12 @@ const googleClientId = ref('')
 const googleClientSecret = ref('')
 const driveFolderId = ref('')
 const redirectUri = defaultGoogleRedirectUri()
+const youtubeInput = ref('')
+const youtubeLanguage = ref('en')
+const youtubeSyncBusy = ref(false)
+const youtubeSyncSummary = ref('')
+const youtubeSyncVideos = ref<Array<{ videoId: string; title: string; chunks: number; url: string }>>([])
+const youtubeSyncErrors = ref<Array<{ videoId: string; message: string }>>([])
 const driveSyncBusy = ref(false)
 const driveSyncSummary = ref('')
 const driveSyncFiles = ref<Array<{ id: string; name: string; chunks: number }>>([])
@@ -146,6 +183,27 @@ async function saveGoogleConfig() {
 async function connectGoogle(connectorIds: Array<'google-drive' | 'gmail'>) {
   await saveGoogleConfig()
   await google.startOAuth(connectorIds)
+}
+
+async function runYouTubeSync(force: boolean) {
+  youtubeSyncBusy.value = true
+  youtubeSyncSummary.value = ''
+  youtubeSyncVideos.value = []
+  youtubeSyncErrors.value = []
+  try {
+    const result = await indexYouTubeUrlsToRag({
+      text: youtubeInput.value,
+      language: youtubeLanguage.value.trim() || 'en',
+      force,
+    })
+    youtubeSyncVideos.value = result.videos
+    youtubeSyncErrors.value = result.errors
+    youtubeSyncSummary.value = `Indexed ${result.indexed}, skipped ${result.skipped}, failed ${result.failed}.`
+  } catch (cause) {
+    youtubeSyncSummary.value = cause instanceof Error ? cause.message : 'YouTube ingest failed'
+  } finally {
+    youtubeSyncBusy.value = false
+  }
 }
 
 async function runDriveSync() {

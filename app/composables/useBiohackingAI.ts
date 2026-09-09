@@ -108,7 +108,7 @@ export function useBiohackingAI() {
     const documentContext = hits.map((hit, index) => `Document excerpt ${index + 1} (${hit.title}, score ${hit.score.toFixed(2)}):\n${hit.content}`).join('\n\n')
     const system = [
       request.system,
-      'You are answering using indexed local lab documents. Cite excerpts when possible. Never invent biomarker values not present in the excerpts.',
+      'You are answering using indexed local documents (lab PDFs, YouTube/podcast transcripts, and other ingested sources). Cite excerpts when possible. Never invent biomarker values not present in the excerpts.',
       documentContext || 'No matching local document excerpts were found.',
       ...biology.profile.value.biomarkers.slice(-8).map((x) => `Confirmed biomarker: ${x.name} ${x.value} ${x.unit}`),
     ].filter(Boolean).join('\n\n')

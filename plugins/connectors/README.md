@@ -14,6 +14,17 @@ PKCE browser flow on `/connectors`:
 `syncDrivePdfsToRag()` downloads new PDFs, extracts text, and indexes chunks.
 Agent tool: `connector.drive.sync` (requires approval).
 
+## YouTube / podcast → RAG (live)
+
+`indexYouTubeUrlsToRag()` fetches YouTube captions (no API key), chunks transcript text, and stores it in the same local document RAG index used by `askWithDocuments()`.
+
+- UI: `/connectors` → paste one or more YouTube URLs
+- Tags: `youtube`, `podcast`, `biohacking`
+- Desktop: Tauri command `fetch_url_text` avoids browser CORS limits
+- Agent tool: `connector.youtube.index` (requires approval)
+
+Videos must have captions/subtitles. For playlists, channel search, or Whisper fallback on caption-less videos, optionally enable the `transcriptor` MCP connector (Docker image `artsamsonov/transcriptor-mcp`).
+
 ## Tauri Tesseract OCR (live)
 
 Desktop command `ocr_pdf_bytes` invokes system Tesseract on PDF bytes.
