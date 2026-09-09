@@ -324,7 +324,7 @@ fn jsonrpc_line(id: u64, method: &str, params: serde_json::Value) -> String {
         "method": method,
         "params": params,
     })
-        .to_string()
+    .to_string()
         + "\n"
 }
 
@@ -337,7 +337,10 @@ fn parse_jsonrpc_response(line: &str, expected_id: u64) -> Result<serde_json::Va
     if let Some(error) = value.get("error") {
         return Err(format!("MCP JSON-RPC error: {error}"));
     }
-    Ok(value.get("result").cloned().unwrap_or(serde_json::Value::Null))
+    Ok(value
+        .get("result")
+        .cloned()
+        .unwrap_or(serde_json::Value::Null))
 }
 
 fn read_jsonrpc_response(
