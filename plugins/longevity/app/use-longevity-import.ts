@@ -88,9 +88,16 @@ export function useLongevityImport() {
     indexedChunks.value = 0
   }
 
+  function updateObservation(id: string, patch: Partial<LocalObservation>) {
+    candidates.value = candidates.value.map((item) => {
+      if (item.type !== 'observation' || item.value.id !== id) return item
+      return { ...item, value: { ...item.value, ...patch } }
+    })
+  }
+
   function removeCandidate(id: string) {
     candidates.value = candidates.value.filter((item) => item.value.id !== id)
   }
 
-  return { preview, candidates, pageTexts, indexedChunks, busy, error, prepare, confirm, cancel, removeCandidate }
+  return { preview, candidates, pageTexts, indexedChunks, busy, error, prepare, confirm, cancel, updateObservation, removeCandidate }
 }
