@@ -31,6 +31,6 @@ describe("Fearprime PTSD learning phenotypes", () => {
       { threatActive: false, safetyRuleCorrect: true, responseConfidence: 90, valid: true }
     ]);
 
-    expect(result.status).toBe("possible");
+    expect(result.status).toBe("probable");
   });
 });

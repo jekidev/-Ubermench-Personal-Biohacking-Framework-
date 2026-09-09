@@ -36,8 +36,8 @@ describe("Fearprime PTSD phenotype engine", () => {
 
   it("does not classify strong acquisition as an F3 bottleneck", () => {
     const signals = scorePhenotype([
-      extinctionEvent(),
-      extinctionEvent()
+      extinctionEvent({ threatPre: 95, threatPost: 5, safetyPre: 5, safetyPost: 95 }),
+      extinctionEvent({ threatPre: 92, threatPost: 8, safetyPre: 8, safetyPost: 92 })
     ]);
 
     expect(signals.find((signal) => signal.phenotype === "F3")?.status).toBe("resolved");
@@ -54,8 +54,8 @@ describe("Fearprime PTSD phenotype engine", () => {
 
   it("separates context transfer from stimulus generalisation", () => {
     const signals = scorePhenotype([
-      extinctionEvent({ followUps: [{ timepoint: "7d", sameContext: 90, similarStimulus: 85, newContext: 30 }] }),
-      extinctionEvent({ followUps: [{ timepoint: "7d", sameContext: 88, similarStimulus: 84, newContext: 25 }] })
+      extinctionEvent({ followUps: [{ timepoint: "7d", sameContext: 90, similarStimulus: 60, newContext: 20 }] }),
+      extinctionEvent({ followUps: [{ timepoint: "7d", sameContext: 88, similarStimulus: 58, newContext: 18 }] })
     ]);
 
     expect(signals.find((signal) => signal.phenotype === "F5")?.status).toBe("probable");
