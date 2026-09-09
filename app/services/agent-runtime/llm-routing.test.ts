@@ -16,12 +16,19 @@ describe('agent runtime LLM routing', () => {
     }
     const originalFetch = globalThis.fetch
     const calls: string[] = []
-    globalThis.fetch = (async (input: RequestInfo | URL) => { calls.push(String(input)); return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200, headers: { 'content-type': 'application/json' } }) }) as typeof fetch
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input)
+      calls.push(url)
+      if (url.includes('openrouter.ai/api/v1/models')) {
+        return new Response(JSON.stringify({ data: [{ id: 'openrouter/free' }] }), { status: 200, headers: { 'content-type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200, headers: { 'content-type': 'application/json' } })
+    }) as typeof fetch
     try {
       const result = await orchestrateLLM({ prompt: 'test', preferredProvider: 'openai', preferredModel: 'gpt-5.6' }, settings)
       expect(result.provider).toBe('openai')
       expect(result.model).toBe('gpt-5.6')
-      expect(calls[0]).toContain('api.openai.com')
+      expect(calls.some((url) => url.includes('api.openai.com'))).toBe(true)
     } finally { globalThis.fetch = originalFetch }
   })
 })

@@ -305,6 +305,143 @@ pub fn mcp_stdio_execute(
     })
 }
 
+#[derive(Debug, Deserialize)]
+pub struct McpStdioJsonRpcRequest {
+    pub command: String,
+    pub args: Vec<String>,
+    pub approval_token: String,
+    pub timeout_ms: Option<u64>,
+    pub env: Option<HashMap<String, String>>,
+    pub method: String,
+    pub params: serde_json::Value,
+    pub with_initialize: Option<bool>,
+}
+
+fn jsonrpc_line(id: u64, method: &str, params: serde_json::Value) -> String {
+    serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": id,
+        "method": method,
+        "params": params,
+    })
+    .to_string()
+        + "\n"
+}
+
+fn parse_jsonrpc_response(line: &str, expected_id: u64) -> Result<serde_json::Value, String> {
+    let value: serde_json::Value = serde_json::from_str(line.trim())
+        .map_err(|error| format!("MCP JSON-RPC parse failed: {error}"))?;
+    if value.get("id").and_then(|id| id.as_u64()) != Some(expected_id) {
+        return Err("MCP JSON-RPC response id mismatch.".into());
+    }
+    if let Some(error) = value.get("error") {
+        return Err(format!("MCP JSON-RPC error: {error}"));
+    }
+    Ok(value
+        .get("result")
+        .cloned()
+        .unwrap_or(serde_json::Value::Null))
+}
+
+fn read_jsonrpc_response(
+    reader: &mut impl Read,
+    expected_id: u64,
+    deadline: Instant,
+) -> Result<serde_json::Value, String> {
+    let mut buffer = String::new();
+    let mut chunk = [0u8; 1];
+    while Instant::now() < deadline {
+        match reader.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(_) => {
+                let ch = chunk[0];
+                if ch == b'\n' {
+                    if !buffer.trim().is_empty() {
+                        if let Ok(value) = parse_jsonrpc_response(&buffer, expected_id) {
+                            return Ok(value);
+                        }
+                    }
+                    buffer.clear();
+                } else {
+                    buffer.push(char::from(ch));
+                    if buffer.len() > MAX_OUTPUT_BYTES {
+                        return Err("MCP JSON-RPC response exceeded size limit.".into());
+                    }
+                }
+            }
+            Err(_) => break,
+        }
+    }
+    if !buffer.trim().is_empty() {
+        return parse_jsonrpc_response(&buffer, expected_id);
+    }
+    Err("MCP JSON-RPC timed out waiting for response.".into())
+}
+
+#[tauri::command]
+pub fn mcp_stdio_jsonrpc(
+    request: McpStdioJsonRpcRequest,
+    registry: tauri::State<'_, McpApprovalRegistry>,
+) -> Result<serde_json::Value, String> {
+    validate_command(&request.command)?;
+    validate_args(&request.args)?;
+    consume_approval(
+        &registry,
+        &request.approval_token,
+        &request.command,
+        &request.args,
+    )?;
+    if let Some(env) = &request.env {
+        validate_env(env)?;
+    }
+    let timeout = timeout_ms(request.timeout_ms);
+    let mut command = Command::new(&request.command);
+    command
+        .args(&request.args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    if let Some(env) = &request.env {
+        for (key, value) in env {
+            command.env(key, value);
+        }
+    }
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("MCP stdio spawn failed: {error}"))?;
+    let mut stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "MCP stdio stdin unavailable.".to_string())?;
+    let mut stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "MCP stdio stdout unavailable.".to_string())?;
+    let deadline = Instant::now() + Duration::from_millis(timeout);
+    if request.with_initialize.unwrap_or(true) {
+        let init = jsonrpc_line(
+            1,
+            "initialize",
+            serde_json::json!({
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": { "name": "ubermensch", "version": "0.1.0" }
+            }),
+        );
+        stdin
+            .write_all(init.as_bytes())
+            .map_err(|error| format!("MCP stdio stdin failed: {error}"))?;
+        let _ = read_jsonrpc_response(&mut stdout, 1, deadline);
+    }
+    let rpc = jsonrpc_line(2, &request.method, request.params);
+    stdin
+        .write_all(rpc.as_bytes())
+        .map_err(|error| format!("MCP stdio stdin failed: {error}"))?;
+    let result = read_jsonrpc_response(&mut stdout, 2, deadline)?;
+    terminate(&mut child);
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
