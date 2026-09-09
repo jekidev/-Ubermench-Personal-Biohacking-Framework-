@@ -3,7 +3,7 @@ import { assertToolPolicyAllowed } from './tool-policy-guard'
 import type { AgentTool } from './types'
 
 const writeTool: AgentTool = {
-  name: 'framework_write_file',
+  name: 'framework.write_file',
   description: 'write',
   risk: 'high',
   requiresApproval: true,

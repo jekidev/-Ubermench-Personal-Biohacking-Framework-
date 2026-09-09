@@ -47,3 +47,27 @@ export async function issueNativeMcpApproval(command: string, args: string[]) {
     request: { command, args },
   })
 }
+
+export async function nativeMcpJsonRpc(
+  command: string,
+  args: string[],
+  approvalToken: string,
+  method: string,
+  params: unknown,
+  options?: { timeoutMs?: number; env?: Record<string, string>; withInitialize?: boolean },
+): Promise<unknown> {
+  if (!isTauriRuntime()) throw new Error('Native MCP JSON-RPC is available only in the Tauri runtime.')
+  if (!approvalToken.trim()) throw new Error('Native MCP JSON-RPC requires an explicit approval token.')
+  return invoke<unknown>('mcp_stdio_jsonrpc', {
+    request: {
+      command,
+      args,
+      approval_token: approvalToken,
+      timeout_ms: options?.timeoutMs,
+      env: options?.env,
+      method,
+      params,
+      with_initialize: options?.withInitialize ?? true,
+    },
+  })
+}

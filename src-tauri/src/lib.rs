@@ -1,3 +1,4 @@
+mod framework;
 mod health_connect;
 mod http_fetch;
 mod mcp;
@@ -57,7 +58,13 @@ pub fn run() {
             health_connect::health_connect_sync_records,
             mcp::mcp_stdio_preflight,
             mcp::mcp_issue_approval,
-            mcp::mcp_stdio_execute
+            mcp::mcp_stdio_execute,
+            mcp::mcp_stdio_jsonrpc,
+            framework::framework_snapshot,
+            framework::framework_search,
+            framework::framework_read_file,
+            framework::framework_write_file,
+            framework::framework_run_command
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ubermench application");

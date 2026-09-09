@@ -8,6 +8,7 @@ import { createConnectorTools } from './tools/connector-tools'
 import { createGoogleWorkspaceTools } from './tools/google-workspace-tools'
 import { createMcpInstallTools } from './tools/mcp-install-tools'
 import { createMcpHttpTools } from './tools/mcp-http-tools'
+import { createFrameworkTools } from './tools/framework-tools'
 import { assertToolPolicyAllowed } from './tool-policy-guard'
 import type { AgentTool, AgentToolCall } from './types'
 
@@ -92,6 +93,9 @@ export function createDefaultToolGateway(): AgentToolGateway {
     gateway.register(tool)
   }
   for (const tool of createMcpHttpTools()) {
+    gateway.register(tool)
+  }
+  for (const tool of createFrameworkTools()) {
     gateway.register(tool)
   }
   return gateway

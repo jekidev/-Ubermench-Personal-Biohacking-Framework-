@@ -1,3 +1,4 @@
+import { discoverOpenRouterFreeModels } from '../../plugins/llm/runtime/openrouter-catalog'
 import {
   selectNextProvider,
   type ProviderCandidate,
@@ -8,6 +9,9 @@ import type { LLMProviderConfig, LLMRequest, LLMSettings } from '~/types/llm'
 import { providerHealth } from './agent-runtime/provider-health'
 
 const PLUGIN_PROVIDERS = new Set<PluginLLMProvider>(['openrouter', 'openai', 'anthropic'])
+const FREE_MODEL_CACHE_TTL_MS = 15 * 60 * 1000
+
+let freeModelCache: { key: string; fetchedAt: number; models: string[] } | null = null
 
 export function modelForProvider(provider: LLMProviderConfig): string {
   if (provider.model?.trim()) return provider.model.trim()
@@ -15,8 +19,36 @@ export function modelForProvider(provider: LLMProviderConfig): string {
   return ''
 }
 
-function isFreeModel(provider: LLMProviderConfig): boolean {
-  return provider.provider === 'openrouter' && modelForProvider(provider) === 'openrouter/free'
+function isFreeModel(provider: LLMProviderConfig, model?: string): boolean {
+  const resolved = model ?? modelForProvider(provider)
+  return provider.provider === 'openrouter' && (resolved === 'openrouter/free' || resolved.endsWith(':free'))
+}
+
+function candidateKey(candidate: Pick<ProviderCandidate, 'provider' | 'model'>): string {
+  return `${candidate.provider}:${candidate.model}`
+}
+
+async function openRouterFreeModelIds(settings: LLMSettings): Promise<string[]> {
+  const openrouter = settings.providers.find((provider) => provider.provider === 'openrouter' && provider.apiKey?.trim())
+  if (!openrouter?.apiKey || !settings.preferFree) return []
+
+  const cacheKey = openrouter.apiKey.slice(-8)
+  if (
+    freeModelCache
+    && freeModelCache.key === cacheKey
+    && Date.now() - freeModelCache.fetchedAt < FREE_MODEL_CACHE_TTL_MS
+  ) {
+    return freeModelCache.models
+  }
+
+  try {
+    const models = await discoverOpenRouterFreeModels(openrouter.apiKey)
+    const ids = models.slice(0, 12).map((model) => model.id)
+    freeModelCache = { key: cacheKey, fetchedAt: Date.now(), models: ids }
+    return ids
+  } catch {
+    return []
+  }
 }
 
 export function toProviderCandidates(settings: LLMSettings): ProviderCandidate[] {
@@ -30,6 +62,25 @@ export function toProviderCandidates(settings: LLMSettings): ProviderCandidate[]
       hasApiKey: Boolean(provider.apiKey?.trim()),
     }))
     .filter((candidate) => providerHealth.isAvailable(candidate.provider))
+}
+
+export async function toProviderCandidatesAsync(settings: LLMSettings): Promise<ProviderCandidate[]> {
+  const base = toProviderCandidates(settings)
+  const freeIds = await openRouterFreeModelIds(settings)
+  if (!freeIds.length) return base
+
+  const openrouter = settings.providers.find((provider) => provider.provider === 'openrouter')
+  if (!openrouter?.enabled || !openrouter.apiKey?.trim()) return base
+
+  const withoutOpenrouter = base.filter((candidate) => candidate.provider !== 'openrouter')
+  const catalogCandidates = freeIds.map((model) => ({
+    provider: 'openrouter' as const,
+    model,
+    free: true,
+    enabled: true,
+    hasApiKey: true,
+  }))
+  return [...withoutOpenrouter, ...catalogCandidates]
 }
 
 export function toRotationPolicy(
@@ -46,17 +97,18 @@ export function toRotationPolicy(
   }
 }
 
-export function findProviderConfig(settings: LLMSettings, active: ActiveModel): LLMProviderConfig | undefined {
-  return settings.providers.find(
-    (provider) => provider.provider === active.provider && modelForProvider(provider) === active.model,
-  ) ?? settings.providers.find((provider) => provider.provider === active.provider)
+export function resolveProviderConfig(settings: LLMSettings, active: ActiveModel): LLMProviderConfig | undefined {
+  const base = settings.providers.find((provider) => provider.provider === active.provider)
+  if (!base) return undefined
+  if (modelForProvider(base) === active.model) return base
+  return { ...base, model: active.model }
 }
 
-export function selectProvidersForRequest(
+export async function selectProvidersForRequest(
   settings: LLMSettings,
   request: LLMRequest,
-): LLMProviderConfig[] {
-  const candidates = toProviderCandidates(settings)
+): Promise<LLMProviderConfig[]> {
+  const candidates = await toProviderCandidatesAsync(settings)
   const hasPreferred = Boolean(request.preferredProvider || request.preferredModel)
   const policy = {
     ...toRotationPolicy(settings),
@@ -71,17 +123,19 @@ export function selectProvidersForRequest(
   if (!pool.length) return []
 
   const ordered: LLMProviderConfig[] = []
-  const failed: PluginLLMProvider[] = []
+  const failedKeys = new Set<string>()
   while (ordered.length < pool.length) {
-    const next = selectNextProvider(pool, { ...policy, failedProviders: failed })
+    const available = pool.filter((candidate) => !failedKeys.has(candidateKey(candidate)))
+    const next = selectNextProvider(available, { ...policy, failedProviders: [] })
     if (!next) break
-    const config = findProviderConfig(settings, next)
-    if (!config || ordered.some((item) => item.provider === config.provider && modelForProvider(item) === modelForProvider(config))) {
-      failed.push(next.provider)
+    const config = resolveProviderConfig(settings, next)
+    const key = candidateKey(next)
+    if (!config || failedKeys.has(key)) {
+      failedKeys.add(key)
       continue
     }
     ordered.push(config)
-    failed.push(next.provider)
+    failedKeys.add(key)
   }
 
   const forceRotation = request.mode === 'safety' || request.mode === 'auditor'
@@ -94,7 +148,7 @@ export async function executeWithRotatingProviders<T>(
   request: LLMRequest,
   execute: (provider: LLMProviderConfig, active: ActiveModel) => Promise<T>,
 ): Promise<{ value: T; provider: ActiveModel; attempts: number; fallbackUsed: boolean }> {
-  const ordered = selectProvidersForRequest(settings, request)
+  const ordered = await selectProvidersForRequest(settings, request)
   if (!ordered.length) throw new Error('No enabled LLM provider with an API key. Unlock the secret vault and add a key in Settings.')
 
   const forceRotation = request.mode === 'safety' || request.mode === 'auditor'
