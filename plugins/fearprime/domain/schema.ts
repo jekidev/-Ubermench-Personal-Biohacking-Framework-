@@ -1,3 +1,5 @@
+import type { FearPhenotypeId, PTSDLearningEventType } from "./ptsd";
+
 export type ID = string;
 
 export type ThreatType =
@@ -8,16 +10,8 @@ export type ThreatType =
   | "intrusive"
   | "nightmare";
 
-export type EventType =
-  | "retrieval"
-  | "extinction"
-  | "safety_discrimination"
-  | "counterconditioning"
-  | "imagery_rescripting"
-  | "interoceptive"
-  | "generalisation"
-  | "retention_test"
-  | "naturalistic_trigger";
+/** Canonical PTSD learning events plus the legacy retention_test alias. */
+export type EventType = PTSDLearningEventType | "retention_test";
 
 export type InterventionType =
   | "psychotherapy"
@@ -30,7 +24,6 @@ export type InterventionType =
   | "digital";
 
 export type EvidenceTier = "E0" | "E1" | "E2" | "E3";
-
 export type QualityState = "pass" | "unclear" | "fail" | "flag";
 
 export interface Patient {
@@ -79,7 +72,7 @@ export interface MemoryTarget {
     | "generalised"
     | "stable"
     | "reassess";
-  currentBottleneck?: string;
+  currentBottleneck?: FearPhenotypeId;
   createdAt: string;
   updatedAt: string;
   version: number;
@@ -109,7 +102,7 @@ export interface Stimulus {
 export interface Hypothesis {
   id: ID;
   patientId: ID;
-  targetType: string;
+  targetType: FearPhenotypeId;
   statement: string;
   expectedDirection?: "increase" | "decrease" | "none" | "mixed";
   confidence: number;
@@ -184,6 +177,7 @@ export interface LearningEvent {
   preState?: EventState;
   postState?: EventState;
   actualOutcome?: string;
+  actualOutcomeProbability?: number;
   learningQuality?: LearningQuality;
   dataQuality?: DataQuality;
   status: "draft" | "locked" | "completed" | "invalid" | "safety_review";
@@ -210,6 +204,8 @@ export interface FollowUp {
   renewal?: number;
   reinstatement?: number;
   majorStressSinceEvent?: boolean;
+  confounded?: boolean;
+  correctionOf?: ID;
 }
 
 export interface DataQuality {
@@ -227,10 +223,11 @@ export interface Intervention {
   id: ID;
   name: string;
   type: InterventionType;
+  role?: "clinical" | "adjunct" | "chronic_state" | "learning_augmentation" | "systems_biology" | "exploratory";
   mechanism?: string[];
   targetPhases: string[];
   evidenceTier: EvidenceTier;
-  ptsdEvidenceTier: "none" | "limited" | "moderate" | "strong";
+  ptsdEvidenceTier: "none" | "limited" | "moderate" | "strong" | "very_limited";
   expectedLatency?: string;
   expectedWindow?: string;
   primaryEndpointId?: ID;
