@@ -4,6 +4,7 @@ import {
   defaultGoogleRedirectUri,
   GOOGLE_CONNECTOR_IDS,
   GOOGLE_SECRET_KEYS,
+  isGoogleConnectorId,
   loadOAuthState,
   scopesForConnectors,
   type GoogleConnectorId,
@@ -98,13 +99,14 @@ export function useGoogleOAuth() {
     try {
       const state = loadOAuthState()
       if (!state) throw new Error('OAuth state expired. Start connect again from Connectors.')
+      const workspaceIds = state.connectorIds.filter(isGoogleConnectorId)
       await completeGoogleOAuth({
         code,
         redirectUri: state.redirectUri,
         codeVerifier: state.codeVerifier,
-        connectorIds: state.connectorIds,
+        connectorIds: workspaceIds,
       })
-      for (const id of state.connectorIds) setConnectorEnabled(id, true)
+      for (const id of workspaceIds) setConnectorEnabled(id, true)
       clearOAuthState()
       await refreshStatus()
       return state.connectorIds
