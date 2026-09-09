@@ -673,8 +673,7 @@ pub fn mcp_stdio_session_call(
     let rpc_id = record.next_rpc_id;
     record.next_rpc_id += 1;
     record.last_used_ms = now;
-    let deadline =
-        Instant::now() + Duration::from_millis(timeout_ms(request.timeout_ms));
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms(request.timeout_ms));
     let rpc = jsonrpc_line(rpc_id, &request.method, request.params);
     record
         .stdin
@@ -790,9 +789,21 @@ mod tests {
         let created = 1_000;
         let idle_boundary = created + SESSION_IDLE_MS;
         assert!(!session_timestamps_expired(created, created, idle_boundary));
-        assert!(session_timestamps_expired(created, created, idle_boundary + 1));
+        assert!(session_timestamps_expired(
+            created,
+            created,
+            idle_boundary + 1
+        ));
         let max_boundary = created + SESSION_MAX_MS;
-        assert!(!session_timestamps_expired(created, max_boundary - 1, max_boundary - 1));
-        assert!(session_timestamps_expired(created, max_boundary - 1, max_boundary + 1));
+        assert!(!session_timestamps_expired(
+            created,
+            max_boundary - 1,
+            max_boundary - 1
+        ));
+        assert!(session_timestamps_expired(
+            created,
+            max_boundary - 1,
+            max_boundary + 1
+        ));
     }
 }
