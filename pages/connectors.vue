@@ -182,26 +182,104 @@
     </div>
 
     <UCard>
+      <template #header>
+        <div class="flex items-center justify-between gap-3">
+          <div class="font-medium">Active MCP stdio sessions</div>
+          <UButton size="sm" variant="outline" :loading="mcpSessions.busy.value" @click="refreshMcpSessions">Refresh</UButton>
+        </div>
+      </template>
+      <p class="text-sm text-zinc-400">
+        Long-lived stdio sessions reuse the same child process for <code>tools/list</code> and <code>tools/call</code>. Idle timeout 5 min, max lifetime 30 min.
+      </p>
+      <UAlert
+        v-if="!mcpSessions.tauriAvailable.value"
+        class="mt-3"
+        title="Desktop runtime required"
+        description="MCP stdio sessions and tool discovery are available in the Tauri desktop app, not in the browser preview."
+        color="warning"
+        variant="subtle"
+      />
+      <UAlert v-if="mcpSessions.error.value" class="mt-3" title="MCP session error" :description="mcpSessions.error.value" color="error" variant="subtle" />
+      <div v-if="mcpSessions.sessions.value.length" class="mt-4 space-y-2">
+        <div
+          v-for="session in mcpSessions.sessions.value"
+          :key="session.sessionId"
+          class="flex flex-wrap items-center justify-between gap-3 rounded border border-zinc-800 p-3 text-sm"
+        >
+          <div>
+            <div class="font-medium">{{ session.serverId ?? 'unknown server' }}</div>
+            <div class="text-xs text-zinc-500">
+              Session {{ session.sessionId.slice(0, 8) }}…
+              · last used {{ mcpSessions.formatSessionAge(session.lastUsedMs) }}
+              <span v-if="session.cached"> · cached</span>
+            </div>
+          </div>
+          <UButton
+            v-if="session.serverId"
+            size="sm"
+            variant="ghost"
+            color="neutral"
+            :loading="mcpSessions.busy.value"
+            @click="closeMcpSession(session.serverId)"
+          >
+            Close
+          </UButton>
+        </div>
+      </div>
+      <p v-else class="mt-4 text-sm text-zinc-500">No active MCP sessions. Discover tools on an installed server to start one.</p>
+    </UCard>
+
+    <UCard>
       <template #header><div class="font-medium">MCP catalog (local install)</div></template>
       <p class="text-sm text-zinc-400">
         The agent can propose <code>mcp.install</code>, but catalog installs stay allowlisted and custom servers require an explicit confirm. Env key names are stored — never secret values.
       </p>
       <div class="mt-4 space-y-3">
-        <div v-for="server in mcp.catalog.value" :key="server.serverId" class="flex flex-wrap items-center justify-between gap-3 rounded border border-zinc-800 p-3">
-          <div>
-            <div class="font-medium">{{ server.serverId }}</div>
-            <p class="text-xs text-zinc-500">{{ server.description }}</p>
-            <p class="text-xs text-zinc-500">{{ server.executable }} {{ server.args.join(' ') }}</p>
+        <div v-for="server in mcp.catalog.value" :key="server.serverId" class="rounded border border-zinc-800 p-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="font-medium">{{ server.serverId }}</div>
+              <p class="text-xs text-zinc-500">{{ server.description }}</p>
+              <p class="text-xs text-zinc-500">{{ server.executable }} {{ server.args.join(' ') }}</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <UBadge :color="server.installed ? (server.enabled ? 'success' : 'neutral') : 'warning'" variant="subtle">
+                {{ server.installed ? (server.enabled ? 'installed' : 'disabled') : 'catalog' }}
+              </UBadge>
+              <UButton v-if="!server.installed" size="sm" :loading="mcp.busy.value" @click="mcp.install(server.serverId)">Install</UButton>
+              <UButton v-else size="sm" variant="outline" @click="mcp.setEnabled(server.serverId, !server.enabled)">
+                {{ server.enabled ? 'Disable' : 'Enable' }}
+              </UButton>
+              <UButton
+                v-if="server.installed && server.enabled"
+                size="sm"
+                variant="outline"
+                :loading="mcpSessions.busy.value && discoveringServerId === server.serverId"
+                @click="discoverMcpTools(server)"
+              >
+                Discover tools
+              </UButton>
+              <UButton v-if="server.installed" size="sm" color="neutral" variant="ghost" @click="mcp.uninstall(server.serverId)">Uninstall</UButton>
+            </div>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <UBadge :color="server.installed ? (server.enabled ? 'success' : 'neutral') : 'warning'" variant="subtle">
-              {{ server.installed ? (server.enabled ? 'installed' : 'disabled') : 'catalog' }}
-            </UBadge>
-            <UButton v-if="!server.installed" size="sm" :loading="mcp.busy.value" @click="mcp.install(server.serverId)">Install</UButton>
-            <UButton v-else size="sm" variant="outline" @click="mcp.setEnabled(server.serverId, !server.enabled)">
-              {{ server.enabled ? 'Disable' : 'Enable' }}
-            </UButton>
-            <UButton v-if="server.installed" size="sm" color="neutral" variant="ghost" @click="mcp.uninstall(server.serverId)">Uninstall</UButton>
+          <div v-if="mcpSessions.discovered.value[server.serverId]" class="mt-3 border-t border-zinc-800 pt-3">
+            <p v-if="mcpSessions.discovered.value[server.serverId]?.error" class="text-sm text-amber-400">
+              {{ mcpSessions.discovered.value[server.serverId]?.error }}
+            </p>
+            <template v-else>
+              <p class="text-xs text-zinc-500">
+                {{ mcpSessions.discovered.value[server.serverId]?.tools.length ?? 0 }} tools
+                · session {{ mcpSessions.discovered.value[server.serverId]?.sessionId.slice(0, 8) }}…
+                · {{ mcpSessions.discovered.value[server.serverId]?.reusedSession ? 'reused' : 'new' }}
+              </p>
+              <ul v-if="mcpSessions.discovered.value[server.serverId]?.tools.length" class="mt-2 space-y-1 text-sm text-zinc-300">
+                <li v-for="tool in mcpSessions.discovered.value[server.serverId]?.tools" :key="tool.name">
+                  <span class="font-medium">{{ tool.name }}</span>
+                  <span v-if="tool.description" class="text-zinc-500"> — {{ tool.description }}</span>
+                </li>
+              </ul>
+              <p v-else class="mt-2 text-sm text-zinc-500">No tools reported by this server.</p>
+            </template>
           </div>
         </div>
       </div>
@@ -283,6 +361,9 @@ const isAndroidBrowserRef = computed(() => isAndroidBrowser())
 const { catalog, statuses, busy, error, refresh, toggle, saveCredential, isEnabled } = useConnectors()
 const google = useGoogleOAuth()
 const mcp = useMcpInstall()
+const mcpSessions = useMcpSessions()
+const mcpApproval = useNativeMcpApproval()
+const discoveringServerId = ref('')
 const googleJsonInput = ref<HTMLInputElement>()
 const credentialDrafts = reactive<Record<string, string>>({})
 const googleClientId = ref('')
@@ -328,6 +409,7 @@ onMounted(async () => {
   driveFolderId.value = creds.driveFolderId ?? ''
   await google.refreshStatus()
   mcp.refresh()
+  await mcpSessions.refresh()
   scheduler.refresh()
   await scheduler.tickIfDue()
   await refresh()
@@ -336,7 +418,33 @@ onMounted(async () => {
 async function refreshAll() {
   await google.refreshStatus()
   mcp.refresh()
+  await mcpSessions.refresh()
   await refresh()
+}
+
+async function refreshMcpSessions() {
+  await mcpSessions.refresh()
+}
+
+async function closeMcpSession(serverId: string) {
+  await mcpSessions.closeSession(serverId)
+}
+
+async function discoverMcpTools(server: { serverId: string; executable: string; args: string[] }) {
+  discoveringServerId.value = server.serverId
+  mcpApproval.clear()
+  try {
+    let approvalToken = mcpApproval.token.value ?? ''
+    if (!approvalToken) {
+      await mcpApproval.request(server.executable, server.args)
+      approvalToken = mcpApproval.token.value ?? ''
+    }
+    await mcpSessions.discoverTools(server.serverId, approvalToken)
+  } catch (cause) {
+    mcpSessions.error.value = cause instanceof Error ? cause.message : 'MCP tool discovery failed'
+  } finally {
+    discoveringServerId.value = ''
+  }
 }
 
 function statusFor(id: ConnectorId) {

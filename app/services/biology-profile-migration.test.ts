@@ -23,4 +23,31 @@ describe('biology profile migration', () => {
     expect(migrateBiologyProfile(null).version).toBe(1)
     expect(migrateBiologyProfile(null).biomarkers).toEqual([])
   })
+
+  it('normalizes missing arrays on version 1 profiles', () => {
+    const migrated = migrateBiologyProfile({
+      version: 1,
+      goals: ['longevity', 42],
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    })
+    expect(migrated.goals).toEqual(['longevity'])
+    expect(migrated.biomarkers).toEqual([])
+    expect(migrated.medications).toEqual([])
+    expect(migrated.supplements).toEqual([])
+    expect(migrated.variants).toEqual([])
+  })
+
+  it('covers every supported profile version in backup round-trip', async () => {
+    const { createBiologyBackup, parseBiologyBackup, serializeBiologyBackup } = await import('./biology-backup')
+    for (const version of SUPPORTED_BIOLOGY_PROFILE_VERSIONS) {
+      const profile = emptyBiologyProfile()
+      profile.version = version
+      profile.goals = [`v${version}`]
+      const backup = await createBiologyBackup(profile)
+      const parsed = await parseBiologyBackup(serializeBiologyBackup(backup))
+      expect(parsed.profile.version).toBe(version)
+      expect(parsed.profile.goals).toEqual([`v${version}`])
+      expect(parsed.checksum).toBeTruthy()
+    }
+  })
 })

@@ -28,5 +28,17 @@ describe('biology backup lifecycle', () => {
     expect(validation.incoming.biomarkers[0]?.name).toBe('Glucose')
     expect(validation.metadata?.biomarkerCount).toBe(1)
     expect(validation.checksum).toBe(backup.checksum)
+    expect(validation.valid).toBe(true)
+    expect(validation.metadata?.biomarkerCount).toBe(1)
+  })
+
+  it('rejects replacing profile when migration fails before import', async () => {
+    const current = emptyBiologyProfile()
+    current.goals = ['keep']
+    const invalid = await createBiologyBackup(emptyBiologyProfile())
+    invalid.profile = { version: 99 } as unknown as typeof invalid.profile
+    const validation = validateImportCandidate(invalid, current)
+    expect(validation.valid).toBe(false)
+    expect(validation.incoming.goals).toEqual(['keep'])
   })
 })

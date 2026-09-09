@@ -24,6 +24,14 @@ describe('biology import validator', () => {
     expect(result.checksum).toBeTruthy()
   })
 
+  it('blocks imports that fail profile migration', async () => {
+    const backup = await createBiologyBackup(emptyBiologyProfile())
+    backup.profile = { version: 99 } as unknown as typeof backup.profile
+    const result = validateImportCandidate(backup, emptyBiologyProfile())
+    expect(result.valid).toBe(false)
+    expect(result.issues[0]?.severity).toBe('error')
+  })
+
   it('warns when import would clear biomarkers', async () => {
     const current = emptyBiologyProfile()
     current.biomarkers.push({
