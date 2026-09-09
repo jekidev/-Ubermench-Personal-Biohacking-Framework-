@@ -18,6 +18,23 @@ export function createHealthSyncOrchestrator(subjectId = 'self'): HealthSyncOrch
   })
 }
 
+export async function importGarminWellnessPayload(payload: unknown): Promise<ExternalHealthSample[]> {
+  return new GarminOAuthAdapter().importWellnessPayload(payload)
+}
+
+export async function storeGarminAccessToken(accessToken: string, refreshToken?: string): Promise<void> {
+  await new GarminOAuthAdapter().storeTokens(accessToken, refreshToken)
+}
+
+export async function importGarminWellnessAndPersist(payload: unknown, subjectId = 'self') {
+  const samples = await importGarminWellnessPayload(payload)
+  if (!import.meta.client) {
+    return { samples, results: [], observations: [], store: null }
+  }
+  const persisted = await syncAndPersistHealth(createHealthSyncOrchestrator(subjectId), window.localStorage)
+  return { samples, ...persisted }
+}
+
 export async function syncHealthProvider(provider: HealthProviderId, subjectId = 'self'): Promise<{ samples: ExternalHealthSample[]; error?: string }> {
   const orchestrator = createHealthSyncOrchestrator(subjectId)
   try {

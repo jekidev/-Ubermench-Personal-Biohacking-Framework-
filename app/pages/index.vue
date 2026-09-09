@@ -54,6 +54,9 @@
     <UCard>
       <template #header><div class="font-medium">Modules</div></template>
       <div class="flex flex-wrap gap-4 text-sm">
+        <NuxtLink to="/biology" class="underline underline-offset-4">Biology</NuxtLink>
+        <NuxtLink to="/health-sync" class="underline underline-offset-4">Health Sync</NuxtLink>
+        <NuxtLink to="/longevity" class="underline underline-offset-4">Longevity</NuxtLink>
         <NuxtLink to="/starchive" class="underline underline-offset-4">STARCHIVE</NuxtLink>
         <NuxtLink to="/connectors" class="underline underline-offset-4">Connectors</NuxtLink>
         <NuxtLink to="/settings" class="underline underline-offset-4">LLM Settings</NuxtLink>
