@@ -1,3 +1,4 @@
+mod http_fetch;
 mod mcp;
 mod ocr;
 mod pdf;
@@ -44,6 +45,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             fingerprint_bytes,
             app_name,
+            http_fetch::fetch_url_text,
             pdf::extract_pdf_lab_text,
             ocr::ocr_pdf_lab_text,
             ocr::ocr_pdf_bytes,
