@@ -1,4 +1,6 @@
 import type { PersonalBiologyProfile } from '~/types/biology'
+import { migrateBiologyProfile } from './biology-profile-migration'
+import { assertNoSecretsInExport } from './secret-leak-guard'
 
 export const BIOLOGY_BACKUP_VERSION = 1 as const
 
@@ -38,8 +40,14 @@ export async function computeBiologyBackupChecksum(profile: PersonalBiologyProfi
   return sha256Hex(JSON.stringify(profile))
 }
 
+function cloneBiologyProfile(profile: PersonalBiologyProfile): PersonalBiologyProfile {
+  // JSON round-trip avoids DetachedCloneError when profile is a Vue reactive proxy.
+  return migrateBiologyProfile(JSON.parse(JSON.stringify(profile)) as PersonalBiologyProfile)
+}
+
 export async function createBiologyBackup(profile: PersonalBiologyProfile, exportedAt = new Date().toISOString()): Promise<BiologyBackup> {
-  const cloned = structuredClone(profile)
+  const cloned = cloneBiologyProfile(profile)
+  assertNoSecretsInExport('biology-backup', cloned)
   const checksum = await computeBiologyBackupChecksum(cloned)
   return {
     format: 'ubermench-biology-backup',
@@ -61,11 +69,13 @@ export async function parseBiologyBackup(raw: string): Promise<BiologyBackup> {
   if (parsed.format !== 'ubermench-biology-backup' || parsed.version !== BIOLOGY_BACKUP_VERSION) {
     throw new Error('Unsupported Ubermench biology backup version')
   }
-  if (!isRecord(parsed.profile) || parsed.profile.version !== 1) {
-    throw new Error('Backup does not contain a version 1 biology profile')
+  if (!isRecord(parsed.profile)) {
+    throw new Error('Backup does not contain a biology profile')
   }
 
   const backup = parsed as unknown as BiologyBackup
+  backup.profile = migrateBiologyProfile(backup.profile)
+
   if (backup.checksum) {
     const expected = await computeBiologyBackupChecksum(backup.profile)
     if (expected !== backup.checksum) throw new Error('Biology backup checksum mismatch')

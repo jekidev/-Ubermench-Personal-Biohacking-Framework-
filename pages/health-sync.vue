@@ -39,10 +39,30 @@
       </UCard>
 
       <UCard>
-        <template #header><div class="font-medium">Garmin access token</div></template>
+        <template #header><div class="font-medium">Garmin OAuth (Wellness API)</div></template>
         <p class="text-sm text-zinc-400">
-          Optional Wellness API token. Stored in the secret vault (Stronghold on desktop, in-memory in browser).
-          Tokens are never written into imported samples or biology backups.
+          Connect with PKCE using your Garmin Connect Developer client ID and secret. Tokens stay in the secret vault and never enter biology backups or sample caches.
+        </p>
+        <div class="mt-3 grid gap-3">
+          <UInput v-model="garminClientId" placeholder="Garmin client ID" />
+          <UInput v-model="garminClientSecret" type="password" placeholder="Garmin client secret" autocomplete="off" />
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <UButton variant="outline" :loading="garminOAuth.busy.value" @click="saveGarminOAuthConfig">Save OAuth config</UButton>
+          <UButton :loading="garminOAuth.busy.value" @click="connectGarminOAuth">Connect Garmin</UButton>
+        </div>
+        <p class="mt-3 text-xs text-zinc-500">
+          Redirect URI: <code>{{ garminOAuth.redirectUri }}</code>
+          · Configured {{ garminOAuth.configured.value ? 'yes' : 'no' }}
+          · Token {{ garminOAuth.connected.value ? 'present' : 'missing' }}
+        </p>
+        <UAlert v-if="garminOAuth.error.value" class="mt-3" title="Garmin OAuth" :description="garminOAuth.error.value" color="warning" variant="subtle" />
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Garmin access token (manual)</div></template>
+        <p class="text-sm text-zinc-400">
+          Development fallback when OAuth is unavailable. Stored in the secret vault (Stronghold on desktop, browser secret store in preview).
         </p>
         <UInput v-model="garminToken" type="password" placeholder="Garmin access token" autocomplete="off" class="mt-3" />
         <UButton class="mt-3" :loading="garminBusy" :disabled="!garminToken.trim()" @click="saveGarminToken">Save token to vault</UButton>
@@ -129,8 +149,11 @@ import {
 } from '~/services/health-sync-runtime'
 import { defaultGoogleRedirectUri } from '~~/plugins/connectors/oauth/google-oauth'
 
+const garminOAuth = useGarminOAuth()
 const garminJson = ref('')
 const garminToken = ref('')
+const garminClientId = ref('')
+const garminClientSecret = ref('')
 const garminStatus = ref('')
 const garminError = ref('')
 const tokenStatus = ref('')
@@ -145,7 +168,18 @@ const redirectUri = defaultGoogleRedirectUri()
 
 onMounted(async () => {
   hcMode.value = await detectHealthConnectRuntimeMode()
+  await garminOAuth.refreshStatus()
 })
+
+async function saveGarminOAuthConfig() {
+  if (garminClientId.value.trim()) await garminOAuth.saveClientId(garminClientId.value.trim())
+  if (garminClientSecret.value.trim()) await garminOAuth.saveClientSecret(garminClientSecret.value.trim())
+}
+
+async function connectGarminOAuth() {
+  await saveGarminOAuthConfig()
+  await garminOAuth.startOAuth()
+}
 
 async function onGarminFile(event: Event) {
   const input = event.target as HTMLInputElement

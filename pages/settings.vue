@@ -14,6 +14,14 @@
       </div>
       <p v-if="vaultError" class="mt-2 text-sm text-red-500">{{ vaultError }}</p>
       <p class="mt-2 text-xs text-zinc-500">On Tauri desktop, provider API keys are stored in Stronghold and are not written to localStorage. The vault password is never persisted.</p>
+      <UAlert
+        v-if="browserDevPath"
+        class="mt-3"
+        title="Browser development credential path"
+        description="You are not in the Tauri runtime. Secrets use an in-memory browser store for local preview only — do not use this path for production credentials."
+        color="warning"
+        variant="subtle"
+      />
     </UCard>
 
     <UCard>
@@ -84,7 +92,10 @@ import {
   type OpenRouterCatalogStatus,
 } from '~/services/llm-provider-bridge'
 
+import { isTauriRuntime } from '~/utils/runtime-platform'
+
 const { settings, vaultUnlocked, unlockVault: unlock, lockVault: lock, update, setProviderKey, clearKeys: clearProviderKeys, reset: resetSettings } = useLLM()
+const browserDevPath = computed(() => !isTauriRuntime())
 const vaultPassword = ref('')
 const vaultBusy = ref(false)
 const vaultError = ref('')
