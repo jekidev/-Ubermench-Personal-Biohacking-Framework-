@@ -3,13 +3,16 @@ import type { ExperimentSpec } from '~/services/experiment-lifecycle'
 import type { ExperimentDesign } from '~/services/experiment-protocols'
 import type { ConfounderCategory } from '~/services/experiment-confounders'
 
-const { experiments, templates, initialize, createExperiment, summarize, recordAdherence, recordConfounder, exportBackup, importBackup } = useExperiments()
+const { experiments, templates, initialize, createExperiment, summarize, recordAdherence, recordConfounder, exportBackup, importBackup, previewImport } = useExperiments()
 const selectedDesign = ref<ExperimentDesign>('single-subject-crossover')
 const message = ref('')
 const errorMessage = ref('')
 const selectedExperimentId = ref('')
 const importInput = ref<HTMLInputElement | null>(null)
 const lastExportChecksum = ref('')
+const importPendingRaw = ref('')
+const importConfirmWarnings = ref(false)
+const importPreview = ref<Awaited<ReturnType<typeof previewImport>> | null>(null)
 const confounderCategory = ref<ConfounderCategory>('sleep')
 const confounderDescription = ref('')
 const confounderSeverity = ref<0 | 1 | 2 | 3>(1)
@@ -59,13 +62,50 @@ async function handleImportFile(event: Event) {
   if (!file) return
   try {
     const raw = await file.text()
-    const backup = await importBackup(raw)
-    message.value = `Imported ${backup.experiments.length} protocol(s). Existing IDs were merged.`
+    importPendingRaw.value = raw
+    importConfirmWarnings.value = false
+    importPreview.value = await previewImport(raw)
+    message.value = 'Import preview ready. Review checksum and merge impact before confirming.'
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Experiment import failed.'
+    importPreview.value = null
+    importPendingRaw.value = ''
+    errorMessage.value = error instanceof Error ? error.message : 'Experiment import preview failed.'
   } finally {
     input.value = ''
   }
+}
+
+async function confirmImport() {
+  resetStatus()
+  if (!importPendingRaw.value || !importPreview.value) {
+    errorMessage.value = 'Select a backup file to preview before importing.'
+    return
+  }
+  if (!importPreview.value.valid) {
+    errorMessage.value = importPreview.value.issues.map((issue) => issue.message).join(' ')
+    return
+  }
+  if (importPreview.value.issues.length && !importConfirmWarnings.value) {
+    errorMessage.value = 'Confirm that you accept the merge warnings before importing.'
+    return
+  }
+  try {
+    const backup = await importBackup(importPendingRaw.value)
+    message.value = `Imported ${backup.experiments.length} protocol(s). ${importPreview.value.summary.newCount} new, ${importPreview.value.summary.overwriteCount} replaced.`
+    importPendingRaw.value = ''
+    importConfirmWarnings.value = false
+    importPreview.value = null
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Experiment import failed.'
+  }
+}
+
+function cancelImportPreview() {
+  importPreview.value = null
+  importPendingRaw.value = ''
+  importConfirmWarnings.value = false
+  errorMessage.value = ''
+  message.value = ''
 }
 
 async function startExperiment() {
@@ -122,6 +162,39 @@ function addConfounder(experimentId: string) {
         </div>
       </div>
       <p v-if="lastExportChecksum" class="mt-3 text-xs text-muted">Last checksum prefix: {{ lastExportChecksum.slice(0, 16) }}…</p>
+
+      <div v-if="importPreview" class="mt-6 rounded border border-zinc-800 p-4 text-sm">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 class="font-semibold">Import preview</h3>
+            <p class="mt-1 text-muted">Review metadata and merge impact before applying protocols.</p>
+          </div>
+          <UBadge :color="importPreview.valid ? 'success' : 'error'" variant="subtle">
+            {{ importPreview.valid ? 'valid' : 'blocked' }}
+          </UBadge>
+        </div>
+        <dl class="mt-4 grid gap-2 sm:grid-cols-2">
+          <div><dt class="text-muted">Exported</dt><dd>{{ importPreview.exportedAt ?? 'unknown' }}</dd></div>
+          <div><dt class="text-muted">Checksum</dt><dd class="break-all font-mono text-xs">{{ importPreview.checksum ?? 'missing' }}</dd></div>
+          <div><dt class="text-muted">Incoming protocols</dt><dd>{{ importPreview.summary.incomingCount }}</dd></div>
+          <div><dt class="text-muted">New / replaced</dt><dd>{{ importPreview.summary.newCount }} new · {{ importPreview.summary.overwriteCount }} replaced</dd></div>
+          <div><dt class="text-muted">Local-only kept</dt><dd>{{ importPreview.summary.localOnlyCount }}</dd></div>
+          <div><dt class="text-muted">Running in backup</dt><dd>{{ importPreview.metadata?.runningCount ?? 0 }}</dd></div>
+        </dl>
+        <ul v-if="importPreview.issues.length" class="mt-4 space-y-2">
+          <li v-for="issue in importPreview.issues" :key="`${issue.field}-${issue.message}`" class="text-amber-500">
+            {{ issue.field }}: {{ issue.message }}
+          </li>
+        </ul>
+        <label v-if="importPreview.issues.length && importPreview.valid" class="mt-4 flex items-center gap-2">
+          <input v-model="importConfirmWarnings" type="checkbox">
+          I understand this import will merge protocols by ID
+        </label>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <UButton :disabled="!importPreview.valid" @click="confirmImport">Confirm import</UButton>
+          <UButton variant="outline" color="neutral" @click="cancelImportPreview">Cancel</UButton>
+        </div>
+      </div>
     </UCard>
 
     <UCard>
