@@ -165,4 +165,16 @@ mod tests {
     fn rejects_absolute_paths() {
         assert!(safe_relative_path("/etc/passwd").is_err());
     }
+
+    #[test]
+    fn rejects_disallowed_commands() {
+        assert!(framework_run_command("rm".into(), vec!["-rf".into()]).is_err());
+    }
+
+    #[test]
+    fn reads_known_repo_file() {
+        let content = framework_read_file("README.md".into(), 4_096)
+            .expect("README.md should be readable from repo root");
+        assert!(content.contains("Ubermench") || content.contains("biohacking"));
+    }
 }
