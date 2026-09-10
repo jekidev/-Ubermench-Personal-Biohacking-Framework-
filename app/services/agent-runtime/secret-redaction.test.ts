@@ -14,4 +14,17 @@ describe('secret redaction', () => {
       nested: { password: '[REDACTED]', safe: 'ok' },
     })
   })
+
+  it('redacts model error payloads and audit metadata', () => {
+    const redacted = redactSecrets({
+      message: 'OpenRouter failed with sk-or-v1_abcdefghijklmnopqrstuvwxyz',
+      metadata: {
+        authorization: 'Bearer provider-token-abcdefghijklmnop',
+        requestId: 'req-1',
+      },
+    }) as { message: string; metadata: Record<string, string> }
+    expect(redacted.message).not.toContain('sk-or-v1_abcdefghijklmnopqrstuvwxyz')
+    expect(redacted.metadata.authorization).toBe('[REDACTED]')
+    expect(redacted.metadata.requestId).toBe('req-1')
+  })
 })

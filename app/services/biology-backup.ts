@@ -1,5 +1,6 @@
 import type { PersonalBiologyProfile } from '~/types/biology'
 import { migrateBiologyProfile } from './biology-profile-migration'
+import { assertNoSecretsInExport } from './secret-leak-guard'
 
 export const BIOLOGY_BACKUP_VERSION = 1 as const
 
@@ -41,6 +42,7 @@ export async function computeBiologyBackupChecksum(profile: PersonalBiologyProfi
 
 export async function createBiologyBackup(profile: PersonalBiologyProfile, exportedAt = new Date().toISOString()): Promise<BiologyBackup> {
   const cloned = structuredClone(profile)
+  assertNoSecretsInExport('biology-backup', cloned)
   const checksum = await computeBiologyBackupChecksum(cloned)
   return {
     format: 'ubermench-biology-backup',
