@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createExperimentBackup, type StoredExperimentRecord } from './experiment-backup'
-import { previewExperimentImport } from './experiment-import-validator'
+import { applyExperimentImport, previewExperimentImport } from './experiment-import-validator'
 
 function sampleExperiment(id = 'exp-1'): StoredExperimentRecord {
   return {
@@ -47,5 +47,20 @@ describe('experiment-import-validator', () => {
     const preview = previewExperimentImport(backup, [])
     expect(preview.valid).toBe(false)
     expect(preview.issues.some((issue) => issue.severity === 'error')).toBe(true)
+  })
+
+  it('refuses to apply invalid imports without force', async () => {
+    const backup = await createExperimentBackup([])
+    const current = [sampleExperiment()]
+    expect(() => applyExperimentImport(backup, current)).toThrow(/no experiment protocols/i)
+    expect(applyExperimentImport(backup, current, { force: true }).experiments).toEqual(current)
+  })
+
+  it('merges incoming protocols while preserving local-only records', async () => {
+    const backup = await createExperimentBackup([sampleExperiment('exp-2')])
+    const applied = applyExperimentImport(backup, [sampleExperiment('exp-1')])
+    expect(applied.experiments.map((item) => item.id).sort()).toEqual(['exp-1', 'exp-2'])
+    expect(applied.preview.summary.overwriteCount).toBe(0)
+    expect(applied.preview.summary.localOnlyCount).toBe(1)
   })
 })

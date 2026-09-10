@@ -80,3 +80,27 @@ export function previewExperimentImport(
     },
   }
 }
+
+export function applyExperimentImport(
+  backup: ExperimentBackup,
+  currentExperiments: StoredExperimentRecord[],
+  options?: { force?: boolean },
+): { experiments: StoredExperimentRecord[]; preview: ExperimentImportPreview } {
+  const preview = previewExperimentImport(backup, currentExperiments)
+  if (!preview.valid && !options?.force) {
+    throw new Error(
+      preview.issues
+        .filter((issue) => issue.severity === 'error')
+        .map((issue) => issue.message)
+        .join(' '),
+    )
+  }
+
+  const merged = new Map(currentExperiments.map((item) => [item.id, item]))
+  for (const item of preview.incoming) merged.set(item.id, item)
+
+  return {
+    experiments: Array.from(merged.values()),
+    preview,
+  }
+}
