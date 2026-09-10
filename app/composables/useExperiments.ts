@@ -12,7 +12,7 @@ import {
   serializeExperimentBackup,
   type StoredExperimentRecord,
 } from '~/services/experiment-backup'
-import { previewExperimentImport, type ExperimentImportPreview } from '~/services/experiment-import-validator'
+import { applyExperimentImport, previewExperimentImport, type ExperimentImportPreview } from '~/services/experiment-import-validator'
 
 const STORAGE_KEY = 'ubermench.experiments.v1'
 
@@ -132,14 +132,17 @@ export function useExperiments() {
     return serializeExperimentBackup(backup)
   }
 
-  async function importBackup(raw: string, options?: { replace?: boolean }) {
+  async function importBackup(raw: string, options?: { replace?: boolean; force?: boolean }) {
     const backup = await parseExperimentBackup(raw)
     if (options?.replace) {
+      const preview = previewExperimentImport(backup, [])
+      if (!preview.valid && !options?.force) {
+        throw new Error(preview.issues.filter((issue) => issue.severity === 'error').map((issue) => issue.message).join(' '))
+      }
       experiments.value = backup.experiments
     } else {
-      const merged = new Map(experiments.value.map((item) => [item.id, item]))
-      for (const item of backup.experiments) merged.set(item.id, item)
-      experiments.value = Array.from(merged.values())
+      const applied = applyExperimentImport(backup, experiments.value, { force: options?.force })
+      experiments.value = applied.experiments
     }
     saveExperiments(experiments.value)
     return backup
