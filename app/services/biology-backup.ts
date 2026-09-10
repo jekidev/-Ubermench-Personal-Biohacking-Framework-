@@ -40,8 +40,13 @@ export async function computeBiologyBackupChecksum(profile: PersonalBiologyProfi
   return sha256Hex(JSON.stringify(profile))
 }
 
+function cloneBiologyProfile(profile: PersonalBiologyProfile): PersonalBiologyProfile {
+  // JSON round-trip avoids DetachedCloneError when profile is a Vue reactive proxy.
+  return migrateBiologyProfile(JSON.parse(JSON.stringify(profile)) as PersonalBiologyProfile)
+}
+
 export async function createBiologyBackup(profile: PersonalBiologyProfile, exportedAt = new Date().toISOString()): Promise<BiologyBackup> {
-  const cloned = structuredClone(profile)
+  const cloned = cloneBiologyProfile(profile)
   assertNoSecretsInExport('biology-backup', cloned)
   const checksum = await computeBiologyBackupChecksum(cloned)
   return {

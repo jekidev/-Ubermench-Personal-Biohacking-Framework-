@@ -56,4 +56,18 @@ describe('biology backup', () => {
 
     expect(profile.goals).toEqual([])
   })
+
+  it('creates backups from reactive proxy profiles', async () => {
+    const profile = emptyBiologyProfile()
+    profile.goals = ['healthspan']
+    const reactiveProfile = new Proxy(profile, {
+      get(target, property, receiver) {
+        return Reflect.get(target, property, receiver)
+      },
+    })
+
+    const backup = await createBiologyBackup(reactiveProfile)
+    expect(backup.profile.goals).toEqual(['healthspan'])
+    expect(backup.checksum).toBeTruthy()
+  })
 })
