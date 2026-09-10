@@ -3,10 +3,13 @@ import type { ExperimentSpec } from '~/services/experiment-lifecycle'
 import type { ExperimentDesign } from '~/services/experiment-protocols'
 import type { ConfounderCategory } from '~/services/experiment-confounders'
 
-const { experiments, templates, initialize, createExperiment, summarize, recordAdherence, recordConfounder } = useExperiments()
+const { experiments, templates, initialize, createExperiment, summarize, recordAdherence, recordConfounder, exportBackup, importBackup } = useExperiments()
 const selectedDesign = ref<ExperimentDesign>('single-subject-crossover')
 const message = ref('')
+const errorMessage = ref('')
 const selectedExperimentId = ref('')
+const importInput = ref<HTMLInputElement | null>(null)
+const lastExportChecksum = ref('')
 const confounderCategory = ref<ConfounderCategory>('sleep')
 const confounderDescription = ref('')
 const confounderSeverity = ref<0 | 1 | 2 | 3>(1)
@@ -25,8 +28,48 @@ const draft = ref<ExperimentSpec>({
 
 onMounted(initialize)
 
-async function startExperiment() {
+function resetStatus() {
   message.value = ''
+  errorMessage.value = ''
+}
+
+async function downloadBackup() {
+  resetStatus()
+  try {
+    const raw = await exportBackup()
+    const parsed = JSON.parse(raw) as { checksum?: string; metadata?: { experimentCount?: number } }
+    lastExportChecksum.value = parsed.checksum ?? ''
+    const blob = new Blob([raw], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `ubermench-experiments-${new Date().toISOString().slice(0, 10)}.json`
+    anchor.click()
+    URL.revokeObjectURL(url)
+    message.value = `Experiment backup exported. Checksum ${parsed.checksum?.slice(0, 16)}… · ${parsed.metadata?.experimentCount ?? 0} protocols.`
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Experiment export failed.'
+  }
+}
+
+async function handleImportFile(event: Event) {
+  resetStatus()
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const raw = await file.text()
+    const backup = await importBackup(raw)
+    message.value = `Imported ${backup.experiments.length} protocol(s). Existing IDs were merged.`
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Experiment import failed.'
+  } finally {
+    input.value = ''
+  }
+}
+
+async function startExperiment() {
+  resetStatus()
   try {
     const created = await createExperiment(draft.value, selectedDesign.value)
     selectedExperimentId.value = created.id
@@ -37,11 +80,13 @@ async function startExperiment() {
 }
 
 function logAdherence(experimentId: string, completed: boolean) {
+  resetStatus()
   recordAdherence(experimentId, completed)
   message.value = completed ? 'Adherence logged as completed.' : 'Missed dose logged.'
 }
 
 function addConfounder(experimentId: string) {
+  resetStatus()
   if (!confounderDescription.value.trim()) {
     message.value = 'Add a short confounder description first.'
     return
@@ -63,6 +108,21 @@ function addConfounder(experimentId: string) {
       <h1 class="mt-2 text-3xl font-semibold">N-of-1 Protocols</h1>
       <p class="mt-2 text-muted">Pre-declared crossover templates with audit-only stopping rules, adherence and sensitivity analysis.</p>
     </div>
+
+    <UCard>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 class="font-semibold">Backup</h2>
+          <p class="mt-1 text-sm text-muted">Portable JSON export with checksum and secret-leak screening.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <UButton size="sm" variant="outline" @click="downloadBackup">Export protocols</UButton>
+          <UButton size="sm" variant="ghost" @click="importInput?.click()">Import protocols</UButton>
+          <input ref="importInput" type="file" accept="application/json,.json" class="hidden" @change="handleImportFile" />
+        </div>
+      </div>
+      <p v-if="lastExportChecksum" class="mt-3 text-xs text-muted">Last checksum prefix: {{ lastExportChecksum.slice(0, 16) }}…</p>
+    </UCard>
 
     <UCard>
       <h2 class="font-semibold">Create protocol</h2>
@@ -88,6 +148,7 @@ function addConfounder(experimentId: string) {
       </div>
       <UButton class="mt-4" @click="startExperiment">Create protocol</UButton>
       <p v-if="message" class="mt-3 text-sm text-muted">{{ message }}</p>
+      <p v-if="errorMessage" class="mt-3 text-sm text-red-400">{{ errorMessage }}</p>
     </UCard>
 
     <div class="space-y-4">
