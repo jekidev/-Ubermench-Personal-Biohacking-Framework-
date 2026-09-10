@@ -71,3 +71,66 @@ export async function nativeMcpJsonRpc(
     },
   })
 }
+
+export interface NativeMcpSessionStartResult {
+  session_id: string
+  idle_timeout_ms: number
+  max_lifetime_ms: number
+}
+
+export interface NativeMcpSessionStatus {
+  session_id: string
+  command_fingerprint: string
+  created_at_ms: number
+  last_used_ms: number
+  idle_timeout_ms: number
+  max_lifetime_ms: number
+}
+
+export async function nativeMcpSessionStart(
+  command: string,
+  args: string[],
+  approvalToken: string,
+  options?: { timeoutMs?: number; env?: Record<string, string> },
+): Promise<NativeMcpSessionStartResult> {
+  if (!isTauriRuntime()) throw new Error('Native MCP sessions are available only in the Tauri runtime.')
+  if (!approvalToken.trim()) throw new Error('Native MCP session start requires an explicit approval token.')
+  return invoke<NativeMcpSessionStartResult>('mcp_stdio_session_start', {
+    request: {
+      command,
+      args,
+      approval_token: approvalToken,
+      timeout_ms: options?.timeoutMs,
+      env: options?.env,
+    },
+  })
+}
+
+export async function nativeMcpSessionCall(
+  sessionId: string,
+  method: string,
+  params: unknown,
+  timeoutMs?: number,
+): Promise<unknown> {
+  if (!isTauriRuntime()) throw new Error('Native MCP sessions are available only in the Tauri runtime.')
+  return invoke<unknown>('mcp_stdio_session_call', {
+    request: {
+      session_id: sessionId,
+      method,
+      params,
+      timeout_ms: timeoutMs,
+    },
+  })
+}
+
+export async function nativeMcpSessionClose(sessionId: string): Promise<boolean> {
+  if (!isTauriRuntime()) throw new Error('Native MCP sessions are available only in the Tauri runtime.')
+  return invoke<boolean>('mcp_stdio_session_close', {
+    request: { session_id: sessionId },
+  })
+}
+
+export async function nativeMcpSessionList(): Promise<NativeMcpSessionStatus[]> {
+  if (!isTauriRuntime()) throw new Error('Native MCP sessions are available only in the Tauri runtime.')
+  return invoke<NativeMcpSessionStatus[]>('mcp_stdio_session_list')
+}

@@ -3,7 +3,8 @@ import { getInstalledMcpServer, listResolvedMcpServers } from '../../../plugins/
 import { validateStdioCommand } from '../../../plugins/llm/mcp/stdio-allowlist'
 import { getSecret } from '../secret-vault'
 import type { AgentTool } from './types'
-import { nativeMcpExecute, nativeMcpJsonRpc } from './native-mcp'
+import { nativeMcpExecute } from './native-mcp'
+import { callMcpWithSession } from './mcp-session-pool'
 import { isMcpLifecycleToolName } from './tools/mcp-install-tools'
 
 export function isMcpStdioToolName(name: string): boolean {
@@ -44,11 +45,19 @@ export function createMcpServerTools(): AgentTool[] {
       const method = typeof args.method === 'string' ? args.method : ''
       const params = args.params ?? {}
       if (method) {
-        return nativeMcpJsonRpc(command, commandArgs, approvalToken, method, params, {
+        const session = await callMcpWithSession(server, {
+          approvalToken,
+          method,
+          params,
           timeoutMs,
           env,
-          withInitialize: args.withInitialize !== false,
+          reuseSession: args.reuseSession !== false,
         })
+        return {
+          result: session.result,
+          sessionId: session.sessionId,
+          reusedSession: session.reused,
+        }
       }
       return nativeMcpExecute(command, commandArgs, approvalToken, stdinPayload, timeoutMs, env)
     },

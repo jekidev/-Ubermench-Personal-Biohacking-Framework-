@@ -9,7 +9,16 @@ import type { LLMProviderConfig, LLMRequest, LLMSettings } from '~/types/llm'
 import { providerHealth } from './agent-runtime/provider-health'
 
 const PLUGIN_PROVIDERS = new Set<PluginLLMProvider>(['openrouter', 'openai', 'anthropic'])
-const FREE_MODEL_CACHE_TTL_MS = 15 * 60 * 1000
+export const OPENROUTER_FREE_MODEL_CACHE_TTL_MS = 15 * 60 * 1000
+
+export type OpenRouterCatalogStatus = {
+  available: boolean
+  modelCount: number
+  models: string[]
+  fetchedAt?: string
+  stale: boolean
+  error?: string
+}
 
 let freeModelCache: { key: string; fetchedAt: number; models: string[] } | null = null
 
@@ -28,15 +37,16 @@ function candidateKey(candidate: Pick<ProviderCandidate, 'provider' | 'model'>):
   return `${candidate.provider}:${candidate.model}`
 }
 
-async function openRouterFreeModelIds(settings: LLMSettings): Promise<string[]> {
+async function openRouterFreeModelIds(settings: LLMSettings, force = false): Promise<string[]> {
   const openrouter = settings.providers.find((provider) => provider.provider === 'openrouter' && provider.apiKey?.trim())
   if (!openrouter?.apiKey || !settings.preferFree) return []
 
   const cacheKey = openrouter.apiKey.slice(-8)
   if (
-    freeModelCache
+    !force
+    && freeModelCache
     && freeModelCache.key === cacheKey
-    && Date.now() - freeModelCache.fetchedAt < FREE_MODEL_CACHE_TTL_MS
+    && Date.now() - freeModelCache.fetchedAt < OPENROUTER_FREE_MODEL_CACHE_TTL_MS
   ) {
     return freeModelCache.models
   }
@@ -49,6 +59,60 @@ async function openRouterFreeModelIds(settings: LLMSettings): Promise<string[]> 
   } catch {
     return []
   }
+}
+
+export function getOpenRouterCatalogStatus(settings: LLMSettings): OpenRouterCatalogStatus {
+  const openrouter = settings.providers.find((provider) => provider.provider === 'openrouter' && provider.apiKey?.trim())
+  if (!openrouter?.apiKey) {
+    return { available: false, modelCount: 0, models: [], stale: true }
+  }
+
+  const cacheKey = openrouter.apiKey.slice(-8)
+  const cacheValid = Boolean(
+    freeModelCache
+    && freeModelCache.key === cacheKey
+    && Date.now() - freeModelCache.fetchedAt < OPENROUTER_FREE_MODEL_CACHE_TTL_MS,
+  )
+
+  return {
+    available: true,
+    modelCount: cacheValid ? freeModelCache!.models.length : 0,
+    models: cacheValid ? freeModelCache!.models : [],
+    fetchedAt: cacheValid ? new Date(freeModelCache!.fetchedAt).toISOString() : undefined,
+    stale: !cacheValid,
+  }
+}
+
+export async function refreshOpenRouterCatalog(settings: LLMSettings): Promise<OpenRouterCatalogStatus> {
+  const openrouter = settings.providers.find((provider) => provider.provider === 'openrouter' && provider.apiKey?.trim())
+  if (!openrouter?.apiKey) {
+    return { available: false, modelCount: 0, models: [], stale: true, error: 'Add an OpenRouter API key first.' }
+  }
+
+  try {
+    const models = await discoverOpenRouterFreeModels(openrouter.apiKey)
+    const ids = models.slice(0, 12).map((model) => model.id)
+    freeModelCache = { key: openrouter.apiKey.slice(-8), fetchedAt: Date.now(), models: ids }
+    return {
+      available: true,
+      modelCount: ids.length,
+      models: ids,
+      fetchedAt: new Date(freeModelCache.fetchedAt).toISOString(),
+      stale: false,
+    }
+  } catch (error) {
+    return {
+      available: true,
+      modelCount: 0,
+      models: [],
+      stale: true,
+      error: error instanceof Error ? error.message : 'OpenRouter catalog refresh failed.',
+    }
+  }
+}
+
+export function clearOpenRouterCatalogCache(): void {
+  freeModelCache = null
 }
 
 export function toProviderCandidates(settings: LLMSettings): ProviderCandidate[] {
