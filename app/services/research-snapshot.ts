@@ -3,6 +3,7 @@ import { extractEvidenceClaims, highestClaimUncertainty, type ExtractedClaim } f
 import { evidenceFreshness, type EvidenceFreshnessBand } from './evidence-freshness'
 import { evaluateRetraction, type RetractionStatus } from './evidence-retraction'
 import type { NormalizedEvidenceRecord } from './evidence-normalizer'
+import { assertNoSecretsInExport } from './secret-leak-guard'
 
 export const RESEARCH_SNAPSHOT_VERSION = 1 as const
 export const RESEARCH_SNAPSHOT_STORAGE_KEY = 'ubermench.research.snapshots.v1'
@@ -68,6 +69,7 @@ export async function createResearchSnapshot(
     claims,
     records: mapped,
   }
+  assertNoSecretsInExport('research-snapshot', snapshot)
   return { ...snapshot, checksum: await hashSnapshot(snapshot) }
 }
 

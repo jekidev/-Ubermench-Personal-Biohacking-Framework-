@@ -3,6 +3,8 @@ import { assertNoSecretsInExport, containsLikelySecret } from './secret-leak-gua
 import { createBiologyBackup, serializeBiologyBackup } from './biology-backup'
 import { emptyBiologyProfile } from './biology-store'
 import { redactSecrets } from './agent-runtime/secret-redaction'
+import { createResearchSnapshot } from './research-snapshot'
+import type { NormalizedEvidenceRecord } from './evidence-normalizer'
 
 describe('secret leak guard', () => {
   it('detects api keys and bearer tokens in nested objects', () => {
@@ -25,6 +27,23 @@ describe('secret leak guard', () => {
     const serialized = serializeBiologyBackup(backup)
     expect(serialized).not.toContain('sk-')
     expect(serialized).not.toMatch(/Bearer\s+\S{16,}/i)
+  })
+
+  it('blocks research snapshots that contain bearer tokens', async () => {
+    const evidence: NormalizedEvidenceRecord = {
+      id: 'doi:10.1000/example',
+      title: 'Vitamin D study',
+      source: 'europe-pmc',
+      evidenceLevel: 'observational',
+      confidence: 0.4,
+      retrievedAt: '2026-09-07T00:00:00.000Z',
+      reviewRequired: true,
+      claimUncertainty: 'high',
+      mechanisticOnly: false,
+    }
+    await expect(createResearchSnapshot([evidence], {
+      query: 'Bearer leaked-token-abcdefghijklmnop',
+    })).rejects.toThrow(/sensitive values/i)
   })
 
   it('redacts audit-like payloads before persistence', () => {

@@ -55,12 +55,23 @@ export function saveEvidenceStore(records: NormalizedEvidenceRecord[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
 }
 
+function evidenceMergeKey(record: NormalizedEvidenceRecord): string {
+  const identity = resolveEvidenceIdentity(record)
+  if (identity.doi) return `doi:${identity.doi}`
+  if (identity.pmid) return `pmid:${identity.pmid}`
+  return `id:${record.id}`
+}
+
 export function persistNormalizedEvidence(records: NormalizedEvidenceRecord[]): NormalizedEvidenceRecord[] {
-  const byId = new Map<string, NormalizedEvidenceRecord>()
+  const byKey = new Map<string, NormalizedEvidenceRecord>()
   for (const record of [...loadEvidenceStore(), ...records]) {
-    byId.set(record.id, record)
+    const key = evidenceMergeKey(record)
+    const existing = byKey.get(key)
+    if (!existing || record.retrievedAt >= existing.retrievedAt) {
+      byKey.set(key, record)
+    }
   }
-  const next = [...byId.values()]
+  const next = [...byKey.values()]
   saveEvidenceStore(next)
   return next
 }
