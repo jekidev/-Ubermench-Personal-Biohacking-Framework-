@@ -12,6 +12,7 @@ import {
   serializeExperimentBackup,
   type StoredExperimentRecord,
 } from '~/services/experiment-backup'
+import { previewExperimentImport, type ExperimentImportPreview } from '~/services/experiment-import-validator'
 
 const STORAGE_KEY = 'ubermench.experiments.v1'
 
@@ -144,6 +145,11 @@ export function useExperiments() {
     return backup
   }
 
+  async function previewImport(raw: string): Promise<ExperimentImportPreview> {
+    const backup = await parseExperimentBackup(raw)
+    return previewExperimentImport(backup, experiments.value)
+  }
+
   return {
     experiments,
     templates: EXPERIMENT_PROTOCOL_TEMPLATES,
@@ -154,5 +160,6 @@ export function useExperiments() {
     summarize,
     exportBackup,
     importBackup,
+    previewImport,
   }
 }
