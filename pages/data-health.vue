@@ -3,11 +3,17 @@ import { assessDataQuality, identifyDataGaps } from '~/services/data-quality-eng
 import { buildLongitudinalView } from '~/services/longitudinal-view'
 import { summarizeLongitudinalSeries } from '~/services/longitudinal-analytics'
 import { assessLongitudinalQuality } from '~/services/longitudinal-quality'
+import { buildDataHealthDiagnostics } from '~/services/data-health-diagnostics'
+import { describeBackupStatus } from '~/services/backup-status'
+import { describeExperimentBackupStatus } from '~/services/experiment-backup'
+import { isTauriRuntime } from '~/utils/runtime-platform'
 
 const biology = usePersonalBiology()
+const experiments = useExperiments()
 const profile = biology.profile
 
 await biology.initialize()
+await experiments.initialize()
 
 const quality = computed(() => assessDataQuality(profile.value))
 const gaps = computed(() => identifyDataGaps(profile.value))
@@ -15,6 +21,11 @@ const longitudinal = computed(() => {
   const view = buildLongitudinalView(profile.value)
   return assessLongitudinalQuality(summarizeLongitudinalSeries(view.series))
 })
+const diagnostics = computed(() => buildDataHealthDiagnostics({
+  profile: profile.value,
+  experiments: experiments.experiments.value,
+  isTauriRuntime: isTauriRuntime(),
+}))
 
 function percent(value: number) {
   return `${Math.round(value * 100)}%`
@@ -57,6 +68,44 @@ function impactLabel(value: number) {
         <div class="mt-1 text-xs text-muted">Biomarkers with units</div>
       </UCard>
     </div>
+
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <UCard>
+        <div class="text-sm text-muted">Credential storage</div>
+        <div class="mt-2 text-lg font-semibold">{{ diagnostics.credentialStorage === 'tauri-vault' ? 'Tauri vault' : 'Browser dev path' }}</div>
+        <div class="mt-1 text-xs text-muted">Provider secret handling</div>
+      </UCard>
+      <UCard>
+        <div class="text-sm text-muted">Active protocols</div>
+        <div class="mt-2 text-2xl font-semibold">{{ diagnostics.experiments.count }}</div>
+        <div class="mt-1 text-xs text-muted">{{ diagnostics.experiments.runningCount }} running</div>
+      </UCard>
+      <UCard>
+        <div class="text-sm text-muted">Stopping-rule alerts</div>
+        <div class="mt-2 text-2xl font-semibold">{{ diagnostics.experiments.triggeredStoppingRules }}</div>
+        <div class="mt-1 text-xs text-muted">Audit-only triggers</div>
+      </UCard>
+      <UCard>
+        <div class="text-sm text-muted">Low adherence protocols</div>
+        <div class="mt-2 text-2xl font-semibold">{{ diagnostics.experiments.lowAdherenceCount }}</div>
+        <div class="mt-1 text-xs text-muted">Below 70% logged adherence</div>
+      </UCard>
+    </div>
+
+    <UCard v-if="diagnostics.warnings.length">
+      <template #header><div class="font-medium">Operational warnings</div></template>
+      <ul class="list-disc space-y-2 pl-5 text-sm">
+        <li v-for="warning in diagnostics.warnings" :key="warning">{{ warning }}</li>
+      </ul>
+    </UCard>
+
+    <UCard>
+      <template #header><div class="font-medium">Backup status</div></template>
+      <div class="space-y-2 text-sm">
+        <p>{{ describeBackupStatus(diagnostics.biologyBackup) }}</p>
+        <p>{{ describeExperimentBackupStatus(diagnostics.experimentBackup) }}</p>
+      </div>
+    </UCard>
 
     <UCard v-if="quality.issues.length">
       <template #header><div class="font-medium">Quality issues</div></template>

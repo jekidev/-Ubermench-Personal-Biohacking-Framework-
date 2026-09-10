@@ -4,6 +4,7 @@ import { createBiologyBackup, serializeBiologyBackup } from './biology-backup'
 import { emptyBiologyProfile } from './biology-store'
 import { redactSecrets } from './agent-runtime/secret-redaction'
 import { createResearchSnapshot } from './research-snapshot'
+import { createExperimentBackup } from './experiment-backup'
 import type { NormalizedEvidenceRecord } from './evidence-normalizer'
 
 describe('secret leak guard', () => {
@@ -27,6 +28,40 @@ describe('secret leak guard', () => {
     const serialized = serializeBiologyBackup(backup)
     expect(serialized).not.toContain('sk-')
     expect(serialized).not.toMatch(/Bearer\s+\S{16,}/i)
+  })
+
+  it('blocks experiment backups that contain api keys', async () => {
+    await expect(createExperimentBackup([{
+      id: 'exp-1',
+      subjectId: 'self',
+      metric: 'hrv',
+      intervention: 'magnesium',
+      baselineDays: 7,
+      interventionDays: 14,
+      washoutDays: 7,
+      followupDays: 7,
+      startAt: '2026-09-01T00:00:00.000Z',
+      design: 'single-subject-crossover',
+      runtime: {
+        id: 'exp-1',
+        intervention: 'magnesium',
+        metric: 'hrv',
+        baselineDays: 7,
+        interventionDays: 14,
+        washoutDays: 7,
+        observations: [],
+        adherence: [],
+        adverseEvents: [],
+        status: 'planned',
+      },
+      confounders: [{
+        id: 'conf-1',
+        recordedAt: '2026-09-07T00:00:00.000Z',
+        category: 'other',
+        description: 'notes sk-live_secretvalue1234567890',
+        severity: 0,
+      }],
+    }])).rejects.toThrow(/sensitive values/i)
   })
 
   it('blocks research snapshots that contain bearer tokens', async () => {
