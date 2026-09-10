@@ -59,4 +59,11 @@ describe('research snapshot', () => {
     const saved = persistResearchSnapshot(second, store)
     expect(saved.map((item) => item.createdAt)).toEqual(['2026-09-07T13:00:00.000Z', '2026-09-07T12:00:00.000Z'])
   })
+
+  it('rejects snapshots that embed provider secrets in the query', async () => {
+    await expect(createResearchSnapshot([record()], {
+      query: 'metformin sk-live_secretvalue1234567890',
+      createdAt: '2026-09-07T12:00:00.000Z',
+    })).rejects.toThrow(/sensitive values/i)
+  })
 })
