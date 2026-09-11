@@ -164,7 +164,6 @@ export function toRotationPolicy(
 export function resolveProviderConfig(settings: LLMSettings, active: ActiveModel): LLMProviderConfig | undefined {
   const base = settings.providers.find((provider) => provider.provider === active.provider)
   if (!base) return undefined
-  if (modelForProvider(base) === active.model) return base
   return { ...base, model: active.model }
 }
 
@@ -190,7 +189,10 @@ export async function selectProvidersForRequest(
   const failedKeys = new Set<string>()
   while (ordered.length < pool.length) {
     const available = pool.filter((candidate) => !failedKeys.has(candidateKey(candidate)))
-    const next = selectNextProvider(available, { ...policy, failedProviders: [] })
+    const next = selectNextProvider(available, {
+      ...policy,
+      failedProviders: [],
+    })
     if (!next) break
     const config = resolveProviderConfig(settings, next)
     const key = candidateKey(next)

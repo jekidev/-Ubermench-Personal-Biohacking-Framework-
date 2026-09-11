@@ -9,6 +9,7 @@ export function indexUploadedDocument(input: {
   bytes?: Uint8Array
   pageTexts?: Array<{ page: number; text: string; confidence?: number }>
   extractionMethod?: 'native-text' | 'llm-assisted'
+  storage?: Pick<Storage, 'getItem' | 'setItem'>
 }) {
   const pages = input.pageTexts ?? (input.bytes ? extractPdfTextBlocks(input.bytes).map((block) => ({
     page: block.page,
@@ -26,6 +27,6 @@ export function indexUploadedDocument(input: {
     extractionMethod: input.extractionMethod,
   })
 
-  const store = new DocumentRagIndex().indexChunks(chunks)
+  const store = new DocumentRagIndex(input.storage).indexChunks(chunks)
   return { chunks, store }
 }
