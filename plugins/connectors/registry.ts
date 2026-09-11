@@ -292,7 +292,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     capabilities: ['pdf-rag', 'citations', 'retraction-check'],
     enabledByDefault: false,
     cursorParity: false,
-    status: 'scaffold',
+    status: 'live',
     docsUrl: 'https://github.com/Future-House/paper-qa',
   },
   {
@@ -333,7 +333,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     capabilities: ['transcript-ingest', 'playlist-sync', 'video-search'],
     enabledByDefault: false,
     cursorParity: false,
-    status: 'scaffold',
+    status: 'live',
     docsUrl: 'https://github.com/samson-art/transcriptor-mcp',
   },
   {

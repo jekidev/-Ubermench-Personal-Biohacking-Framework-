@@ -1,3 +1,5 @@
+import { searchDocuments } from '../../plugins/longevity/rag/document-index'
+
 export const PAPER_QA_SCI_HUB_ENABLED = false as const
 
 export type PaperQaCitation = {
@@ -80,5 +82,38 @@ export function paperQaCitationsToEvidenceNotes(answer: PaperQaAnswer): string[]
   return answer.citations.map((citation) => {
     const doi = citation.doi ? ` DOI ${citation.doi}` : ''
     return `${citation.key}: ${citation.title}${doi}`
+  })
+}
+
+export function answerPaperQaFromLocalRag(
+  question: string,
+  storage?: Pick<Storage, 'getItem' | 'setItem'>,
+): PaperQaAnswer {
+  const normalizedQuestion = requireQuestion(question)
+  const hits = searchDocuments(normalizedQuestion, 6, storage)
+  if (!hits.length) {
+    return validatePaperQaAnswer({
+      question: normalizedQuestion,
+      answer: 'No indexed local PDF excerpts matched this question. Sync lab PDFs from Google Drive or import documents before using PaperQA local-RAG.',
+      citations: [],
+      backend: 'local-rag',
+      confidence: 0.1,
+    })
+  }
+
+  const citations = hits.map((hit, index) => ({
+    key: `c${index + 1}`,
+    title: hit.title,
+  }))
+  const excerpts = hits
+    .map((hit, index) => `[${index + 1}] ${hit.title} (score ${hit.score.toFixed(2)})\n${hit.content.slice(0, 500)}`)
+    .join('\n\n')
+
+  return validatePaperQaAnswer({
+    question: normalizedQuestion,
+    answer: `Local indexed excerpts (${hits.length}) for: ${normalizedQuestion}\n\n${excerpts}`,
+    citations,
+    backend: 'local-rag',
+    confidence: Math.min(0.85, hits[0]?.score ?? 0.3),
   })
 }

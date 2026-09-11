@@ -30,6 +30,13 @@
       >
         Memory
       </UButton>
+      <UButton
+        size="sm"
+        :variant="activeTab === 'research' ? 'solid' : 'ghost'"
+        @click="activeTab = 'research'"
+      >
+        Research
+      </UButton>
     </div>
 
     <template v-if="activeTab === 'general'">
@@ -335,6 +342,88 @@
         </ul>
       </UCard>
     </template>
+
+    <template v-else-if="activeTab === 'research'">
+      <UCard>
+        <template #header><div class="font-medium">Literature & deep research</div></template>
+        <p class="text-sm text-zinc-400">
+          Starred research adapters: Paper Search MCP, PaperQA local-RAG, Local Deep Research, and Transcriptor.
+          Sci-Hub stays disabled. Europe PMC is always available via <code>research.europepmc</code>.
+        </p>
+        <UAlert v-if="research.error" class="mt-3" title="Research error" :description="research.error" color="error" variant="subtle" />
+        <ul class="mt-4 space-y-1 text-sm text-zinc-400">
+          <li v-for="provider in research.providers" :key="provider.id">
+            {{ provider.name }} — {{ provider.enabled ? 'enabled' : 'disabled' }}
+            <span v-if="provider.requiresLocalRuntime" class="text-xs text-zinc-500">· local runtime</span>
+          </li>
+        </ul>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Paper Search MCP</div></template>
+        <p class="text-xs text-zinc-500">uvx paper-search-mcp · arXiv, PubMed, bioRxiv, OpenAlex</p>
+        <div class="mt-3 flex gap-2">
+          <UInput v-model="research.unpaywallEmailDraft" placeholder="PAPER_SEARCH_MCP_UNPAYWALL_EMAIL" class="flex-1" :disabled="!vaultUnlocked" />
+          <UButton size="sm" :loading="research.busy" :disabled="!vaultUnlocked" @click="research.saveUnpaywallEmail()">Save</UButton>
+        </div>
+        <label class="mt-3 flex items-center gap-2 text-sm">
+          <input type="checkbox" :checked="research.isConnectorEnabled('paper-search')" @change="research.setConnector('paper-search', ($event.target as HTMLInputElement).checked)" />
+          Enable Paper Search
+        </label>
+        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('paper-search') }}</p>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Local Deep Research</div></template>
+        <p class="text-xs text-zinc-500">uvx local-deep-research[mcp] ldr-mcp · cited summaries sidecar</p>
+        <div class="mt-3 flex gap-2">
+          <UInput v-model="research.ldrProviderDraft" placeholder="LDR_LLM_PROVIDER (e.g. openai)" class="flex-1" :disabled="!vaultUnlocked" />
+          <UButton size="sm" :loading="research.busy" :disabled="!vaultUnlocked" @click="research.saveLdrProvider()">Save</UButton>
+        </div>
+        <label class="mt-3 flex items-center gap-2 text-sm">
+          <input type="checkbox" :checked="research.isConnectorEnabled('local-deep-research')" @change="research.setConnector('local-deep-research', ($event.target as HTMLInputElement).checked)" />
+          Enable Local Deep Research
+        </label>
+        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('local-deep-research') }}</p>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">PaperQA (local RAG)</div></template>
+        <p class="text-xs text-zinc-500">Citation contract over indexed lab PDFs — no PaperQA2 sidecar required for preview.</p>
+        <label class="mt-3 flex items-center gap-2 text-sm">
+          <input type="checkbox" :checked="research.isConnectorEnabled('paper-qa')" @change="research.setConnector('paper-qa', ($event.target as HTMLInputElement).checked)" />
+          Enable PaperQA connector
+        </label>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <UInput v-model="research.paperQaQuestion" placeholder="Scientific question" class="flex-1 min-w-[12rem]" @keyup.enter="research.runPaperQaPreview()" />
+          <UButton @click="research.runPaperQaPreview()">Preview local answer</UButton>
+        </div>
+        <div v-if="research.paperQaAnswer" class="mt-4 rounded border border-zinc-800 p-3 text-sm">
+          <div class="text-xs text-zinc-500">{{ research.paperQaAnswer.backend }} · confidence {{ research.paperQaAnswer.confidence.toFixed(2) }}</div>
+          <p class="mt-2 text-zinc-300 whitespace-pre-wrap">{{ research.paperQaAnswer.answer.slice(0, 800) }}</p>
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Transcriptor MCP</div></template>
+        <p class="text-xs text-zinc-500">Docker sidecar for playlists, Whisper fallback, and private YouTube videos.</p>
+        <label class="mt-3 flex items-center gap-2 text-sm">
+          <input type="checkbox" :checked="research.isConnectorEnabled('transcriptor')" @change="research.setConnector('transcriptor', ($event.target as HTMLInputElement).checked)" />
+          Enable Transcriptor MCP
+        </label>
+        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('transcriptor') }}</p>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Agent tools</div></template>
+        <ul class="space-y-1 font-mono text-xs text-zinc-400">
+          <li><code>research.providers</code> / <code>research.status</code></li>
+          <li><code>research.europepmc</code> — built-in bibliographic search</li>
+          <li><code>research.paperqa.plan</code> / <code>research.paperqa.ask</code></li>
+          <li><code>mcp.stdio:paper-search</code> / <code>mcp.stdio:local-deep-research</code> / <code>mcp.stdio:transcriptor</code></li>
+        </ul>
+      </UCard>
+    </template>
   </div>
 </template>
 
@@ -347,15 +436,16 @@ import {
 import { isTauriRuntime } from '~/utils/runtime-platform'
 
 const route = useRoute()
-const activeTab = ref<'general' | 'github' | 'memory'>('general')
+const activeTab = ref<'general' | 'github' | 'memory' | 'research'>('general')
 
 watch(() => route.query.tab, (tab) => {
-  if (tab === 'github' || tab === 'memory') activeTab.value = tab
+  if (tab === 'github' || tab === 'memory' || tab === 'research') activeTab.value = tab
 }, { immediate: true })
 
 const { settings, vaultUnlocked, unlockVault: unlock, lockVault: lock, update, setProviderKey, clearKeys: clearProviderKeys, reset: resetSettings } = useLLM()
 const github = useGitHubIntegration()
 const memory = useMemoryIntegration()
+const research = useResearchIntegration()
 const browserDevPath = computed(() => !isTauriRuntime())
 const vaultPassword = ref('')
 const vaultBusy = ref(false)

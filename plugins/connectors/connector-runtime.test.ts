@@ -28,7 +28,8 @@ describe('connector runtime', () => {
     setConnectorEnabled('paper-qa', true)
     const status = await getConnectorStatus('paper-qa')
     expect(status.status).toBe('connected')
-    expect(status.implementationStatus).toBe('scaffold')
+    expect(status.implementationStatus).toBe('live')
+    expect(status.missing).toEqual([])
   })
 
   it('marks MCP research sidecars as configured when enabled without env keys', async () => {
