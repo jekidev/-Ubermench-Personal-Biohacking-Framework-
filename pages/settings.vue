@@ -12,35 +12,35 @@
       <UButton
         size="sm"
         :variant="activeTab === 'general' ? 'solid' : 'ghost'"
-        @click="activeTab = 'general'"
+        @click="setTab('general')"
       >
         General
       </UButton>
       <UButton
         size="sm"
         :variant="activeTab === 'github' ? 'solid' : 'ghost'"
-        @click="activeTab = 'github'"
+        @click="setTab('github')"
       >
         GitHub
       </UButton>
       <UButton
         size="sm"
         :variant="activeTab === 'memory' ? 'solid' : 'ghost'"
-        @click="activeTab = 'memory'"
+        @click="setTab('memory')"
       >
         Memory
       </UButton>
       <UButton
         size="sm"
         :variant="activeTab === 'research' ? 'solid' : 'ghost'"
-        @click="activeTab = 'research'"
+        @click="setTab('research')"
       >
         Research
       </UButton>
       <UButton
         size="sm"
         :variant="activeTab === 'plugins' ? 'solid' : 'ghost'"
-        @click="activeTab = 'plugins'"
+        @click="setTab('plugins')"
       >
         Plugins
       </UButton>
@@ -549,7 +549,7 @@
             <div class="text-xs text-zinc-500">{{ exercise.category }} · {{ exercise.equipment }} · {{ exercise.target }}</div>
           </li>
         </ul>
-        <p v-else class="mt-4 text-sm text-zinc-500">Search the catalog or open Longevity → Fitness.</p>
+        <p v-else class="mt-4 text-sm text-zinc-500">Search the catalog. The same catalog is also on <NuxtLink to="/longevity/fitness" class="underline underline-offset-4">Longevity → Fitness</NuxtLink>.</p>
       </UCard>
 
       <UCard>
@@ -588,7 +588,7 @@
 
         <UCard>
           <template #header><div class="font-medium">PDF inspector</div></template>
-          <p class="text-xs text-zinc-500">Classify a lab PDF as text, scanned, or mixed before OCR.</p>
+          <p class="text-xs text-zinc-500">Classify a lab PDF as text, scanned, or mixed. Lab import always runs this locally; the connector toggle is catalog status only.</p>
           <div class="mt-3 flex flex-wrap gap-2">
             <UButton size="sm" variant="outline" @click="plugins.inspectSamplePdf()">Inspect sample PDF</UButton>
             <label class="inline-flex cursor-pointer items-center gap-2 text-sm">
@@ -624,13 +624,15 @@ import {
   type OpenRouterCatalogStatus,
 } from '~/services/llm-provider-bridge'
 import { isTauriRuntime } from '~/utils/runtime-platform'
+import { parseSettingsTab, settingsTabQuery, type SettingsTab } from '~/utils/settings-tabs'
 
 const route = useRoute()
-const activeTab = ref<'general' | 'github' | 'memory' | 'research' | 'plugins'>('general')
+const router = useRouter()
+const activeTab = computed(() => parseSettingsTab(route.query.tab))
 
-watch(() => route.query.tab, (tab) => {
-  if (tab === 'github' || tab === 'memory' || tab === 'research' || tab === 'plugins') activeTab.value = tab
-}, { immediate: true })
+function setTab(tab: SettingsTab) {
+  void router.replace({ query: settingsTabQuery(tab) })
+}
 
 const { settings, vaultUnlocked, unlockVault: unlock, lockVault: lock, update, setProviderKey, clearKeys: clearProviderKeys, reset: resetSettings } = useLLM()
 const github = useGitHubIntegration()

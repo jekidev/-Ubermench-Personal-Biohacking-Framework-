@@ -1,6 +1,6 @@
 import { syncConnectorMcpInstall } from '../../plugins/connectors/connector-mcp-sync'
 import { getConnectorStatus } from '../../plugins/connectors/connector-runtime'
-import { isConnectorEnabled, setConnectorEnabled } from '../../plugins/connectors/connector-store'
+import { useConnectorEnablement } from './useConnectorEnablement'
 import type { ConnectorId } from '../../plugins/connectors/types'
 import { getInstalledMcpServer } from '../../plugins/llm/mcp/install-store'
 import { installMcpFromCatalog } from '../../plugins/llm/mcp/install'
@@ -15,6 +15,7 @@ const MCP_BY_CONNECTOR: Partial<Record<ConnectorId, string>> = {
 }
 
 export function useResearchIntegration() {
+  const { settings, isEnabled, setEnabled } = useConnectorEnablement()
   const busy = ref(false)
   const error = ref('')
   const unpaywallEmailDraft = ref('')
@@ -22,7 +23,10 @@ export function useResearchIntegration() {
   const paperQaQuestion = ref('')
   const paperQaAnswer = ref<PaperQaAnswer | null>(null)
 
-  const providers = computed(() => listResearchProviders())
+  const providers = computed(() => {
+    void settings.value.enabled
+    return listResearchProviders()
+  })
 
   function mcpStatus(serverId: string) {
     const installed = getInstalledMcpServer(serverId)
@@ -57,7 +61,7 @@ export function useResearchIntegration() {
   }
 
   function setConnector(id: ConnectorId, enabled: boolean) {
-    setConnectorEnabled(id, enabled)
+    setEnabled(id, enabled)
     const serverId = MCP_BY_CONNECTOR[id]
     if (serverId) syncConnectorMcpInstall(id, enabled)
     if (enabled && serverId) installMcpFromCatalog(serverId)
@@ -70,7 +74,7 @@ export function useResearchIntegration() {
   function runPaperQaPreview() {
     error.value = ''
     try {
-      if (!isConnectorEnabled('paper-qa')) {
+      if (!isEnabled('paper-qa')) {
         throw new Error('Enable the PaperQA connector first.')
       }
       paperQaAnswer.value = answerPaperQaFromLocalRag(paperQaQuestion.value)
@@ -94,6 +98,6 @@ export function useResearchIntegration() {
     setConnector,
     refreshConnectorStatus,
     runPaperQaPreview,
-    isConnectorEnabled,
+    isConnectorEnabled: isEnabled,
   }
 }

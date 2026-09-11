@@ -1,6 +1,5 @@
 import { syncConnectorMcpInstall } from '../../plugins/connectors/connector-mcp-sync'
 import { getConnectorStatus } from '../../plugins/connectors/connector-runtime'
-import { isConnectorEnabled, setConnectorEnabled } from '../../plugins/connectors/connector-store'
 import { AgentMemoryRagIndex } from '../../plugins/longevity/rag/agent-memory-index'
 import { searchUnifiedRag } from '../../plugins/longevity/rag/unified-search'
 import type { UnifiedRagHit } from '../../plugins/longevity/rag/unified-search'
@@ -8,10 +7,12 @@ import { getInstalledMcpServer } from '../../plugins/llm/mcp/install-store'
 import { installMcpFromCatalog } from '../../plugins/llm/mcp/install'
 import type { ConnectorId } from '../../plugins/connectors/types'
 import { setSecret } from '../services/secret-vault'
+import { useConnectorEnablement } from './useConnectorEnablement'
 
 const MEMORY_MCP_CONNECTORS: ConnectorId[] = ['supermemory', 'mem0', 'mcp-memory']
 
 export function useMemoryIntegration() {
+  const { isEnabled, setEnabled } = useConnectorEnablement()
   const busy = ref(false)
   const error = ref('')
   const searchQuery = ref('')
@@ -19,7 +20,7 @@ export function useMemoryIntegration() {
   const mem0KeyDraft = ref('')
 
   const agentMemoryCount = computed(() => new AgentMemoryRagIndex().count())
-  const connectorEnabled = computed(() => isConnectorEnabled('agent-memory'))
+  const connectorEnabled = computed(() => isEnabled('agent-memory'))
 
   function mcpStatus(serverId: string) {
     const installed = getInstalledMcpServer(serverId)
@@ -45,11 +46,11 @@ export function useMemoryIntegration() {
   }
 
   function setAgentMemoryConnector(enabled: boolean) {
-    setConnectorEnabled('agent-memory', enabled)
+    setEnabled('agent-memory', enabled)
   }
 
   async function setMemoryMcpConnector(id: ConnectorId, enabled: boolean) {
-    setConnectorEnabled(id, enabled)
+    setEnabled(id, enabled)
     syncConnectorMcpInstall(id, enabled)
     if (enabled) {
       const connector = { supermemory: 'supermemory', mem0: 'mem0', 'mcp-memory': 'memory' } as const
@@ -86,6 +87,6 @@ export function useMemoryIntegration() {
     setMemoryMcpConnector,
     refreshStatus,
     runSearch,
-    isConnectorEnabled,
+    isConnectorEnabled: isEnabled,
   }
 }

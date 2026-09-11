@@ -6,6 +6,7 @@
         <p class="text-zinc-500">
           Cursor-style Google OAuth, Drive / Gmail / Calendar tools, and a local MCP install catalog. Credentials stay in the secret vault.
           GitHub token, MCP, and starred archive: <NuxtLink to="/settings?tab=github" class="underline underline-offset-4">Settings → GitHub</NuxtLink>.
+          Domain plugins and starred adapters: <NuxtLink to="/settings?tab=plugins" class="underline underline-offset-4">Settings → Plugins</NuxtLink>.
         </p>
       </div>
       <UButton :loading="busy" @click="refreshAll">Refresh</UButton>

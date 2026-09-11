@@ -1,4 +1,3 @@
-import { isConnectorEnabled, setConnectorEnabled } from '../../plugins/connectors/connector-store'
 import { getConnectorStatus } from '../../plugins/connectors/connector-runtime'
 import type { ConnectorId } from '../../plugins/connectors/types'
 import { loadExerciseCatalog, searchExercises, type ExerciseRecord } from '../../plugins/longevity/fitness/exercises'
@@ -13,6 +12,7 @@ import {
 import { FEARPRIME_INTERVENTION_REGISTRY } from '../../plugins/fearprime/interventions/registry'
 import type { GarminBiometricMetric } from '../services/health-adapters/garmin-biometric-schema'
 import { REJECTED_BIOMETRIC_PROVIDERS } from '../services/health-adapters/garmin-biometric-schema'
+import { useConnectorEnablement } from './useConnectorEnablement'
 
 const GARMIN_METRICS: GarminBiometricMetric[] = [
   'sleep_score',
@@ -26,6 +26,7 @@ const GARMIN_METRICS: GarminBiometricMetric[] = [
 ]
 
 export function usePluginsIntegration() {
+  const { isEnabled, setEnabled } = useConnectorEnablement()
   const busy = ref(false)
   const error = ref('')
   const exerciseSearchQuery = ref('')
@@ -49,11 +50,11 @@ export function usePluginsIntegration() {
 
   function isIntegrationEnabled(integration: StarredIntegration): boolean | null {
     if (!integration.connectorId) return null
-    return isConnectorEnabled(integration.connectorId as ConnectorId)
+    return isEnabled(integration.connectorId as ConnectorId)
   }
 
   function setIntegrationConnector(connectorId: string, enabled: boolean) {
-    setConnectorEnabled(connectorId as ConnectorId, enabled)
+    setEnabled(connectorId as ConnectorId, enabled)
   }
 
   async function refreshConnectorStatus(connectorId: ConnectorId) {
