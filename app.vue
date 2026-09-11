@@ -53,6 +53,9 @@ const route = useRoute()
 
 const navigation = [
   { label: 'Overview', to: '/' },
+  { label: 'Plugins', to: '/plugins' },
+  { label: 'FearPrime', to: '/fearprime' },
+  { label: 'Longevity', to: '/longevity' },
   { label: 'Agent', to: '/agent' },
   { label: 'AI Models', to: '/ai-models' },
   { label: 'Settings', to: '/settings' },
@@ -61,9 +64,7 @@ const navigation = [
   { label: 'Data health', to: '/data-health' },
   { label: 'Safety', to: '/safety' },
   { label: 'Experiments', to: '/experiments' },
-  { label: 'Fearprime', to: '/fearprime' },
   { label: 'Health Sync', to: '/health-sync' },
-  { label: 'Longevity', to: '/longevity' },
   { label: 'Bloods', to: '/longevity/bloods' },
   { label: 'Genetics', to: '/longevity/genetics' },
   { label: 'Cardiovascular', to: '/longevity/cardiovascular' },
