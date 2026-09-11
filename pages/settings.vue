@@ -37,6 +37,13 @@
       >
         Research
       </UButton>
+      <UButton
+        size="sm"
+        :variant="activeTab === 'plugins' ? 'solid' : 'ghost'"
+        @click="activeTab = 'plugins'"
+      >
+        Plugins
+      </UButton>
     </div>
 
     <template v-if="activeTab === 'general'">
@@ -424,6 +431,189 @@
         </ul>
       </UCard>
     </template>
+
+    <template v-else-if="activeTab === 'plugins'">
+      <UCard>
+        <template #header><div class="font-medium">Domain plugins</div></template>
+        <p class="text-sm text-zinc-400">
+          Fearprime and Longevity are first-class domain plugins with manifests under <code>plugins/</code>.
+          MCP connectors and OAuth live on <NuxtLink to="/connectors" class="underline underline-offset-4">Connectors</NuxtLink>;
+          starred research adapters are on the Research tab.
+        </p>
+        <UAlert v-if="plugins.error" class="mt-3" title="Plugins error" :description="plugins.error" color="error" variant="subtle" />
+        <div class="mt-4 grid gap-3 lg:grid-cols-2">
+          <div
+            v-for="plugin in plugins.domainPlugins"
+            :key="plugin.id"
+            class="rounded border border-zinc-800 p-4"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="font-medium">{{ plugin.name }}</div>
+              <UBadge variant="subtle">v{{ plugin.version }}</UBadge>
+            </div>
+            <p class="mt-2 text-sm text-zinc-400">{{ plugin.description }}</p>
+            <div class="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
+              <span v-if="plugin.clinicalMode">Clinical mode</span>
+              <span v-if="plugin.researchMode">Research mode</span>
+              <span v-if="plugin.id === 'fearprime'">{{ plugins.fearprimeInterventionCount }} interventions</span>
+              <span v-if="plugin.id === 'longevity'">{{ plugins.exerciseCatalog.count }} exercises</span>
+            </div>
+            <UButton class="mt-3" size="sm" variant="outline" :to="plugin.route">Open {{ plugin.name }}</UButton>
+          </div>
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Starred integrations</div></template>
+        <p class="text-xs text-zinc-500">Approved adapters from jekidev/stararchive — not wholesale merges. Sci-Hub stays off.</p>
+        <ul class="mt-4 space-y-3">
+          <li
+            v-for="integration in plugins.starredIntegrations"
+            :key="integration.id"
+            class="rounded border border-zinc-800 p-3"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div class="font-medium">{{ integration.name }}</div>
+                <p class="mt-1 text-sm text-zinc-400">{{ integration.description }}</p>
+                <p class="mt-1 font-mono text-xs text-zinc-500">{{ integration.modulePath }}</p>
+              </div>
+              <div class="flex flex-col items-end gap-2">
+                <UBadge variant="subtle">{{ integration.kind }}</UBadge>
+                <UButton
+                  v-if="integration.settingsTab === 'research'"
+                  size="xs"
+                  variant="ghost"
+                  to="/settings?tab=research"
+                >
+                  Research settings
+                </UButton>
+                <UButton
+                  v-else-if="integration.settingsTab === 'github'"
+                  size="xs"
+                  variant="ghost"
+                  to="/settings?tab=github"
+                >
+                  GitHub settings
+                </UButton>
+                <UButton
+                  v-else-if="integration.settingsTab === 'memory'"
+                  size="xs"
+                  variant="ghost"
+                  to="/settings?tab=memory"
+                >
+                  Memory settings
+                </UButton>
+                <UButton
+                  v-else-if="integration.settingsTab === 'connectors'"
+                  size="xs"
+                  variant="ghost"
+                  to="/connectors"
+                >
+                  Connectors
+                </UButton>
+              </div>
+            </div>
+            <label
+              v-if="integration.connectorId && integration.kind === 'connector'"
+              class="mt-3 flex items-center gap-2 text-sm"
+            >
+              <input
+                type="checkbox"
+                :checked="plugins.isIntegrationEnabled(integration) ?? false"
+                @change="plugins.setIntegrationConnector(integration.connectorId!, ($event.target as HTMLInputElement).checked)"
+              />
+              Enable {{ integration.name }} connector
+            </label>
+          </li>
+        </ul>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Exercise catalog</div></template>
+        <p class="text-xs text-zinc-500">
+          {{ plugins.exerciseCatalog.count }} exercises · {{ plugins.exerciseCatalog.license }} · {{ plugins.exerciseCatalog.source }}
+        </p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <UInput
+            v-model="plugins.exerciseSearchQuery"
+            placeholder="Search exercises (e.g. squat, dumbbell)"
+            class="flex-1 min-w-[12rem]"
+            @keyup.enter="plugins.runExerciseSearch()"
+          />
+          <UButton @click="plugins.runExerciseSearch()">Search</UButton>
+        </div>
+        <ul v-if="plugins.exerciseResults.length" class="mt-4 space-y-2 text-sm">
+          <li v-for="exercise in plugins.exerciseResults" :key="exercise.id" class="rounded border border-zinc-800 p-3">
+            <div class="font-medium">{{ exercise.name }}</div>
+            <div class="text-xs text-zinc-500">{{ exercise.category }} · {{ exercise.equipment }} · {{ exercise.target }}</div>
+          </li>
+        </ul>
+        <p v-else class="mt-4 text-sm text-zinc-500">Search the catalog or open Longevity → Fitness.</p>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Longevity watchlist</div></template>
+        <div class="flex flex-wrap gap-2">
+          <UButton
+            v-for="tier in ['all', 'resource', 'clock', 'organization', 'reading'] as const"
+            :key="tier"
+            size="xs"
+            :variant="plugins.watchlistTier === tier ? 'solid' : 'ghost'"
+            @click="plugins.watchlistTier = tier"
+          >
+            {{ tier }}
+          </UButton>
+        </div>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li v-for="item in plugins.watchlistItems" :key="item.id" class="rounded border border-zinc-800 p-3">
+            <a :href="item.url" target="_blank" rel="noopener noreferrer" class="font-medium underline underline-offset-4">{{ item.title }}</a>
+            <div class="text-xs text-zinc-500">{{ item.tier }} · {{ item.source }}</div>
+            <p class="mt-1 text-zinc-400">{{ item.notes }}</p>
+          </li>
+        </ul>
+      </UCard>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <UCard>
+          <template #header><div class="font-medium">Garmin biometric map</div></template>
+          <p class="text-xs text-zinc-500">Supported metrics:</p>
+          <ul class="mt-2 space-y-1 font-mono text-xs text-zinc-400">
+            <li v-for="metric in plugins.garminMetrics" :key="metric">{{ metric }}</li>
+          </ul>
+          <p class="mt-4 text-xs text-zinc-500">Rejected providers (use Garmin or Health Connect):</p>
+          <p class="mt-1 text-xs text-zinc-400">{{ plugins.rejectedProviders.join(', ') }}</p>
+          <UButton class="mt-3" size="sm" variant="outline" to="/health-sync">Open Health Sync</UButton>
+        </UCard>
+
+        <UCard>
+          <template #header><div class="font-medium">PDF inspector</div></template>
+          <p class="text-xs text-zinc-500">Classify a lab PDF as text, scanned, or mixed before OCR.</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <UButton size="sm" variant="outline" @click="plugins.inspectSamplePdf()">Inspect sample PDF</UButton>
+            <label class="inline-flex cursor-pointer items-center gap-2 text-sm">
+              <input type="file" accept="application/pdf" class="text-xs" @change="onPdfFileSelected">
+              Upload PDF
+            </label>
+          </div>
+          <div v-if="plugins.pdfInspection" class="mt-4 rounded border border-zinc-800 p-3 text-sm">
+            <div class="font-medium capitalize">{{ plugins.pdfInspection.kind }}</div>
+            <div class="text-xs text-zinc-500">
+              text streams {{ plugins.pdfInspection.textStreamCount }} · images {{ plugins.pdfInspection.imageXObjectCount }}
+              · OCR {{ plugins.pdfInspection.recommendOcr ? 'recommended' : 'not needed' }}
+            </div>
+          </div>
+        </UCard>
+      </div>
+
+      <UCard>
+        <template #header><div class="font-medium">Agent tools</div></template>
+        <ul class="space-y-1 font-mono text-xs text-zinc-400">
+          <li><code>plugins.status</code> — domain plugins + starred integration summary</li>
+          <li><code>plugins.exercises.search</code> — search MIT exercise catalog</li>
+        </ul>
+      </UCard>
+    </template>
   </div>
 </template>
 
@@ -436,16 +626,17 @@ import {
 import { isTauriRuntime } from '~/utils/runtime-platform'
 
 const route = useRoute()
-const activeTab = ref<'general' | 'github' | 'memory' | 'research'>('general')
+const activeTab = ref<'general' | 'github' | 'memory' | 'research' | 'plugins'>('general')
 
 watch(() => route.query.tab, (tab) => {
-  if (tab === 'github' || tab === 'memory' || tab === 'research') activeTab.value = tab
+  if (tab === 'github' || tab === 'memory' || tab === 'research' || tab === 'plugins') activeTab.value = tab
 }, { immediate: true })
 
 const { settings, vaultUnlocked, unlockVault: unlock, lockVault: lock, update, setProviderKey, clearKeys: clearProviderKeys, reset: resetSettings } = useLLM()
 const github = useGitHubIntegration()
 const memory = useMemoryIntegration()
 const research = useResearchIntegration()
+const plugins = usePluginsIntegration()
 const browserDevPath = computed(() => !isTauriRuntime())
 const vaultPassword = ref('')
 const vaultBusy = ref(false)
@@ -483,6 +674,7 @@ onMounted(async () => {
   githubConnectorStatus.value = (await github.refreshStatus()).status
   await memory.loadCredentials()
   memory.runSearch()
+  plugins.runExerciseSearch()
 })
 
 async function refreshGitHubStatus() {
@@ -553,5 +745,11 @@ async function onGitHubConnectorToggle(enabled: boolean) {
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString()
+}
+
+function onPdfFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (file) plugins.inspectPdfFile(file)
 }
 </script>

@@ -14,6 +14,7 @@ import { createMcpHttpTools } from './tools/mcp-http-tools'
 import { createFrameworkTools } from './tools/framework-tools'
 import { createGitHubTools } from './tools/github-tools'
 import { createResearchTools } from './tools/research-tools'
+import { createPluginTools } from './tools/plugin-tools'
 import { searchAgentMemories } from '../../../plugins/longevity/rag/agent-memory-index'
 import { assertToolPolicyAllowed } from './tool-policy-guard'
 import type { AgentTool, AgentToolCall } from './types'
@@ -109,6 +110,9 @@ export function createDefaultToolGateway(): AgentToolGateway {
     gateway.register(tool)
   }
   for (const tool of createResearchTools()) {
+    gateway.register(tool)
+  }
+  for (const tool of createPluginTools()) {
     gateway.register(tool)
   }
   for (const tool of createMcpInstallTools()) {
