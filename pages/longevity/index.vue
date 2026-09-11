@@ -13,6 +13,13 @@
 
     <UAlert v-if="!initialized" title="Loading personal biology" description="Reading the local-first biology profile." />
 
+    <UCard>
+      <template #header><div class="font-medium">Modules</div></template>
+      <div class="flex flex-wrap gap-2">
+        <UButton v-for="item in modules" :key="item.to" size="sm" variant="outline" :to="item.to">{{ item.label }}</UButton>
+      </div>
+    </UCard>
+
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <UCard v-for="metric in metrics" :key="metric.label">
         <div class="text-sm text-zinc-500">{{ metric.label }}</div>
@@ -90,6 +97,22 @@ const recentBiomarkers = computed(() =>
     .sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))
     .slice(0, 5),
 )
+
+const modules = [
+  { label: 'Bloods', to: '/longevity/bloods' },
+  { label: 'Genetics', to: '/longevity/genetics' },
+  { label: 'Fitness', to: '/longevity/fitness' },
+  { label: 'Evidence', to: '/longevity/evidence' },
+  { label: 'Timeline', to: '/longevity/timeline' },
+  { label: 'Mito', to: '/longevity/mito' },
+  { label: 'Cardiovascular', to: '/longevity/cardiovascular' },
+  { label: 'Metabolic', to: '/longevity/metabolic' },
+  { label: 'Recovery', to: '/longevity/recovery' },
+  { label: 'Organs', to: '/longevity/organs' },
+  { label: 'Prevention', to: '/longevity/prevention' },
+  { label: 'Interventions', to: '/longevity/interventions' },
+  { label: 'Plugins', to: '/settings?tab=plugins' },
+]
 
 const metrics = computed(() => [
   { label: 'Bloods', value: String(profile.value.biomarkers.length), note: 'Imported biomarker records' },

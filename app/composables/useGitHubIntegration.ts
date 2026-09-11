@@ -1,6 +1,6 @@
 import { syncConnectorMcpInstall } from '../../plugins/connectors/connector-mcp-sync'
 import { getConnectorStatus } from '../../plugins/connectors/connector-runtime'
-import { isConnectorEnabled, setConnectorEnabled } from '../../plugins/connectors/connector-store'
+import { useConnectorEnablement } from './useConnectorEnablement'
 import { DEFAULT_GITHUB_USERNAME, summarizeStarchiveCatalog } from '../../plugins/starchive/catalog-loader'
 import { fetchStarredReposFromGithub } from '../../plugins/starchive/github-api'
 import type { StarchiveRepo } from '../../plugins/starchive/types'
@@ -24,9 +24,10 @@ export function useGitHubIntegration() {
   const tokenDraft = ref('')
   const usernameDraft = ref(DEFAULT_GITHUB_USERNAME)
 
+  const { isEnabled, setEnabled } = useConnectorEnablement()
   const activeCatalog = computed(() => resolveActiveStarchiveCatalog())
   const summary = computed(() => summarizeStarchiveCatalog(activeCatalog.value.catalog))
-  const connectorEnabled = computed(() => isConnectorEnabled('github'))
+  const connectorEnabled = computed(() => isEnabled('github'))
   const mcpInstalled = computed(() => Boolean(getInstalledMcpServer('github')))
   const mcpEnabled = computed(() => Boolean(getInstalledMcpServer('github')?.enabled))
 
@@ -61,7 +62,7 @@ export function useGitHubIntegration() {
   }
 
   async function setConnector(enabled: boolean) {
-    setConnectorEnabled('github', enabled)
+    setEnabled('github', enabled)
     syncConnectorMcpInstall('github', enabled)
   }
 
