@@ -3,7 +3,10 @@
     <div class="flex items-end justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold">Connectors</h1>
-        <p class="text-zinc-500">Cursor-style Google OAuth, Drive / Gmail / Calendar tools, and a local MCP install catalog. Credentials stay in the secret vault.</p>
+        <p class="text-zinc-500">
+          Cursor-style Google OAuth, Drive / Gmail / Calendar tools, and a local MCP install catalog. Credentials stay in the secret vault.
+          GitHub token, MCP, and starred archive: <NuxtLink to="/settings?tab=github" class="underline underline-offset-4">Settings → GitHub</NuxtLink>.
+        </p>
       </div>
       <UButton :loading="busy" @click="refreshAll">Refresh</UButton>
     </div>

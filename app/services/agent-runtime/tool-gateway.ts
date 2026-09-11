@@ -11,6 +11,7 @@ import { createMcpSessionTools } from './tools/mcp-session-tools'
 import { createMcpDiscoveryTools } from './tools/mcp-discovery-tools'
 import { createMcpHttpTools } from './tools/mcp-http-tools'
 import { createFrameworkTools } from './tools/framework-tools'
+import { createGitHubTools } from './tools/github-tools'
 import { assertToolPolicyAllowed } from './tool-policy-guard'
 import type { AgentTool, AgentToolCall } from './types'
 
@@ -86,6 +87,9 @@ export function createDefaultToolGateway(): AgentToolGateway {
     gateway.register(tool)
   }
   for (const tool of createGoogleWorkspaceTools()) {
+    gateway.register(tool)
+  }
+  for (const tool of createGitHubTools()) {
     gateway.register(tool)
   }
   for (const tool of createMcpInstallTools()) {
