@@ -1,3 +1,4 @@
+import { syncConnectorMcpInstall } from '../../plugins/connectors/connector-mcp-sync'
 import { CONNECTOR_REGISTRY } from '../../plugins/connectors/registry'
 import { isConnectorEnabled, loadConnectorSettings, setConnectorEnabled } from '../../plugins/connectors/connector-store'
 import { listConnectorStatuses } from '../../plugins/connectors/connector-runtime'
@@ -25,6 +26,7 @@ export function useConnectors() {
 
   function toggle(id: ConnectorId, enabled: boolean) {
     settings.value = setConnectorEnabled(id, enabled)
+    syncConnectorMcpInstall(id, enabled)
     return refresh()
   }
 
