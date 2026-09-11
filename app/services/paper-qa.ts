@@ -1,6 +1,27 @@
 import { searchDocuments } from '../../plugins/longevity/rag/document-index'
 
 export const PAPER_QA_SCI_HUB_ENABLED = false as const
+export const PAPER_QA_SETTINGS_HREF = '/settings?tab=research'
+export const PAPER_QA_CONNECTOR_OFF_MESSAGE =
+  'PaperQA connector is off. Enable it in Settings → Research, then retry research.paperqa.ask.'
+
+export type PaperQaConnectorOffResult = {
+  ok: false
+  error: string
+  settingsHref: typeof PAPER_QA_SETTINGS_HREF
+  connectorId: 'paper-qa'
+  enabled: false
+}
+
+export function paperQaConnectorOffResult(): PaperQaConnectorOffResult {
+  return {
+    ok: false,
+    error: PAPER_QA_CONNECTOR_OFF_MESSAGE,
+    settingsHref: PAPER_QA_SETTINGS_HREF,
+    connectorId: 'paper-qa',
+    enabled: false,
+  }
+}
 
 export type PaperQaCitation = {
   key: string

@@ -4,7 +4,7 @@ import { useConnectorEnablement } from './useConnectorEnablement'
 import type { ConnectorId } from '../../plugins/connectors/types'
 import { getInstalledMcpServer } from '../../plugins/llm/mcp/install-store'
 import { installMcpFromCatalog } from '../../plugins/llm/mcp/install'
-import { answerPaperQaFromLocalRag, type PaperQaAnswer } from '../services/paper-qa'
+import { answerPaperQaFromLocalRag, PAPER_QA_CONNECTOR_OFF_MESSAGE, type PaperQaAnswer } from '../services/paper-qa'
 import { listResearchProviders } from '../services/external-research-providers'
 import { setSecret } from '../services/secret-vault'
 
@@ -79,7 +79,7 @@ export function useResearchIntegration() {
     error.value = ''
     try {
       if (!isEnabled('paper-qa')) {
-        throw new Error('Enable the PaperQA connector first.')
+        throw new Error(PAPER_QA_CONNECTOR_OFF_MESSAGE)
       }
       paperQaAnswer.value = answerPaperQaFromLocalRag(paperQaQuestion.value)
     } catch (cause) {

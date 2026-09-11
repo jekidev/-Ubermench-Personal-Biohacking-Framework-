@@ -9,6 +9,7 @@ import { withRecovery } from './recovery'
 import { SkillEvolutionEngine } from './skill-evolution'
 import { executeApprovedToolCalls } from './tool-loop'
 import { extractToolCalls, partitionToolCalls, selectUnobservedFollowUpCalls, upsertToolCalls } from './tool-plan'
+import { applyWaitingApprovalIfNeeded } from './run-reply'
 import { formatAgentToolCatalog, listAgentToolCatalog } from './tool-catalog'
 import { formatSuggestedTools, resolveToolCallsFromModel } from './suggest-tools'
 import { auditTaskSecurity } from './security-audit'
@@ -225,11 +226,9 @@ export async function continueAgentWithTools(task: AgentTask, run: AgentRun, cal
     const extra = await executeApprovedToolCalls(task, run, moreAuto, maxToolCalls)
     await recordAudit(store, auditEvent(run.id, 'tool.completed', `Executed ${extra.executed} follow-up tool call(s)`))
   }
-  if (awaitingApproval.length) {
-    mergeRunToolCalls(run, awaitingApproval)
-    run.status = 'waiting-approval'
-    run.completedAt = undefined
-    await recordAudit(store, auditEvent(run.id, 'tool.blocked', 'Continuation paused pending explicit approval', { toolCalls: awaitingApproval.map((call) => call.name) }))
+  const stillPending = applyWaitingApprovalIfNeeded(run, awaitingApproval)
+  if (stillPending.length) {
+    await recordAudit(store, auditEvent(run.id, 'tool.blocked', 'Continuation paused pending explicit approval', { toolCalls: stillPending.map((call) => call.name) }))
     await store.appendRun(run)
     return run
   }

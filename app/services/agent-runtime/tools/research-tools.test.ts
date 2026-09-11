@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
+import { isConnectorEnabled } from '../../../../plugins/connectors/connector-store'
+import { PAPER_QA_CONNECTOR_OFF_MESSAGE } from '../../paper-qa'
 import { createResearchTools } from './research-tools'
 
 vi.mock('../../../../plugins/connectors/connector-store', () => ({
@@ -33,5 +35,16 @@ describe('research tools', () => {
     const tools = createResearchTools()
     const workflow = tools.find((tool) => tool.name === 'research.europepmc')!
     await expect(workflow.execute({ goal: 'metformin longevity' })).resolves.toMatchObject({ hitCount: 1 })
+  })
+
+  it('returns a Settings → Research error instead of throwing when PaperQA is off', async () => {
+    vi.mocked(isConnectorEnabled).mockReturnValueOnce(false)
+    const tools = createResearchTools()
+    const ask = tools.find((tool) => tool.name === 'research.paperqa.ask')!
+    await expect(ask.execute({ question: 'CRP' })).resolves.toMatchObject({
+      ok: false,
+      settingsHref: '/settings?tab=research',
+      error: PAPER_QA_CONNECTOR_OFF_MESSAGE,
+    })
   })
 })

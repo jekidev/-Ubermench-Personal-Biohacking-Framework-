@@ -2,10 +2,15 @@ import { recentAudit } from '~/services/agent-runtime/audit'
 import { invokeCatalogTool } from '~/services/agent-runtime/invoke-tool'
 import { continueAgentWithTools, runAgentTask } from '~/services/agent-runtime/runtime'
 import { pendingAgentToolCalls } from '~/services/agent-runtime/run-reply'
+import { selectApprovableToolCalls } from '~/services/agent-runtime/tool-plan'
 import { createRuntimeStore } from '~/services/agent-runtime/store'
 import type { AgentTask } from '~/services/agent-superstack/types'
 import type { AgentRun, AgentToolCall } from '~/services/agent-runtime/types'
 import { providerHealth } from '~/services/agent-runtime/provider-health'
+
+export type ApprovePendingOptions = {
+  includeNative?: boolean
+}
 
 export function useAgentRuntime() {
   const activeRun = useState<AgentRun | null>('ubermench-agent-active-run', () => null)
@@ -55,13 +60,17 @@ export function useAgentRuntime() {
     return run(task)
   }
 
-  async function approvePending(approvalToken?: string) {
+  async function approvePending(approvalToken?: string, options: ApprovePendingOptions = {}) {
     const run = activeRun.value
     if (!run) throw new Error('No active agent run to approve.')
     const pending = pendingAgentToolCalls(run)
     if (!pending.length) return run
+    const approvable = selectApprovableToolCalls(pending, { includeNative: options.includeNative === true })
+    if (!approvable.length) {
+      throw new Error('Pending native MCP tools need Agent Control Center (preflight token). Catalog tools are already approved or none are waiting.')
+    }
     const token = approvalToken?.trim() || `user-approved-${Date.now()}`
-    return continueRun(run.task, run, pending.map((call) => ({ ...call, approvalToken: token })))
+    return continueRun(run.task, run, approvable.map((call) => ({ ...call, approvalToken: token })))
   }
 
   async function invokeTool(name: string, args: Record<string, unknown> = {}, approvalToken?: string) {

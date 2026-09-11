@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractToolCalls, partitionToolCalls, selectUnobservedFollowUpCalls, upsertToolCalls } from './tool-plan'
+import { extractToolCalls, partitionPendingByApprovalSurface, partitionToolCalls, selectApprovableToolCalls, selectUnobservedFollowUpCalls, upsertToolCalls } from './tool-plan'
 
 describe('agent tool plan parser', () => {
   it('extracts a bounded structured tool plan', () => {
@@ -96,5 +96,20 @@ describe('agent tool plan parser', () => {
     expect(followUp[0]?.name).toBe('research.paperqa.ask')
     expect(followUp[0]?.id).not.toBe('tool_1')
     expect(followUp[0]?.requiresApproval).toBe(true)
+  })
+
+  it('splits mixed catalog and native pending so PaperQA can approve without paper-search', () => {
+    const mixed = [
+      { id: 'c1', name: 'research.paperqa.ask', args: { question: 'CRP' }, requiresApproval: true },
+      { id: 'c2', name: 'mcp.stdio:paper-search', args: { method: 'search_pubmed' }, requiresApproval: true },
+    ]
+    const { catalog, native } = partitionPendingByApprovalSurface(mixed)
+    expect(catalog.map((call) => call.name)).toEqual(['research.paperqa.ask'])
+    expect(native.map((call) => call.name)).toEqual(['mcp.stdio:paper-search'])
+    expect(selectApprovableToolCalls(mixed).map((call) => call.name)).toEqual(['research.paperqa.ask'])
+    expect(selectApprovableToolCalls(mixed, { includeNative: true }).map((call) => call.name)).toEqual([
+      'research.paperqa.ask',
+      'mcp.stdio:paper-search',
+    ])
   })
 })

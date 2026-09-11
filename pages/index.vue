@@ -120,22 +120,29 @@
         <textarea v-model="prompt" class="min-h-28 w-full rounded-md border border-zinc-200 bg-transparent p-3 text-sm dark:border-zinc-700" placeholder="Ask Ubermench to research, analyse or reason about a health optimisation question..." />
         <div class="flex flex-wrap items-center gap-3">
           <UButton type="submit" :loading="loading" :disabled="!prompt.trim()">Run agent</UButton>
-          <span class="text-xs text-zinc-500">Uses the agent kernel, including Garmin/PDF/research tools when they help.</span>
-          <span v-if="lastRun" class="text-xs text-zinc-500">{{ lastRun.provider }} / {{ lastRun.model }} · {{ lastRun.status }}</span>
+          <span class="text-xs text-zinc-500">Uses the agent kernel, including Garmin/PDF/research tools when they help. Waiting-approval is shared with Chat and Agent.</span>
+          <span v-if="displayedRun" class="text-xs text-zinc-500">{{ displayedRun.provider }} / {{ displayedRun.model }} · {{ displayedRun.status }}</span>
         </div>
         <div v-if="error" class="rounded-md border border-red-300 p-3 text-sm text-red-700">{{ error }}</div>
-        <div v-if="lastRun" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">{{ lastRun.text }}</div>
-        <div v-if="lastRun?.status === 'waiting-approval'" class="flex flex-wrap gap-2">
+        <div v-if="displayedRun && waitingApproval" class="rounded-md border border-amber-800/70 bg-amber-950/30 p-3 text-sm">
+          <div class="font-medium text-amber-200">Active run waiting for approval</div>
+          <p v-if="displayedRun.prompt" class="mt-1 text-xs text-zinc-500">{{ displayedRun.prompt }}</p>
+        </div>
+        <div v-if="displayedRun" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">{{ displayedRun.text }}</div>
+        <div v-if="waitingApproval" class="flex flex-wrap gap-2">
           <UButton
             v-if="pendingCatalogTools.length"
             size="sm"
             :loading="loading"
             @click="approvePending"
           >
-            Approve pending tools
+            {{ pendingNativeTools.length ? 'Approve catalog tools' : 'Approve pending tools' }}
           </UButton>
+          <p v-if="pendingCatalogTools.length" class="w-full text-xs text-zinc-500">
+            Catalog: {{ pendingCatalogTools.map((call) => call.name).join(', ') }}
+          </p>
           <p v-if="pendingNativeTools.length" class="w-full text-xs text-zinc-500">
-            Native MCP ({{ pendingNativeTools.map((call) => call.name).join(', ') }}) still needs the Agent preflight token.
+            Native MCP still needs Agent preflight: {{ pendingNativeTools.map((call) => call.name).join(', ') }}.
           </p>
           <NuxtLink to="/chat"><UButton size="sm" variant="outline">Open Chat</UButton></NuxtLink>
           <NuxtLink to="/agent"><UButton size="sm" variant="outline">Open Agent</UButton></NuxtLink>
@@ -159,21 +166,14 @@ import { loadBackupStatus } from '~/services/backup-status'
 import { assessLongevity } from '~/services/longevity-engine'
 import { buildOverviewSummary } from '~/services/overview-dashboard'
 import { screenProfileSafety } from '~/services/profile-safety'
-import { formatAgentRunReply, pendingAgentToolCalls } from '~/services/agent-runtime/run-reply'
-import { toolNameRequiresNativeApproval } from '~/services/agent-runtime/tool-plan'
-
 const llm = useLLM()
-const runtime = useAgentRuntime()
+const { runtime, pendingCatalogTools, pendingNativeTools, displayedRun, waitingApproval } = usePendingAgentApprovals()
 const biology = usePersonalBiology()
 const experiments = useExperiments()
 const profile = biology.profile
 const prompt = ref('')
 const loading = ref(false)
 const error = ref('')
-const lastRun = ref<{ text: string; provider: string; model: string; status: string } | null>(null)
-const pendingTools = computed(() => runtime.activeRun.value ? pendingAgentToolCalls(runtime.activeRun.value) : [])
-const pendingNativeTools = computed(() => pendingTools.value.filter((call) => toolNameRequiresNativeApproval(call.name)))
-const pendingCatalogTools = computed(() => pendingTools.value.filter((call) => !toolNameRequiresNativeApproval(call.name)))
 
 await biology.initialize()
 await experiments.initialize()
@@ -213,22 +213,15 @@ function percent(value: number) {
 
 async function runAI() {
   error.value = ''
-  lastRun.value = null
   loading.value = true
   try {
     const looksLikeResearch = /pubmed|arxiv|paper|literature|europe pmc|paperqa|research/i.test(prompt.value)
-    const run = await runtime.run({
+    await runtime.run({
       id: `overview_${Date.now()}`,
       kind: looksLikeResearch ? 'research' : 'chat',
       prompt: prompt.value,
       requiredCapabilities: looksLikeResearch ? ['research'] : ['reasoning'],
     })
-    lastRun.value = {
-      text: formatAgentRunReply(run),
-      provider: run.activeProvider ?? run.selectedModel?.provider ?? 'none',
-      model: run.activeModel ?? run.selectedModel?.model ?? 'none',
-      status: run.status,
-    }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
   } finally {
@@ -237,22 +230,17 @@ async function runAI() {
 }
 
 async function approvePending() {
-  const run = runtime.activeRun.value
-  if (!run) return
+  if (!runtime.activeRun.value) return
+  if (!pendingCatalogTools.value.length) {
+    error.value = pendingNativeTools.value.length
+      ? `Native MCP still needs Agent preflight: ${pendingNativeTools.value.map((call) => call.name).join(', ')}. Open Agent.`
+      : 'No catalog tools are waiting for approval.'
+    return
+  }
   error.value = ''
   loading.value = true
   try {
-    if (pendingAgentToolCalls(run).some((call) => toolNameRequiresNativeApproval(call.name))) {
-      error.value = 'Native MCP tools need approval in Agent Control Center (preflight + token).'
-      return
-    }
-    const updated = await runtime.approvePending(`user-approved-${Date.now()}`)
-    lastRun.value = {
-      text: formatAgentRunReply(updated),
-      provider: updated.activeProvider ?? updated.selectedModel?.provider ?? lastRun.value?.provider ?? 'none',
-      model: updated.activeModel ?? updated.selectedModel?.model ?? lastRun.value?.model ?? 'none',
-      status: updated.status,
-    }
+    await runtime.approvePending(`user-approved-${Date.now()}`, { includeNative: false })
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
   } finally {

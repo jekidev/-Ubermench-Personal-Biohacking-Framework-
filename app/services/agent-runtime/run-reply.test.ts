@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { formatAgentRunReply, pendingAgentToolCalls } from './run-reply'
+import {
+  applyWaitingApprovalIfNeeded,
+  formatAgentRunReply,
+  formatNativeMcpAgentHandoff,
+  pendingAgentToolCalls,
+  pendingCatalogAgentToolCalls,
+  pendingNativeAgentToolCalls,
+  summarizeAgentRunForUi,
+} from './run-reply'
 import type { AgentRun } from './types'
 import type { AgentTask } from '~/services/agent-superstack/types'
 
@@ -40,8 +48,8 @@ describe('agent run reply', () => {
     })
     expect(pendingAgentToolCalls(run).map((call) => call.name)).toEqual(['research.paperqa.ask'])
     expect(formatAgentRunReply(run)).toContain('Waiting for approval: research.paperqa.ask')
-    expect(formatAgentRunReply(run)).toContain('Approve on Chat, Overview, or Agent Control Center')
-    expect(formatAgentRunReply(run)).not.toContain('Native MCP')
+    expect(formatAgentRunReply(run)).toContain('Approve catalog tools (research.paperqa.ask) on Chat, Overview, or Agent')
+    expect(formatAgentRunReply(run)).not.toContain('Native MCP still needs')
   })
 
   it('tells Chat users that native MCP still needs the Agent token', () => {
@@ -51,5 +59,37 @@ describe('agent run reply', () => {
     })
     expect(formatAgentRunReply(run)).toContain('mcp.stdio:paper-search')
     expect(formatAgentRunReply(run)).toContain('Agent Control Center preflight token')
+    expect(formatNativeMcpAgentHandoff(pendingNativeAgentToolCalls(run))).toContain('mcp.stdio:paper-search')
+  })
+
+  it('keeps catalog approvable when native MCP is also pending', () => {
+    const run = runFixture({
+      status: 'waiting-approval',
+      toolCalls: [
+        { id: 'c1', name: 'research.paperqa.ask', args: { question: 'CRP' }, requiresApproval: true },
+        { id: 'c2', name: 'mcp.stdio:paper-search', args: { method: 'search_pubmed' }, requiresApproval: true },
+      ],
+    })
+    expect(pendingCatalogAgentToolCalls(run).map((call) => call.name)).toEqual(['research.paperqa.ask'])
+    expect(pendingNativeAgentToolCalls(run).map((call) => call.name)).toEqual(['mcp.stdio:paper-search'])
+    const reply = formatAgentRunReply(run)
+    expect(reply).toContain('Approve catalog tools (research.paperqa.ask)')
+    expect(reply).toContain('mcp.stdio:paper-search')
+    expect(summarizeAgentRunForUi(run).status).toBe('waiting-approval')
+  })
+
+  it('leaves leftover native tools in waiting-approval after a catalog-only wave', () => {
+    const run = runFixture({
+      status: 'executing',
+      toolCalls: [
+        { id: 'c1', name: 'research.paperqa.ask', args: { question: 'CRP' }, requiresApproval: true, approvalToken: 'user-1' },
+        { id: 'c2', name: 'mcp.stdio:paper-search', args: { method: 'search_pubmed' }, requiresApproval: true },
+      ],
+      observations: [{ kind: 'tool', toolCallId: 'c1', text: '{"ok":true}', createdAt: '1' }],
+    })
+    const leftover = applyWaitingApprovalIfNeeded(run)
+    expect(leftover.map((call) => call.name)).toEqual(['mcp.stdio:paper-search'])
+    expect(run.status).toBe('waiting-approval')
+    expect(run.completedAt).toBeUndefined()
   })
 })

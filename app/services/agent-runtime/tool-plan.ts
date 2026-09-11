@@ -70,6 +70,27 @@ export function toolNameRequiresNativeApproval(name: string): boolean {
   return name === 'mcp.stdio' || name.startsWith('mcp.stdio:')
 }
 
+export function partitionPendingByApprovalSurface(calls: AgentToolCall[]): {
+  catalog: AgentToolCall[]
+  native: AgentToolCall[]
+} {
+  const catalog: AgentToolCall[] = []
+  const native: AgentToolCall[] = []
+  for (const call of calls) {
+    if (toolNameRequiresNativeApproval(call.name)) native.push(call)
+    else catalog.push(call)
+  }
+  return { catalog, native }
+}
+
+export function selectApprovableToolCalls(
+  calls: AgentToolCall[],
+  options: { includeNative?: boolean } = {},
+): AgentToolCall[] {
+  const { catalog, native } = partitionPendingByApprovalSurface(calls)
+  return options.includeNative === true ? [...catalog, ...native] : catalog
+}
+
 export function applyCatalogApproval(
   calls: AgentToolCall[],
   catalog: ToolApprovalLookup = [],

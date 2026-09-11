@@ -401,6 +401,14 @@
           <input type="checkbox" :checked="research.isConnectorEnabled('paper-qa')" @change="research.setConnector('paper-qa', ($event.target as HTMLInputElement).checked)" />
           Enable PaperQA connector
         </label>
+        <UAlert
+          v-if="!research.isConnectorEnabled('paper-qa')"
+          class="mt-3"
+          title="PaperQA is off"
+          description="research.paperqa.ask needs this connector. Enable it here (Settings → Research), then approve the tool on Chat, Overview, or Agent."
+          color="warning"
+          variant="subtle"
+        />
         <div class="mt-4 flex flex-wrap gap-2">
           <UInput v-model="research.paperQaQuestion" placeholder="Scientific question" class="flex-1 min-w-[12rem]" @keyup.enter="research.runPaperQaPreview()" />
           <UButton @click="research.runPaperQaPreview()">Preview local answer</UButton>

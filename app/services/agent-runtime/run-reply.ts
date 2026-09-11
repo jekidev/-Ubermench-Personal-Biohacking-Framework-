@@ -1,4 +1,5 @@
 import type { AgentObservation, AgentRun, AgentToolCall } from './types'
+import { partitionPendingByApprovalSurface, upsertToolCalls } from './tool-plan'
 
 const TOOL_PREVIEW_CHARS = 1200
 
@@ -10,6 +11,47 @@ export function pendingAgentToolCalls(run: AgentRun): AgentToolCall[] {
     const observed = run.observations.some((item) => item.kind === 'tool' && item.toolCallId === call.id)
     return !observed && call.requiresApproval === true && !call.approvalToken?.trim()
   })
+}
+
+export function pendingCatalogAgentToolCalls(run: AgentRun): AgentToolCall[] {
+  return partitionPendingByApprovalSurface(pendingAgentToolCalls(run)).catalog
+}
+
+export function pendingNativeAgentToolCalls(run: AgentRun): AgentToolCall[] {
+  return partitionPendingByApprovalSurface(pendingAgentToolCalls(run)).native
+}
+
+export function applyWaitingApprovalIfNeeded(run: AgentRun, extraAwaiting: AgentToolCall[] = []): AgentToolCall[] {
+  if (extraAwaiting.length) {
+    run.toolCalls = upsertToolCalls(run.toolCalls, extraAwaiting)
+  }
+  const pending = pendingAgentToolCalls(run)
+  if (pending.length) {
+    run.status = 'waiting-approval'
+    run.completedAt = undefined
+  }
+  return pending
+}
+
+export function summarizeAgentRunForUi(run: AgentRun): {
+  text: string
+  provider: string
+  model: string
+  status: string
+  prompt: string
+} {
+  return {
+    text: formatAgentRunReply(run),
+    provider: run.activeProvider ?? run.selectedModel?.provider ?? 'none',
+    model: run.activeModel ?? run.selectedModel?.model ?? 'none',
+    status: run.status,
+    prompt: run.task.prompt,
+  }
+}
+
+export function formatNativeMcpAgentHandoff(calls: AgentToolCall[]): string {
+  const names = calls.map((call) => call.name).join(', ')
+  return `Native MCP still needs the Agent Control Center preflight token: ${names}. Open Agent to continue those calls. Catalog tools can be approved here.`
 }
 
 export function observationForToolCall(run: AgentRun, callId: string): AgentObservation | undefined {
@@ -35,11 +77,15 @@ export function formatAgentRunReply(run: AgentRun): string {
     sections.push(`Tool results:\n${lines.join('\n')}`)
   }
   if (pending.length) {
-    const nativePending = pending.some((call) => call.name === 'mcp.stdio' || call.name.startsWith('mcp.stdio:'))
-    const where = nativePending
-      ? 'Native MCP (mcp.stdio:*) still needs the Agent Control Center preflight token. Catalog tools can be approved on Chat or Agent.'
-      : 'Approve on Chat, Overview, or Agent Control Center.'
-    sections.push(`Waiting for approval: ${pending.map((call) => call.name).join(', ')}\n${where}`)
+    const { catalog, native } = partitionPendingByApprovalSurface(pending)
+    const lines = [`Waiting for approval: ${pending.map((call) => call.name).join(', ')}`]
+    if (catalog.length) {
+      lines.push(`Approve catalog tools (${catalog.map((call) => call.name).join(', ')}) on Chat, Overview, or Agent.`)
+    }
+    if (native.length) {
+      lines.push(formatNativeMcpAgentHandoff(native))
+    }
+    sections.push(lines.join('\n'))
   }
   if (lastModel.trim()) sections.push(lastModel.trim())
   if (run.error && !sections.length) return run.error
