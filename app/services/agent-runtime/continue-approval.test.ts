@@ -30,7 +30,7 @@ function runFixture(): AgentRun {
     },
     observations: [],
     toolCalls: [
-      { id: 'c1', name: 'research.paperqa.ask', args: { question: 'CRP' }, requiresApproval: true },
+      { id: 'c1', name: 'plugins.garmin.schema', args: {}, requiresApproval: true },
       { id: 'c2', name: 'mcp.stdio:paper-search', args: { method: 'search_pubmed' }, requiresApproval: true },
     ],
     startedAt: new Date().toISOString(),
@@ -38,12 +38,12 @@ function runFixture(): AgentRun {
 }
 
 describe('continueAgentWithTools mixed approval', () => {
-  it('executes PaperQA and keeps paper-search waiting for Agent preflight', async () => {
+  it('executes an approved catalog tool and keeps paper-search waiting for Agent preflight', async () => {
     const run = runFixture()
     const updated = await continueAgentWithTools(task, run, [{
       id: 'c1',
-      name: 'research.paperqa.ask',
-      args: { question: 'CRP' },
+      name: 'plugins.garmin.schema',
+      args: {},
       requiresApproval: true,
       approvalToken: 'user-approved-1',
     }])
