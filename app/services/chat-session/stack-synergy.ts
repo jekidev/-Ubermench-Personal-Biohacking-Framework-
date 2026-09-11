@@ -50,7 +50,7 @@ export function buildStackSynergySnapshot(options: ChatRunOptions, storage?: Pic
   if (skills.some((skill) => skill.id === 'bio-research') && rules.some((rule) => rule.id === 'stack-synergy')) {
     synergies.push('Biohacking research skill + stack synergy rule → interaction-aware supplement/protocol answers.')
   }
-  if (connectors.find((item) => item.id === 'youtube-rag')?.enabled && skills.some((skill) => skill.tools.includes('paper-search') || skill.id === 'scientific-literature-search')) {
+  if (connectors.find((item) => item.id === 'youtube-rag')?.enabled && skills.some((skill) => skill.tools.includes('mcp.stdio:paper-search') || skill.id === 'scientific-literature-search')) {
     synergies.push('YouTube RAG + literature search → combine podcast claims with published evidence.')
   }
   if (connectors.find((item) => item.id === 'google-drive')?.enabled) {

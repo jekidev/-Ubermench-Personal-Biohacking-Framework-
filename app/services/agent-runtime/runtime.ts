@@ -8,7 +8,7 @@ import { recordAudit } from './audit'
 import { withRecovery } from './recovery'
 import { SkillEvolutionEngine } from './skill-evolution'
 import { executeApprovedToolCalls } from './tool-loop'
-import { extractToolCalls, partitionToolCalls, upsertToolCalls } from './tool-plan'
+import { extractToolCalls, partitionToolCalls, selectUnobservedFollowUpCalls, upsertToolCalls } from './tool-plan'
 import { formatAgentToolCatalog, listAgentToolCatalog } from './tool-catalog'
 import { formatSuggestedTools, resolveToolCallsFromModel } from './suggest-tools'
 import { auditTaskSecurity } from './security-audit'
@@ -23,6 +23,11 @@ function auditEvent(runId: string, type: Parameters<typeof recordAudit>[1]['type
 
 function mergeRunToolCalls(run: AgentRun, calls: AgentToolCall[]) {
   run.toolCalls = upsertToolCalls(run.toolCalls, calls)
+}
+
+function followUpCallsFromModel(text: string, run: AgentRun, extraPending: AgentToolCall[] = []) {
+  const catalog = listAgentToolCatalog()
+  return selectUnobservedFollowUpCalls(extractToolCalls(text, catalog), run, extraPending)
 }
 
 export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
@@ -130,7 +135,9 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       }))
     }
 
-    const { executable, awaitingApproval } = partitionToolCalls(calls)
+    const partitioned = partitionToolCalls(calls)
+    const executable = partitioned.executable
+    const awaitingApproval = [...partitioned.awaitingApproval]
     if (executable.length) {
       const result = await executeApprovedToolCalls(task, run, executable)
       await recordAudit(store, auditEvent(id, 'tool.completed', `Executed ${result.executed} tool call(s)`, { source: resolved.source }))
@@ -151,6 +158,13 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
         },
       )
       run.observations.push({ kind: 'model', text: continuation.text, createdAt: new Date().toISOString() })
+      const followUp = followUpCallsFromModel(continuation.text, run, awaitingApproval)
+      const more = partitionToolCalls(followUp)
+      if (more.executable.length) {
+        const extra = await executeApprovedToolCalls(task, run, more.executable)
+        await recordAudit(store, auditEvent(id, 'tool.completed', `Executed ${extra.executed} follow-up tool call(s)`, { source: 'model' }))
+      }
+      awaitingApproval.push(...more.awaitingApproval)
     }
 
     if (awaitingApproval.length) {
@@ -205,11 +219,7 @@ export async function continueAgentWithTools(task: AgentTask, run: AgentRun, cal
     },
   )
   run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() })
-  const catalog = listAgentToolCatalog()
-  const followUp = extractToolCalls(response.text, catalog).filter((call) => {
-    const observed = run.observations.some((item) => item.kind === 'tool' && item.toolCallId === call.id)
-    return !observed
-  })
+  const followUp = followUpCallsFromModel(response.text, run)
   const { executable: moreAuto, awaitingApproval } = partitionToolCalls(followUp)
   if (moreAuto.length) {
     const extra = await executeApprovedToolCalls(task, run, moreAuto, maxToolCalls)

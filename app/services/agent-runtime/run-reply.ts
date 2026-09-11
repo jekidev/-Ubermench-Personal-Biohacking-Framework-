@@ -35,7 +35,11 @@ export function formatAgentRunReply(run: AgentRun): string {
     sections.push(`Tool results:\n${lines.join('\n')}`)
   }
   if (pending.length) {
-    sections.push(`Waiting for approval: ${pending.map((call) => call.name).join(', ')}\nApprove on Chat or Agent Control Center. Native MCP (mcp.stdio:*) still needs the Agent preflight token.`)
+    const nativePending = pending.some((call) => call.name === 'mcp.stdio' || call.name.startsWith('mcp.stdio:'))
+    const where = nativePending
+      ? 'Native MCP (mcp.stdio:*) still needs the Agent Control Center preflight token. Catalog tools can be approved on Chat or Agent.'
+      : 'Approve on Chat, Overview, or Agent Control Center.'
+    sections.push(`Waiting for approval: ${pending.map((call) => call.name).join(', ')}\n${where}`)
   }
   if (lastModel.trim()) sections.push(lastModel.trim())
   if (run.error && !sections.length) return run.error

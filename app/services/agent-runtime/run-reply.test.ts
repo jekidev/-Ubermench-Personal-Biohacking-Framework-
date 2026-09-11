@@ -40,6 +40,16 @@ describe('agent run reply', () => {
     })
     expect(pendingAgentToolCalls(run).map((call) => call.name)).toEqual(['research.paperqa.ask'])
     expect(formatAgentRunReply(run)).toContain('Waiting for approval: research.paperqa.ask')
-    expect(formatAgentRunReply(run)).toContain('Approve on Chat or Agent Control Center')
+    expect(formatAgentRunReply(run)).toContain('Approve on Chat, Overview, or Agent Control Center')
+    expect(formatAgentRunReply(run)).not.toContain('Native MCP')
+  })
+
+  it('tells Chat users that native MCP still needs the Agent token', () => {
+    const run = runFixture({
+      status: 'waiting-approval',
+      toolCalls: [{ id: 'c1', name: 'mcp.stdio:paper-search', args: { method: 'search_pubmed' }, requiresApproval: true }],
+    })
+    expect(formatAgentRunReply(run)).toContain('mcp.stdio:paper-search')
+    expect(formatAgentRunReply(run)).toContain('Agent Control Center preflight token')
   })
 })

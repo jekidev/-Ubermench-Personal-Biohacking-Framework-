@@ -100,14 +100,64 @@ export function partitionToolCalls(calls: AgentToolCall[]): {
   return { executable, awaitingApproval }
 }
 
+export function assignUniqueToolCallIds(
+  calls: AgentToolCall[],
+  reserved: Iterable<string> = [],
+): AgentToolCall[] {
+  const taken = new Set([...reserved].filter(Boolean))
+  const idToName = new Map<string, string>()
+  return calls.map((call, index) => {
+    const base = call.id.trim() || `tool_${index + 1}`
+    let id = base
+    const conflicts = taken.has(id) || (idToName.has(id) && idToName.get(id) !== call.name)
+    if (conflicts) {
+      let suffix = index + 1
+      let next = `${base}__${suffix}`
+      while (taken.has(next) || idToName.has(next)) {
+        suffix += 1
+        next = `${base}__${suffix}`
+      }
+      id = next
+    }
+    idToName.set(id, call.name)
+    return { ...call, id }
+  })
+}
+
 export function upsertToolCalls(existing: AgentToolCall[], incoming: AgentToolCall[]): AgentToolCall[] {
   const merged = [...existing]
   for (const call of incoming) {
-    const index = merged.findIndex((item) => item.id === call.id)
+    const index = merged.findIndex((item) => item.id === call.id && item.name === call.name)
     if (index >= 0) merged[index] = { ...merged[index], ...call }
-    else merged.push(call)
+    else {
+      const [unique] = assignUniqueToolCallIds([call], merged.map((item) => item.id))
+      if (unique) merged.push(unique)
+    }
   }
   return merged
+}
+
+export function selectUnobservedFollowUpCalls(
+  calls: AgentToolCall[],
+  run: {
+    toolCalls: AgentToolCall[]
+    observations: Array<{ kind: string; toolCallId?: string }>
+  },
+  extraPending: AgentToolCall[] = [],
+): AgentToolCall[] {
+  const reserved = [
+    ...run.toolCalls.map((call) => call.id),
+    ...run.observations.flatMap((item) => item.toolCallId ? [item.toolCallId] : []),
+    ...extraPending.map((call) => call.id),
+  ]
+  const unique = assignUniqueToolCallIds(calls, reserved)
+  const executedNames = new Set(
+    run.toolCalls
+      .filter((call) => run.observations.some((item) => item.kind === 'tool' && item.toolCallId === call.id))
+      .map((call) => call.name),
+  )
+  const pendingNames = new Set(extraPending.map((call) => call.name))
+  return unique.filter((call) => !executedNames.has(call.name) && !pendingNames.has(call.name))
 }
 
 export function extractToolCalls(text: string, catalog: ToolApprovalLookup = []): AgentToolCall[] {
@@ -131,5 +181,5 @@ export function extractToolCalls(text: string, catalog: ToolApprovalLookup = [])
       requiresApproval: value.requiresApproval === true,
     }]
   })
-  return applyCatalogApproval(parsed, catalog)
+  return applyCatalogApproval(assignUniqueToolCallIds(parsed), catalog)
 }

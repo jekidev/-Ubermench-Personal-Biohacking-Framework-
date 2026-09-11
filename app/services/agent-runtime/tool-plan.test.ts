@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractToolCalls, partitionToolCalls, upsertToolCalls } from './tool-plan'
+import { extractToolCalls, partitionToolCalls, selectUnobservedFollowUpCalls, upsertToolCalls } from './tool-plan'
 
 describe('agent tool plan parser', () => {
   it('extracts a bounded structured tool plan', () => {
@@ -52,5 +52,49 @@ describe('agent tool plan parser', () => {
     expect(merged).toHaveLength(1)
     expect(merged[0]?.approvalToken).toBe('user-1')
     expect(merged[0]?.args.question).toBe('CRP')
+  })
+
+  it('assigns unique ids when the model reuses the same toolCall id', () => {
+    const calls = extractToolCalls(
+      '{"toolCalls":[{"id":"dup","name":"plugins.garmin.status","args":{}},{"id":"dup","name":"research.paperqa.ask","args":{"question":"CRP"}}]}',
+      [{ name: 'research.paperqa.ask', requiresApproval: true }],
+    )
+    expect(calls).toHaveLength(2)
+    expect(new Set(calls.map((call) => call.id)).size).toBe(2)
+    expect(calls.map((call) => call.name)).toEqual(['plugins.garmin.status', 'research.paperqa.ask'])
+    expect(calls[1]?.requiresApproval).toBe(true)
+  })
+
+  it('keeps the same id for duplicate calls of the same tool so the loop can skip retries', () => {
+    const calls = extractToolCalls(
+      '{"toolCalls":[{"id":"same","name":"memory.search","args":{"query":"a"}},{"id":"same","name":"memory.search","args":{"query":"b"}}]}',
+    )
+    expect(calls.map((call) => call.id)).toEqual(['same', 'same'])
+  })
+
+  it('does not overwrite a different tool when upserting a colliding id', () => {
+    const merged = upsertToolCalls(
+      [{ id: 'dup', name: 'plugins.garmin.status', args: {}, requiresApproval: false }],
+      [{ id: 'dup', name: 'research.paperqa.ask', args: { question: 'CRP' }, requiresApproval: true }],
+    )
+    expect(merged).toHaveLength(2)
+    expect(merged.map((call) => call.name)).toEqual(['plugins.garmin.status', 'research.paperqa.ask'])
+    expect(new Set(merged.map((call) => call.id)).size).toBe(2)
+  })
+
+  it('reassigns follow-up default ids so they are not skipped as already observed', () => {
+    const followUp = selectUnobservedFollowUpCalls(
+      extractToolCalls('{"toolCalls":[{"name":"research.paperqa.ask","args":{"question":"CRP"}}]}', [
+        { name: 'research.paperqa.ask', requiresApproval: true },
+      ]),
+      {
+        toolCalls: [{ id: 'tool_1', name: 'plugins.garmin.status', args: {} }],
+        observations: [{ kind: 'tool', toolCallId: 'tool_1' }],
+      },
+    )
+    expect(followUp).toHaveLength(1)
+    expect(followUp[0]?.name).toBe('research.paperqa.ask')
+    expect(followUp[0]?.id).not.toBe('tool_1')
+    expect(followUp[0]?.requiresApproval).toBe(true)
   })
 })

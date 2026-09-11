@@ -45,7 +45,7 @@ export function useAgentRuntime() {
     if (!existing) throw new Error(`No recoverable run found for task ${task.id}.`)
     if (existing.status === 'waiting-approval') {
       const pending = pendingAgentToolCalls(existing)
-      if (!pending.length) return run(task)
+      if (!pending.length) return continueRun(task, existing, [])
       const token = approvalToken?.trim()
       if (pending.some((call) => call.requiresApproval) && !token) {
         throw new Error('Pending tool calls require explicit approval.')

@@ -54,4 +54,20 @@ describe('chat-session stack synergy', () => {
     expect(snapshot.gaps.some((gap) => gap.includes('Transcriptor'))).toBe(true)
     expect(formatStackSynergyContext(snapshot)).toContain('Active stack snapshot')
   })
+
+  it('uses catalog MCP tool names on the literature skill, not the bare connector id', () => {
+    const storage = {
+      getItem: () => null,
+      setItem: () => {},
+    } as Pick<Storage, 'getItem' | 'setItem'>
+    const snapshot = buildStackSynergySnapshot({
+      enabledSkillIds: ['scientific-literature-search'],
+      enabledRuleIds: [],
+      enabledWorkflowIds: [],
+      showStackSynergy: true,
+    }, storage)
+    const literature = snapshot.skills.find((skill) => skill.id === 'scientific-literature-search')
+    expect(literature?.tools).toContain('mcp.stdio:paper-search')
+    expect(literature?.tools).not.toContain('paper-search')
+  })
 })

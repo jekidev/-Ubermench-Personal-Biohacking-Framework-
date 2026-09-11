@@ -126,7 +126,18 @@
         <div v-if="error" class="rounded-md border border-red-300 p-3 text-sm text-red-700">{{ error }}</div>
         <div v-if="lastRun" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">{{ lastRun.text }}</div>
         <div v-if="lastRun?.status === 'waiting-approval'" class="flex flex-wrap gap-2">
-          <NuxtLink to="/chat"><UButton size="sm" variant="outline">Approve on Chat</UButton></NuxtLink>
+          <UButton
+            v-if="pendingCatalogTools.length"
+            size="sm"
+            :loading="loading"
+            @click="approvePending"
+          >
+            Approve pending tools
+          </UButton>
+          <p v-if="pendingNativeTools.length" class="w-full text-xs text-zinc-500">
+            Native MCP ({{ pendingNativeTools.map((call) => call.name).join(', ') }}) still needs the Agent preflight token.
+          </p>
+          <NuxtLink to="/chat"><UButton size="sm" variant="outline">Open Chat</UButton></NuxtLink>
           <NuxtLink to="/agent"><UButton size="sm" variant="outline">Open Agent</UButton></NuxtLink>
         </div>
       </form>
@@ -148,7 +159,8 @@ import { loadBackupStatus } from '~/services/backup-status'
 import { assessLongevity } from '~/services/longevity-engine'
 import { buildOverviewSummary } from '~/services/overview-dashboard'
 import { screenProfileSafety } from '~/services/profile-safety'
-import { formatAgentRunReply } from '~/services/agent-runtime/run-reply'
+import { formatAgentRunReply, pendingAgentToolCalls } from '~/services/agent-runtime/run-reply'
+import { toolNameRequiresNativeApproval } from '~/services/agent-runtime/tool-plan'
 
 const llm = useLLM()
 const runtime = useAgentRuntime()
@@ -159,6 +171,9 @@ const prompt = ref('')
 const loading = ref(false)
 const error = ref('')
 const lastRun = ref<{ text: string; provider: string; model: string; status: string } | null>(null)
+const pendingTools = computed(() => runtime.activeRun.value ? pendingAgentToolCalls(runtime.activeRun.value) : [])
+const pendingNativeTools = computed(() => pendingTools.value.filter((call) => toolNameRequiresNativeApproval(call.name)))
+const pendingCatalogTools = computed(() => pendingTools.value.filter((call) => !toolNameRequiresNativeApproval(call.name)))
 
 await biology.initialize()
 await experiments.initialize()
@@ -213,6 +228,30 @@ async function runAI() {
       provider: run.activeProvider ?? run.selectedModel?.provider ?? 'none',
       model: run.activeModel ?? run.selectedModel?.model ?? 'none',
       status: run.status,
+    }
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : String(cause)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function approvePending() {
+  const run = runtime.activeRun.value
+  if (!run) return
+  error.value = ''
+  loading.value = true
+  try {
+    if (pendingAgentToolCalls(run).some((call) => toolNameRequiresNativeApproval(call.name))) {
+      error.value = 'Native MCP tools need approval in Agent Control Center (preflight + token).'
+      return
+    }
+    const updated = await runtime.approvePending(`user-approved-${Date.now()}`)
+    lastRun.value = {
+      text: formatAgentRunReply(updated),
+      provider: updated.activeProvider ?? updated.selectedModel?.provider ?? lastRun.value?.provider ?? 'none',
+      model: updated.activeModel ?? updated.selectedModel?.model ?? lastRun.value?.model ?? 'none',
+      status: updated.status,
     }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
