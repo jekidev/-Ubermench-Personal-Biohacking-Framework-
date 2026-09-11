@@ -56,6 +56,37 @@
     </UCard>
 
     <UCard>
+      <template #header><div class="font-medium">ChatGPT export → RAG</div></template>
+      <p class="text-sm text-zinc-400">
+        Import your ChatGPT data export (<code>conversations.json</code> or the full <code>.zip</code>).
+        Works from Android Chrome when you open this preview URL — pick the file from Downloads or Google Drive.
+      </p>
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <input
+          ref="chatgptExportInput"
+          type="file"
+          accept=".json,.zip,application/json,application/zip"
+          class="hidden"
+          @change="onChatGptExportSelected"
+        />
+        <UButton :loading="chatgptIngestBusy" @click="chatgptExportInput?.click()">Upload ChatGPT export</UButton>
+        <UButton variant="outline" :loading="chatgptIngestBusy" @click="reindexChatGptExport">Re-index all</UButton>
+        <span v-if="chatgptIngestSummary" class="text-sm text-zinc-400">{{ chatgptIngestSummary }}</span>
+      </div>
+      <ul v-if="chatgptIngestConversations.length" class="mt-3 space-y-1 text-sm text-zinc-300">
+        <li v-for="conversation in chatgptIngestConversations" :key="conversation.id">
+          {{ conversation.title }} · {{ conversation.messages }} messages · {{ conversation.chunks }} chunks
+        </li>
+      </ul>
+      <ul v-if="chatgptIngestErrors.length" class="mt-2 space-y-1 text-sm text-amber-400">
+        <li v-for="item in chatgptIngestErrors" :key="item.id">{{ item.id }}: {{ item.message }}</li>
+      </ul>
+      <p class="mt-3 text-xs text-zinc-500">
+        Cloud agents cannot read your phone storage directly. Connect Google Drive above and sync, or upload the export file here.
+      </p>
+    </UCard>
+
+    <UCard>
       <template #header><div class="font-medium">YouTube / podcast → RAG</div></template>
       <p class="text-sm text-zinc-400">
         Paste YouTube links (or video IDs) from biohacking podcasts. Captions are fetched locally and chunked into your document RAG index.
@@ -352,6 +383,7 @@ import { listGmailMessages, type GmailMessageSummary } from '~~/plugins/connecto
 import { searchDriveFiles, type DriveFile } from '~~/plugins/connectors/adapters/google-drive-adapter'
 import { listCalendarEvents, type CalendarEvent } from '~~/plugins/connectors/adapters/google-calendar-adapter'
 import { syncDrivePdfsToRag } from '~~/plugins/connectors/drive-rag-sync'
+import { ingestChatGptExportFile } from '~~/plugins/connectors/chatgpt-export-ingest'
 import { indexYouTubeUrlsToRag } from '~~/plugins/connectors/youtube-rag-sync'
 import type { ConnectorConnectionStatus, ConnectorId } from '~~/plugins/connectors/types'
 import { isAndroidBrowser } from '~~/app/utils/runtime-platform'
@@ -365,6 +397,12 @@ const mcpSessions = useMcpSessions()
 const mcpApproval = useNativeMcpApproval()
 const discoveringServerId = ref('')
 const googleJsonInput = ref<HTMLInputElement>()
+const chatgptExportInput = ref<HTMLInputElement>()
+const chatgptIngestBusy = ref(false)
+const chatgptIngestSummary = ref('')
+const chatgptIngestConversations = ref<Array<{ id: string; title: string; chunks: number; messages: number }>>([])
+const chatgptIngestErrors = ref<Array<{ id: string; message: string }>>([])
+const lastChatGptExportFile = ref<File | null>(null)
 const credentialDrafts = reactive<Record<string, string>>({})
 const googleClientId = ref('')
 const googleClientSecret = ref('')
@@ -509,6 +547,39 @@ function addScheduleSource() {
   })
   scheduleLabel.value = ''
   scheduleUrl.value = ''
+}
+
+async function onChatGptExportSelected(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  lastChatGptExportFile.value = file
+  await runChatGptIngest(false, file)
+  if (chatgptExportInput.value) chatgptExportInput.value.value = ''
+}
+
+async function reindexChatGptExport() {
+  if (!lastChatGptExportFile.value) {
+    chatgptIngestSummary.value = 'Upload a ChatGPT export file first.'
+    return
+  }
+  await runChatGptIngest(true, lastChatGptExportFile.value)
+}
+
+async function runChatGptIngest(force: boolean, file: File) {
+  chatgptIngestBusy.value = true
+  chatgptIngestSummary.value = ''
+  chatgptIngestConversations.value = []
+  chatgptIngestErrors.value = []
+  try {
+    const result = await ingestChatGptExportFile({ file, force })
+    chatgptIngestConversations.value = result.conversations
+    chatgptIngestErrors.value = result.errors
+    chatgptIngestSummary.value = `Indexed ${result.indexed}, skipped ${result.skipped}, failed ${result.failed}.`
+  } catch (cause) {
+    chatgptIngestSummary.value = cause instanceof Error ? cause.message : 'ChatGPT ingest failed'
+  } finally {
+    chatgptIngestBusy.value = false
+  }
 }
 
 async function runYouTubeSync(force: boolean) {
