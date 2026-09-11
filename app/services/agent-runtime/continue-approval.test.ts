@@ -55,7 +55,7 @@ describe('continueAgentWithTools mixed approval', () => {
   })
 
   it('keeps leftover native waiting-approval if the continuation model fails', async () => {
-    vi.mocked(orchestrateLLM).mockRejectedValueOnce(new Error('All configured LLM providers failed.'))
+    vi.mocked(orchestrateLLM).mockRejectedValue(new Error('All configured LLM providers failed.'))
     const run = runFixture()
     const updated = await continueAgentWithTools(task, run, [{
       id: 'c1',
