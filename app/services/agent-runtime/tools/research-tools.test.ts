@@ -47,4 +47,19 @@ describe('research tools', () => {
       error: PAPER_QA_CONNECTOR_OFF_MESSAGE,
     })
   })
+
+  it('returns a structured error instead of throwing when PaperQA has no question', async () => {
+    const tools = createResearchTools()
+    const ask = tools.find((tool) => tool.name === 'research.paperqa.ask')!
+    const plan = tools.find((tool) => tool.name === 'research.paperqa.plan')!
+    await expect(ask.execute({})).resolves.toMatchObject({
+      ok: false,
+      settingsHref: '/settings?tab=research',
+      error: expect.stringMatching(/cannot be empty/i),
+    })
+    await expect(plan.execute({ question: '   ' })).resolves.toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/cannot be empty/i),
+    })
+  })
 })

@@ -98,7 +98,7 @@
             :loading="runtime.status.value === 'running'"
             @click="approvePending"
           >
-            {{ pendingNativeTools.length && pendingCatalogTools.length ? 'Approve catalog + native' : 'Approve pending tools' }}
+            {{ approvePendingLabel }}
           </UButton>
         </div>
         <div v-for="(item, index) in runtime.activeRun.value.observations" :key="`${item.createdAt}-${index}`" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
@@ -163,8 +163,10 @@
 import type { AgentTaskKind } from '~/services/agent-superstack/types'
 import type { AgentAuditEvent, AgentRun, AgentToolCall } from '~/services/agent-runtime/types'
 import { exampleArgsForTool } from '~/services/agent-runtime/invoke-tool'
+import { resolveNativeMcpPreflightRequest } from '~/services/agent-runtime/mcp-server-tools'
 import { observationForToolCall } from '~/services/agent-runtime/run-reply'
 import { isPluginAgentToolName, isResearchAgentToolName, listAgentToolCatalog } from '~/services/agent-runtime/tool-catalog'
+import { isTauriRuntime } from '~/utils/runtime-platform'
 const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools } = usePendingAgentApprovals()
 const native = useNativeMcpApproval()
 const prompt = ref('')
@@ -192,6 +194,27 @@ watch(tryToolName, (name) => {
   tryToolResult.value = ''
   tryToolError.value = ''
 })
+
+const nativePreflightTarget = computed(() => {
+  for (const call of pendingNativeTools.value) {
+    const target = resolveNativeMcpPreflightRequest(call)
+    if (target) return target
+  }
+  return null
+})
+
+const approvePendingLabel = computed(() => {
+  if (pendingCatalogTools.value.length && pendingNativeTools.value.length) {
+    return native.token.value && isTauriRuntime() ? 'Approve catalog + native' : 'Approve catalog tools'
+  }
+  return 'Approve pending tools'
+})
+
+watch(nativePreflightTarget, (target) => {
+  if (!target) return
+  nativeCommand.value = target.command
+  nativeArgs.value = target.args.join(' ')
+}, { immediate: true })
 
 function toolCallStatus(run: AgentRun, call: AgentToolCall) {
   if (observationForToolCall(run, call.id)) return 'completed'
@@ -252,19 +275,34 @@ async function approvePending() {
   const needsNative = pendingNativeTools.value.length > 0
   let nativeToken = native.token.value ?? ''
   if (needsNative && !nativeToken) {
+    const target = nativePreflightTarget.value
+    const command = target?.command || nativeCommand.value
+    const args = target?.args ?? nativeArgs.value.split(/\s+/).filter(Boolean)
+    if (target) {
+      nativeCommand.value = target.command
+      nativeArgs.value = target.args.join(' ')
+    }
     try {
-      await native.request(nativeCommand.value, nativeArgs.value.split(/\s+/).filter(Boolean))
+      await native.request(command, args)
       nativeToken = native.token.value ?? ''
     } catch {
       nativeToken = ''
     }
   }
-  if (needsNative && nativeToken) {
-    await runtime.approvePending(nativeToken, { includeNative: true })
-  } else {
-    await runtime.approvePending(`user-approved-${Date.now()}`, { includeNative: false })
+  try {
+    if (needsNative && nativeToken) {
+      await runtime.approvePending(nativeToken, { includeNative: true })
+    } else if (needsNative && !pendingCatalogTools.value.length) {
+      runtime.error.value = native.error.value
+        ?? `Native MCP still needs a Tauri preflight token for ${pendingNativeTools.value.map((call) => call.name).join(', ')}.`
+      return
+    } else {
+      await runtime.approvePending(`user-approved-${Date.now()}`, { includeNative: false })
+    }
+    await Promise.all([refreshAudit(), refreshRecoverable()])
+  } catch (cause) {
+    runtime.error.value = cause instanceof Error ? cause.message : String(cause)
   }
-  await Promise.all([refreshAudit(), refreshRecoverable()])
 }
 
 async function submit() {

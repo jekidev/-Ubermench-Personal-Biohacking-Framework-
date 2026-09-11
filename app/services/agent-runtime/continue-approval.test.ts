@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { orchestrateLLM } from '~/services/llm-orchestrator'
 import { continueAgentWithTools } from './runtime'
 import type { AgentRun } from './types'
 import type { AgentTask } from '~/services/agent-superstack/types'
@@ -49,6 +50,22 @@ describe('continueAgentWithTools mixed approval', () => {
     }])
     expect(updated.observations.some((item) => item.kind === 'tool' && item.toolCallId === 'c1')).toBe(true)
     expect(updated.observations.some((item) => item.toolCallId === 'c2')).toBe(false)
+    expect(updated.status).toBe('waiting-approval')
+    expect(updated.toolCalls.find((call) => call.name === 'mcp.stdio:paper-search')?.approvalToken).toBeUndefined()
+  })
+
+  it('keeps leftover native waiting-approval if the continuation model fails', async () => {
+    vi.mocked(orchestrateLLM).mockRejectedValueOnce(new Error('All configured LLM providers failed.'))
+    const run = runFixture()
+    const updated = await continueAgentWithTools(task, run, [{
+      id: 'c1',
+      name: 'plugins.garmin.schema',
+      args: {},
+      requiresApproval: true,
+      approvalToken: 'user-approved-1',
+    }])
+    expect(updated.observations.some((item) => item.kind === 'tool' && item.toolCallId === 'c1')).toBe(true)
+    expect(updated.observations.some((item) => item.kind === 'system' && item.text.includes('Continuation model failed'))).toBe(true)
     expect(updated.status).toBe('waiting-approval')
     expect(updated.toolCalls.find((call) => call.name === 'mcp.stdio:paper-search')?.approvalToken).toBeUndefined()
   })

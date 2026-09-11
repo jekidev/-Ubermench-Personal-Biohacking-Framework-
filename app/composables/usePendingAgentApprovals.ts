@@ -2,6 +2,7 @@ import {
   pendingAgentToolCalls,
   pendingCatalogAgentToolCalls,
   pendingNativeAgentToolCalls,
+  runNeedsApprovalUi,
   summarizeAgentRunForUi,
 } from '~/services/agent-runtime/run-reply'
 
@@ -19,7 +20,9 @@ export function usePendingAgentApprovals() {
   const displayedRun = computed(() => (
     runtime.activeRun.value ? summarizeAgentRunForUi(runtime.activeRun.value) : null
   ))
-  const waitingApproval = computed(() => displayedRun.value?.status === 'waiting-approval')
+  const waitingApproval = computed(() => (
+    runtime.activeRun.value ? runNeedsApprovalUi(runtime.activeRun.value) : false
+  ))
 
   return {
     runtime,

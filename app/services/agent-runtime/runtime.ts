@@ -9,7 +9,7 @@ import { withRecovery } from './recovery'
 import { SkillEvolutionEngine } from './skill-evolution'
 import { executeApprovedToolCalls } from './tool-loop'
 import { extractToolCalls, partitionToolCalls, selectUnobservedFollowUpCalls, upsertToolCalls } from './tool-plan'
-import { applyWaitingApprovalIfNeeded } from './run-reply'
+import { applyWaitingApprovalIfNeeded, pendingAgentToolCalls } from './run-reply'
 import { formatAgentToolCatalog, listAgentToolCatalog } from './tool-catalog'
 import { formatSuggestedTools, resolveToolCallsFromModel } from './suggest-tools'
 import { auditTaskSecurity } from './security-audit'
@@ -200,43 +200,60 @@ export async function continueAgentWithTools(task: AgentTask, run: AgentRun, cal
   if (run.status === 'failed') throw new Error('Cannot continue a failed agent run.')
   const store = createRuntimeStore()
   for (const call of calls) await recordAudit(store, auditEvent(run.id, 'tool.requested', `Tool continuation requested: ${call.name}`, { toolCallId: call.id }))
-  const result = await executeApprovedToolCalls(task, run, calls, maxToolCalls)
-  run.status = 'executing'
-  await recordAudit(store, auditEvent(run.id, 'tool.completed', `Executed ${result.executed} continuation tool call(s)`))
-  const toolContext = run.observations.filter((observation) => observation.kind === 'tool').slice(-maxToolCalls).map((observation) => observation.text).join('\n')
-  const response = await withRecovery(
-    () => orchestrateLLM({
-      prompt: `${task.prompt}\n\nTool results:\n${toolContext}`,
-      system: 'Continue the agent task using only verified tool results. Never claim an unobserved tool execution. Return structured toolCalls JSON if another tool is required.',
-      mode: task.kind === 'research' ? 'researcher' : 'biohacker',
-      preferredProvider: run.selectedModel?.provider as LLMProvider | undefined,
-      preferredModel: run.selectedModel?.model,
-    }),
-    undefined,
-    async (attempt, error, delayMs) => {
-      run.retryCount = (run.retryCount ?? 0) + 1
+  try {
+    const result = await executeApprovedToolCalls(task, run, calls, maxToolCalls)
+    await recordAudit(store, auditEvent(run.id, 'tool.completed', `Executed ${result.executed} continuation tool call(s)`))
+    applyWaitingApprovalIfNeeded(run)
+    const toolContext = run.observations.filter((observation) => observation.kind === 'tool').slice(-maxToolCalls).map((observation) => observation.text).join('\n')
+    try {
+      const response = await withRecovery(
+        () => orchestrateLLM({
+          prompt: `${task.prompt}\n\nTool results:\n${toolContext}`,
+          system: 'Continue the agent task using only verified tool results. Never claim an unobserved tool execution. Return structured toolCalls JSON if another tool is required.',
+          mode: task.kind === 'research' ? 'researcher' : 'biohacker',
+          preferredProvider: run.selectedModel?.provider as LLMProvider | undefined,
+          preferredModel: run.selectedModel?.model,
+        }),
+        undefined,
+        async (attempt, error, delayMs) => {
+          run.retryCount = (run.retryCount ?? 0) + 1
+          await store.appendRun(run)
+          await recordAudit(store, auditEvent(run.id, 'recovery.retry', 'Retrying continuation model execution', { attempt, delayMs, error: error instanceof Error ? error.message : String(error) }))
+        },
+      )
+      run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() })
+      const followUp = followUpCallsFromModel(response.text, run)
+      const { executable: moreAuto, awaitingApproval } = partitionToolCalls(followUp)
+      if (moreAuto.length) {
+        const extra = await executeApprovedToolCalls(task, run, moreAuto, maxToolCalls)
+        await recordAudit(store, auditEvent(run.id, 'tool.completed', `Executed ${extra.executed} follow-up tool call(s)`))
+      }
+      const stillPending = applyWaitingApprovalIfNeeded(run, awaitingApproval)
+      if (stillPending.length) {
+        await recordAudit(store, auditEvent(run.id, 'tool.blocked', 'Continuation paused pending explicit approval', { toolCalls: stillPending.map((call) => call.name) }))
+        await store.appendRun(run)
+        return run
+      }
+      run.status = 'completed'
+      run.completedAt = new Date().toISOString()
+      await recordAudit(store, auditEvent(run.id, 'model.completed', 'Continuation model execution completed', { provider: response.provider, model: response.model, pendingApproval: false }))
       await store.appendRun(run)
-      await recordAudit(store, auditEvent(run.id, 'recovery.retry', 'Retrying continuation model execution', { attempt, delayMs, error: error instanceof Error ? error.message : String(error) }))
-    },
-  )
-  run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() })
-  const followUp = followUpCallsFromModel(response.text, run)
-  const { executable: moreAuto, awaitingApproval } = partitionToolCalls(followUp)
-  if (moreAuto.length) {
-    const extra = await executeApprovedToolCalls(task, run, moreAuto, maxToolCalls)
-    await recordAudit(store, auditEvent(run.id, 'tool.completed', `Executed ${extra.executed} follow-up tool call(s)`))
-  }
-  const stillPending = applyWaitingApprovalIfNeeded(run, awaitingApproval)
-  if (stillPending.length) {
-    await recordAudit(store, auditEvent(run.id, 'tool.blocked', 'Continuation paused pending explicit approval', { toolCalls: stillPending.map((call) => call.name) }))
+      return run
+    } catch (modelError) {
+      applyWaitingApprovalIfNeeded(run)
+      const message = modelError instanceof Error ? modelError.message : String(modelError)
+      run.observations.push({ kind: 'system', text: `Continuation model failed: ${message}`, createdAt: new Date().toISOString() })
+      if (pendingAgentToolCalls(run).length) {
+        await store.appendRun(run)
+        return run
+      }
+      throw modelError
+    }
+  } catch (error) {
+    applyWaitingApprovalIfNeeded(run)
     await store.appendRun(run)
-    return run
+    throw error
   }
-  run.status = 'completed'
-  run.completedAt = new Date().toISOString()
-  await recordAudit(store, auditEvent(run.id, 'model.completed', 'Continuation model execution completed', { provider: response.provider, model: response.model, pendingApproval: false }))
-  await store.appendRun(run)
-  return run
 }
 
 export function pendingSkillCandidates() { return skillEvolution.listPending() }

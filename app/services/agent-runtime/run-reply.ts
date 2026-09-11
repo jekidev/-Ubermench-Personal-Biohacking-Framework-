@@ -21,6 +21,10 @@ export function pendingNativeAgentToolCalls(run: AgentRun): AgentToolCall[] {
   return partitionPendingByApprovalSurface(pendingAgentToolCalls(run)).native
 }
 
+export function runNeedsApprovalUi(run: AgentRun): boolean {
+  return run.status === 'waiting-approval' || pendingAgentToolCalls(run).length > 0
+}
+
 export function applyWaitingApprovalIfNeeded(run: AgentRun, extraAwaiting: AgentToolCall[] = []): AgentToolCall[] {
   if (extraAwaiting.length) {
     run.toolCalls = upsertToolCalls(run.toolCalls, extraAwaiting)
@@ -65,6 +69,7 @@ function previewToolText(text: string): string {
 
 export function formatAgentRunReply(run: AgentRun): string {
   const toolObservations = run.observations.filter((item) => item.kind === 'tool')
+  const systemNotes = run.observations.filter((item) => item.kind === 'system')
   const lastModel = [...run.observations].reverse().find((item) => item.kind === 'model')?.text ?? ''
   const pending = pendingAgentToolCalls(run)
 
@@ -75,6 +80,9 @@ export function formatAgentRunReply(run: AgentRun): string {
       return `- ${name}: ${previewToolText(item.text)}`
     })
     sections.push(`Tool results:\n${lines.join('\n')}`)
+  }
+  if (systemNotes.length) {
+    sections.push(systemNotes.map((item) => item.text).join('\n'))
   }
   if (pending.length) {
     const { catalog, native } = partitionPendingByApprovalSurface(pending)

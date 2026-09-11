@@ -13,12 +13,19 @@ export type PaperQaConnectorOffResult = {
   enabled: false
 }
 
-export function paperQaConnectorOffResult(): PaperQaConnectorOffResult {
+export function paperQaFailedResult(error: string): Omit<PaperQaConnectorOffResult, 'enabled'> & { enabled?: false } {
+  const message = error.trim() || PAPER_QA_CONNECTOR_OFF_MESSAGE
   return {
     ok: false,
-    error: PAPER_QA_CONNECTOR_OFF_MESSAGE,
+    error: message,
     settingsHref: PAPER_QA_SETTINGS_HREF,
     connectorId: 'paper-qa',
+  }
+}
+
+export function paperQaConnectorOffResult(): PaperQaConnectorOffResult {
+  return {
+    ...paperQaFailedResult(PAPER_QA_CONNECTOR_OFF_MESSAGE),
     enabled: false,
   }
 }

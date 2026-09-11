@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyWaitingApprovalIfNeeded,
   formatAgentRunReply,
+  runNeedsApprovalUi,
   formatNativeMcpAgentHandoff,
   pendingAgentToolCalls,
   pendingCatalogAgentToolCalls,
@@ -91,5 +92,18 @@ describe('agent run reply', () => {
     expect(leftover.map((call) => call.name)).toEqual(['mcp.stdio:paper-search'])
     expect(run.status).toBe('waiting-approval')
     expect(run.completedAt).toBeUndefined()
+  })
+
+  it('shows approval UI when leftover native tools exist even if status is still executing', () => {
+    const run = runFixture({
+      status: 'executing',
+      toolCalls: [
+        { id: 'c2', name: 'mcp.stdio:paper-search', args: { method: 'search_pubmed' }, requiresApproval: true },
+      ],
+      observations: [{ kind: 'system', text: 'Continuation model failed: no provider key', createdAt: '2' }],
+    })
+    expect(runNeedsApprovalUi(run)).toBe(true)
+    expect(formatAgentRunReply(run)).toContain('Continuation model failed')
+    expect(formatAgentRunReply(run)).toContain('mcp.stdio:paper-search')
   })
 })

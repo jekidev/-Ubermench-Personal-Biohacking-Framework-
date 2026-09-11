@@ -11,6 +11,29 @@ export function isMcpStdioToolName(name: string): boolean {
   return isMcpLifecycleToolName(name)
 }
 
+export function resolveNativeMcpPreflightRequest(call: {
+  name: string
+  args?: Record<string, unknown>
+}): { command: string; args: string[] } | null {
+  const name = call.name.trim()
+  const args = call.args ?? {}
+  if (name === 'mcp.stdio') {
+    const command = typeof args.command === 'string' ? args.command.trim() : ''
+    if (!command) return null
+    const commandArgs = Array.isArray(args.args) && args.args.every((value) => typeof value === 'string')
+      ? args.args
+      : []
+    return { command, args: commandArgs }
+  }
+  if (!name.startsWith('mcp.stdio:')) return null
+  const server = resolveMcpServer(name.slice('mcp.stdio:'.length))
+  if (!server?.executable.trim()) return null
+  return {
+    command: server.executable,
+    args: server.allowedArgs ? [...server.allowedArgs] : [],
+  }
+}
+
 export function resolveMcpServer(serverId: string): McpServerRegistryEntry | undefined {
   return listResolvedMcpServers().find((entry) => entry.serverId === serverId)
 }

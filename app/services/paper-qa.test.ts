@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { answerPaperQaFromLocalRag, buildPaperQaPlan, PAPER_QA_CONNECTOR_OFF_MESSAGE, PAPER_QA_SETTINGS_HREF, paperQaCitationsToEvidenceNotes, paperQaConnectorOffResult, validatePaperQaAnswer } from './paper-qa'
+import { answerPaperQaFromLocalRag, buildPaperQaPlan, PAPER_QA_CONNECTOR_OFF_MESSAGE, PAPER_QA_SETTINGS_HREF, paperQaCitationsToEvidenceNotes, paperQaConnectorOffResult, paperQaFailedResult, validatePaperQaAnswer } from './paper-qa'
 
 describe('paper-qa', () => {
   it('builds an approval-bound local plan without Sci-Hub', () => {
@@ -36,5 +36,10 @@ describe('paper-qa', () => {
     expect(payload.settingsHref).toBe(PAPER_QA_SETTINGS_HREF)
     expect(payload.error).toBe(PAPER_QA_CONNECTOR_OFF_MESSAGE)
     expect(payload.error).toContain('Settings → Research')
+    expect(paperQaFailedResult('PaperQA question cannot be empty')).toMatchObject({
+      ok: false,
+      settingsHref: PAPER_QA_SETTINGS_HREF,
+      error: 'PaperQA question cannot be empty',
+    })
   })
 })
