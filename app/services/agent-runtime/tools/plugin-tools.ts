@@ -131,7 +131,13 @@ export function createPluginTools(): AgentTool[] {
       requiresApproval: false,
       async execute(args) {
         if (!isConnectorEnabled('pdf-inspector')) {
-          throw new Error('PDF inspector is disabled. Enable it in Settings → Plugins.')
+          return {
+            ok: false,
+            error: 'PDF inspector is disabled. Enable it in Settings → Plugins, then retry plugins.pdf.inspect.',
+            settingsHref: '/settings?tab=plugins',
+            connectorId: 'pdf-inspector',
+            enabled: false,
+          }
         }
 
         const sample = args.sample === true || args.sample === 'true'

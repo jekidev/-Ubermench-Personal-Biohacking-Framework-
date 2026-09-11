@@ -111,8 +111,17 @@ describe('plugin-tools', () => {
     expect(uploaded.inspection.kind).toBe('text')
   })
 
-  it('refuses PDF inspect when the connector is disabled', async () => {
+  it('returns a Settings → Plugins error instead of throwing when PDF inspect is disabled', async () => {
     vi.mocked(isConnectorEnabled).mockReturnValue(false)
-    await expect(pdfTool!.execute({ sample: true })).rejects.toThrow(/disabled/i)
+    const result = await pdfTool!.execute({ sample: true }) as {
+      ok: false
+      error: string
+      settingsHref: string
+      connectorId: string
+    }
+    expect(result.ok).toBe(false)
+    expect(result.connectorId).toBe('pdf-inspector')
+    expect(result.settingsHref).toContain('tab=plugins')
+    expect(result.error).toMatch(/disabled/i)
   })
 })

@@ -51,11 +51,13 @@
           <div v-if="runtime.error.value" class="rounded-md border border-red-900/50 p-3 text-sm text-red-300">{{ runtime.error.value }}</div>
           <div v-if="pendingTools.length" class="rounded-md border border-amber-800/70 bg-amber-950/30 p-3 text-sm">
             <div class="font-medium text-amber-200">Waiting for approval</div>
+            <p v-if="displayedRun?.prompt" class="mt-1 text-xs text-zinc-500">{{ displayedRun.prompt }}</p>
+            <p v-if="approvalNotice" class="mt-1 text-xs text-amber-300">{{ approvalNotice }}</p>
             <p v-if="pendingCatalogTools.length" class="mt-1 text-zinc-400">
               Catalog tools can be approved here: {{ pendingCatalogTools.map((call) => call.name).join(', ') }}.
             </p>
             <p v-if="pendingNativeTools.length" class="mt-1 text-zinc-400">
-              Native MCP still needs the Agent preflight token: {{ pendingNativeTools.map((call) => call.name).join(', ') }}.
+              {{ nativeHandoff }}
             </p>
             <div class="mt-3 flex flex-wrap gap-2">
               <UButton
@@ -163,13 +165,14 @@ import { runYouTubeScheduler } from '../plugins/connectors/youtube-scheduler'
 import { formatAgentRunReply, formatNativeMcpAgentHandoff } from '~/services/agent-runtime/run-reply'
 
 const chat = useChatSession()
-const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools } = usePendingAgentApprovals()
+const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools, displayedRun, approvalNotice } = usePendingAgentApprovals()
 const llm = useLLM()
 const scheduler = useYouTubeScheduler()
 const draft = ref('')
 const newRuleName = ref('')
 const newRuleDescription = ref('')
 const newRulePrompt = ref('')
+const nativeHandoff = computed(() => formatNativeMcpAgentHandoff(pendingNativeTools.value))
 const commandHint = computed(() => chat.slashHelp().slice(0, 4).join(' · '))
 const builtInRules = computed(() => chat.allRules().filter((rule) => !rule.custom))
 
@@ -220,6 +223,9 @@ async function submit() {
     requiredCapabilities: task.kind === 'research' ? ['research'] : ['reasoning'],
     chatOptions: task.chatOptions,
   })
+  if (runtime.approvalNotice.value) {
+    chat.pushMessage({ role: 'system', content: runtime.approvalNotice.value })
+  }
   const latest = formatAgentRunReply(run)
   const modelLabel = llm.settings.value.showModel && run.activeProvider && run.activeModel
     ? `${run.activeProvider}/${run.activeModel}${run.fallbackUsed ? ' (fallback)' : ''}`

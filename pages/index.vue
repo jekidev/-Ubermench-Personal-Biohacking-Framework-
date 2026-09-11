@@ -127,8 +127,13 @@
         <div v-if="displayedRun && waitingApproval" class="rounded-md border border-amber-800/70 bg-amber-950/30 p-3 text-sm">
           <div class="font-medium text-amber-200">Active run waiting for approval</div>
           <p v-if="displayedRun.prompt" class="mt-1 text-xs text-zinc-500">{{ displayedRun.prompt }}</p>
+          <p v-if="approvalNotice" class="mt-1 text-xs text-amber-300">{{ approvalNotice }}</p>
         </div>
         <div v-if="displayedRun" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">{{ displayedRun.text }}</div>
+        <div v-if="laterRunText" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+          <div class="mb-1 text-xs uppercase tracking-wide text-zinc-500">Later run (not the Approve target)</div>
+          {{ laterRunText }}
+        </div>
         <div v-if="waitingApproval" class="flex flex-wrap gap-2">
           <UButton
             v-if="pendingCatalogTools.length"
@@ -142,7 +147,7 @@
             Catalog: {{ pendingCatalogTools.map((call) => call.name).join(', ') }}
           </p>
           <p v-if="pendingNativeTools.length" class="w-full text-xs text-zinc-500">
-            Native MCP still needs Agent preflight: {{ pendingNativeTools.map((call) => call.name).join(', ') }}.
+            {{ nativeHandoff }}
           </p>
           <NuxtLink to="/chat"><UButton size="sm" variant="outline">Open Chat</UButton></NuxtLink>
           <NuxtLink to="/agent"><UButton size="sm" variant="outline">Open Agent</UButton></NuxtLink>
@@ -166,14 +171,22 @@ import { loadBackupStatus } from '~/services/backup-status'
 import { assessLongevity } from '~/services/longevity-engine'
 import { buildOverviewSummary } from '~/services/overview-dashboard'
 import { screenProfileSafety } from '~/services/profile-safety'
+import { formatAgentRunReply, formatNativeMcpAgentHandoff } from '~/services/agent-runtime/run-reply'
 const llm = useLLM()
-const { runtime, pendingCatalogTools, pendingNativeTools, displayedRun, waitingApproval } = usePendingAgentApprovals()
+const { runtime, pendingCatalogTools, pendingNativeTools, displayedRun, waitingApproval, approvalNotice } = usePendingAgentApprovals()
 const biology = usePersonalBiology()
 const experiments = useExperiments()
 const profile = biology.profile
 const prompt = ref('')
 const loading = ref(false)
 const error = ref('')
+const nativeHandoff = computed(() => formatNativeMcpAgentHandoff(pendingNativeTools.value))
+const laterRunText = computed(() => {
+  const latest = runtime.latestRun.value
+  const focused = runtime.activeRun.value
+  if (!latest || !focused || latest.id === focused.id) return ''
+  return formatAgentRunReply(latest)
+})
 
 await biology.initialize()
 await experiments.initialize()
@@ -233,7 +246,7 @@ async function approvePending() {
   if (!runtime.activeRun.value) return
   if (!pendingCatalogTools.value.length) {
     error.value = pendingNativeTools.value.length
-      ? `Native MCP still needs Agent preflight: ${pendingNativeTools.value.map((call) => call.name).join(', ')}. Open Agent.`
+      ? formatNativeMcpAgentHandoff(pendingNativeTools.value)
       : 'No catalog tools are waiting for approval.'
     return
   }

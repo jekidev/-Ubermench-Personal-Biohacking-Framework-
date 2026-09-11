@@ -56,11 +56,12 @@
     <UCard>
       <template #header><div class="font-medium">Native MCP approval</div></template>
       <div class="space-y-3">
-        <p class="text-sm text-zinc-500">Preflight is validated first. Native execution still requires this explicit approval action; the agent cannot mint the token itself.</p>
+        <p class="text-sm text-zinc-500">Preflight is validated first. Native execution still requires this explicit approval action; the agent cannot mint the token itself. Multiple native servers in one pause are approved one command at a time.</p>
         <div class="grid gap-3 md:grid-cols-2">
           <input v-model="nativeCommand" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700" placeholder="node" />
           <input v-model="nativeArgs" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700" placeholder="server.js --stdio" />
         </div>
+        <div v-if="nextNativeLabel" class="text-xs text-zinc-500">{{ nextNativeLabel }}</div>
         <div class="flex flex-wrap items-center gap-3">
           <UButton :loading="native.state.value === 'preflight'" :disabled="!nativeCommand.trim()" @click="approveNative">Approve native MCP action</UButton>
           <span v-if="native.state.value === 'approved'" class="text-xs text-zinc-500">Approved for {{ native.expiresInMs.value }} ms</span>
@@ -70,9 +71,10 @@
     </UCard>
 
     <UCard v-if="runtime.activeRun.value">
-      <template #header><div class="font-medium">Latest run</div></template>
+      <template #header><div class="font-medium">{{ waitingApprovalHeader }}</div></template>
       <div class="space-y-4">
         <div class="text-xs text-zinc-500">{{ runtime.activeRun.value.task.kind }} · {{ runtime.activeRun.value.status }} · {{ runtime.activeRun.value.selectedModel?.provider ?? 'no model' }} · retries {{ runtime.activeRun.value.retryCount ?? 0 }}</div>
+        <p v-if="approvalNotice" class="text-xs text-amber-600">{{ approvalNotice }}</p>
         <div v-if="runtime.activeRun.value.toolCalls.length" class="space-y-2">
           <div class="text-sm font-medium">Tool calls</div>
           <div
@@ -90,7 +92,7 @@
             Catalog: {{ pendingCatalogTools.map((call) => call.name).join(', ') }}
           </p>
           <p v-if="pendingNativeTools.length" class="text-xs text-zinc-500">
-            Native MCP (preflight token): {{ pendingNativeTools.map((call) => call.name).join(', ') }}
+            {{ nextNativeLabel || 'Native MCP (preflight token): ' + pendingNativeTools.map((call) => call.name).join(', ') }}
           </p>
           <UButton
             v-if="pendingTools.length"
@@ -105,6 +107,14 @@
           <div class="mb-1 text-xs uppercase tracking-wide text-zinc-500">{{ item.kind }}</div>
           {{ item.text }}
         </div>
+      </div>
+    </UCard>
+
+    <UCard v-if="laterRun">
+      <template #header><div class="font-medium">Later run (not the Approve target)</div></template>
+      <div class="space-y-2 text-sm">
+        <div class="text-xs text-zinc-500">{{ laterRun.task.kind }} · {{ laterRun.status }} · {{ laterRun.task.prompt }}</div>
+        <div class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 dark:border-zinc-700">{{ formatAgentRunReply(laterRun) }}</div>
       </div>
     </UCard>
 
@@ -163,11 +173,11 @@
 import type { AgentTaskKind } from '~/services/agent-superstack/types'
 import type { AgentAuditEvent, AgentRun, AgentToolCall } from '~/services/agent-runtime/types'
 import { exampleArgsForTool } from '~/services/agent-runtime/invoke-tool'
-import { resolveNativeMcpPreflightRequest } from '~/services/agent-runtime/mcp-server-tools'
-import { observationForToolCall } from '~/services/agent-runtime/run-reply'
+import { formatNextNativePreflightLabel, resolveNativeMcpPreflightRequest } from '~/services/agent-runtime/mcp-server-tools'
+import { formatAgentRunReply, observationForToolCall } from '~/services/agent-runtime/run-reply'
 import { isPluginAgentToolName, isResearchAgentToolName, listAgentToolCatalog } from '~/services/agent-runtime/tool-catalog'
 import { isTauriRuntime } from '~/utils/runtime-platform'
-const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools } = usePendingAgentApprovals()
+const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools, approvalNotice } = usePendingAgentApprovals()
 const native = useNativeMcpApproval()
 const prompt = ref('')
 const kind = ref<AgentTaskKind>('research')
@@ -198,14 +208,31 @@ watch(tryToolName, (name) => {
 const nativePreflightTarget = computed(() => {
   for (const call of pendingNativeTools.value) {
     const target = resolveNativeMcpPreflightRequest(call)
-    if (target) return target
+    if (target) return { ...target, name: call.name }
   }
   return null
 })
 
+const nextNativeLabel = computed(() => formatNextNativePreflightLabel(pendingNativeTools.value))
+const laterRun = computed(() => {
+  const latest = runtime.latestRun.value
+  const focused = runtime.activeRun.value
+  if (!latest || !focused || latest.id === focused.id) return null
+  return latest
+})
+const waitingApprovalHeader = computed(() => (
+  laterRun.value ? 'Approve this run first' : 'Latest run'
+))
+
 const approvePendingLabel = computed(() => {
+  const nextNative = nativePreflightTarget.value?.name
   if (pendingCatalogTools.value.length && pendingNativeTools.value.length) {
-    return native.token.value && isTauriRuntime() ? 'Approve catalog + native' : 'Approve catalog tools'
+    return native.token.value && isTauriRuntime() && nextNative
+      ? `Approve catalog + ${nextNative}`
+      : 'Approve catalog tools'
+  }
+  if (pendingNativeTools.value.length && nextNative && native.token.value && isTauriRuntime()) {
+    return `Approve ${nextNative}`
   }
   return 'Approve pending tools'
 })
@@ -273,15 +300,15 @@ async function approvePending() {
   if (!run) return
   if (!pendingTools.value.length) return
   const needsNative = pendingNativeTools.value.length > 0
+  const target = nativePreflightTarget.value
+  const command = target?.command || nativeCommand.value
+  const args = target?.args ?? nativeArgs.value.split(/\s+/).filter(Boolean)
+  if (target) {
+    nativeCommand.value = target.command
+    nativeArgs.value = target.args.join(' ')
+  }
   let nativeToken = native.token.value ?? ''
   if (needsNative && !nativeToken) {
-    const target = nativePreflightTarget.value
-    const command = target?.command || nativeCommand.value
-    const args = target?.args ?? nativeArgs.value.split(/\s+/).filter(Boolean)
-    if (target) {
-      nativeCommand.value = target.command
-      nativeArgs.value = target.args.join(' ')
-    }
     try {
       await native.request(command, args)
       nativeToken = native.token.value ?? ''
@@ -291,9 +318,15 @@ async function approvePending() {
   }
   try {
     if (needsNative && nativeToken) {
-      await runtime.approvePending(nativeToken, { includeNative: true })
+      await runtime.approvePending(nativeToken, {
+        includeNative: true,
+        nativeCommand: command,
+        nativeArgs: args,
+      })
+      native.clear()
     } else if (needsNative && !pendingCatalogTools.value.length) {
       runtime.error.value = native.error.value
+        ?? nextNativeLabel.value
         ?? `Native MCP still needs a Tauri preflight token for ${pendingNativeTools.value.map((call) => call.name).join(', ')}.`
       return
     } else {

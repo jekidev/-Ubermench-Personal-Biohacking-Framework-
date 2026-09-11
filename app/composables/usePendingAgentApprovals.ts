@@ -23,6 +23,8 @@ export function usePendingAgentApprovals() {
   const waitingApproval = computed(() => (
     runtime.activeRun.value ? runNeedsApprovalUi(runtime.activeRun.value) : false
   ))
+  const approvalNotice = computed(() => runtime.approvalNotice.value)
+  const queuedApprovalCount = computed(() => Math.max(0, runtime.approvalQueue.value.length - (waitingApproval.value ? 1 : 0)))
 
   return {
     runtime,
@@ -31,5 +33,7 @@ export function usePendingAgentApprovals() {
     pendingNativeTools,
     displayedRun,
     waitingApproval,
+    approvalNotice,
+    queuedApprovalCount,
   }
 }

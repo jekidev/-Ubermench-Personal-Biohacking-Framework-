@@ -85,10 +85,15 @@ export function partitionPendingByApprovalSurface(calls: AgentToolCall[]): {
 
 export function selectApprovableToolCalls(
   calls: AgentToolCall[],
-  options: { includeNative?: boolean } = {},
+  options: { includeNative?: boolean; nativeCallIds?: string[] } = {},
 ): AgentToolCall[] {
   const { catalog, native } = partitionPendingByApprovalSurface(calls)
-  return options.includeNative === true ? [...catalog, ...native] : catalog
+  if (options.includeNative !== true) return catalog
+  if (options.nativeCallIds?.length) {
+    const allowed = new Set(options.nativeCallIds)
+    return [...catalog, ...native.filter((call) => allowed.has(call.id))]
+  }
+  return [...catalog, ...native.slice(0, 1)]
 }
 
 export function applyCatalogApproval(

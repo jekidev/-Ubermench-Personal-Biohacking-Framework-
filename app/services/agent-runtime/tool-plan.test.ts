@@ -112,4 +112,20 @@ describe('agent tool plan parser', () => {
       'mcp.stdio:paper-search',
     ])
   })
+
+  it('approves only the selected native MCP server when several wait in the same pause', () => {
+    const mixed = [
+      { id: 'c1', name: 'research.paperqa.ask', args: { question: 'CRP' }, requiresApproval: true },
+      { id: 'c2', name: 'mcp.stdio:paper-search', args: { method: 'search_pubmed' }, requiresApproval: true },
+      { id: 'c3', name: 'mcp.stdio:local-deep-research', args: { method: 'quick_search' }, requiresApproval: true },
+    ]
+    expect(selectApprovableToolCalls(mixed, { includeNative: true }).map((call) => call.name)).toEqual([
+      'research.paperqa.ask',
+      'mcp.stdio:paper-search',
+    ])
+    expect(selectApprovableToolCalls(mixed, { includeNative: true, nativeCallIds: ['c3'] }).map((call) => call.name)).toEqual([
+      'research.paperqa.ask',
+      'mcp.stdio:local-deep-research',
+    ])
+  })
 })
