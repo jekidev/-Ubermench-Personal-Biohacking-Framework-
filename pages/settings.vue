@@ -607,6 +607,7 @@
           </div>
           <div v-if="plugins.pdfInspection" class="mt-4 rounded border border-zinc-800 p-3 text-sm">
             <div class="font-medium capitalize">{{ plugins.pdfInspection.kind }}</div>
+            <div v-if="plugins.pdfInspectionFilename" class="text-xs text-zinc-400">{{ plugins.pdfInspectionFilename }}</div>
             <div class="text-xs text-zinc-500">
               text streams {{ plugins.pdfInspection.textStreamCount }} · images {{ plugins.pdfInspection.imageXObjectCount }}
               · OCR {{ plugins.pdfInspection.recommendOcr ? 'recommended' : 'not needed' }}
@@ -623,6 +624,7 @@
           <li><code>plugins.watchlist.list</code> — geroscience watchlist</li>
           <li><code>plugins.garmin.schema</code> — Garmin-only biometric map</li>
           <li><code>plugins.garmin.status</code> — OAuth + persisted Garmin samples</li>
+          <li><code>plugins.pdf.inspect</code> — last/sample/base64 PDF classification (no file bytes)</li>
         </ul>
       </UCard>
     </template>
@@ -689,6 +691,7 @@ onMounted(async () => {
   await memory.loadCredentials()
   memory.runSearch()
   plugins.runExerciseSearch()
+  plugins.applyCachedPdfInspection()
   await plugins.refreshGarminStatus()
 })
 

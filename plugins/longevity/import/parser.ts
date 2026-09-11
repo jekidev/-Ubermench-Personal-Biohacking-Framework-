@@ -208,6 +208,7 @@ async function parsePdf(
     useVision: options?.useVision,
     ocrAdapter: options?.ocrAdapter,
     visionRunner: options?.visionRunner,
+    filename: file.name,
   })
   let { candidates, requiresReview } = {
     candidates: pipeline.candidates,
