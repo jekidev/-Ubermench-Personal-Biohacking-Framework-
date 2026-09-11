@@ -37,6 +37,8 @@
           <NuxtLink to="/longevity/bloods"><UButton size="xs" variant="outline">Bloods</UButton></NuxtLink>
           <NuxtLink to="/longevity/genetics"><UButton size="xs" variant="outline">Genetics</UButton></NuxtLink>
           <NuxtLink to="/longevity/fitness"><UButton size="xs" variant="outline">Fitness</UButton></NuxtLink>
+          <NuxtLink to="/longevity/evidence"><UButton size="xs" variant="outline">Evidence</UButton></NuxtLink>
+          <NuxtLink to="/longevity/timeline"><UButton size="xs" variant="outline">Timeline</UButton></NuxtLink>
         </div>
       </UCard>
 
