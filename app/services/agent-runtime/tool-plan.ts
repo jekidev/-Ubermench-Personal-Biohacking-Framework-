@@ -46,7 +46,7 @@ function extractBalancedObject(text: string, openIndex: number): string | undefi
   return undefined
 }
 
-function parseCandidate(text: string): unknown {
+function parseCandidate(text: string): { toolCalls?: unknown } | undefined {
   const trimmed = text.trim()
   const fences = [...trimmed.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/gi)]
   for (const fence of fences) {
@@ -88,9 +88,10 @@ export function applyCatalogApproval(
 
 export function extractToolCalls(text: string, catalog: ToolApprovalLookup = []): AgentToolCall[] {
   const candidate = parseCandidate(text)
-  if (!candidate || !Array.isArray(candidate.toolCalls)) return []
+  const planned = candidate?.toolCalls
+  if (!Array.isArray(planned)) return []
 
-  const parsed = candidate.toolCalls.slice(0, MAX_TOOL_CALLS).flatMap((raw, index) => {
+  const parsed = planned.slice(0, MAX_TOOL_CALLS).flatMap((raw: unknown, index: number) => {
     if (!raw || typeof raw !== 'object') return []
     const value = raw as Record<string, unknown>
     const name = typeof value.name === 'string' ? value.name.trim() : ''
