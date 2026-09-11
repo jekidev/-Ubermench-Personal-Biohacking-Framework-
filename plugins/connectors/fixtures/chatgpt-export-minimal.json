@@ -1,0 +1,44 @@
+[
+  {
+    "id": "conv-1",
+    "title": "Sauna protocol",
+    "create_time": 1700000000,
+    "mapping": {
+      "root": {
+        "id": "root",
+        "message": null,
+        "parent": null,
+        "children": ["user-1"]
+      },
+      "user-1": {
+        "id": "user-1",
+        "message": {
+          "id": "user-1",
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": ["What is the best sauna temperature for heat shock proteins?"]
+          },
+          "create_time": 1700000001
+        },
+        "parent": "root",
+        "children": ["assistant-1"]
+      },
+      "assistant-1": {
+        "id": "assistant-1",
+        "message": {
+          "id": "assistant-1",
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": ["Aim for 80-90C for 15-20 minutes, 3-4 times per week."]
+          },
+          "create_time": 1700000002
+        },
+        "parent": "user-1",
+        "children": []
+      }
+    },
+    "current_node": "assistant-1"
+  }
+]

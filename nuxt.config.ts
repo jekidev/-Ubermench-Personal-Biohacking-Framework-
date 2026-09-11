@@ -4,7 +4,7 @@ export default defineNuxtConfig({
   modules: ['@nuxt/ui'],
   devtools: { enabled: true },
   typescript: { strict: true, typeCheck: true },
-  css: ['~/assets/css/a11y.css'],
+  css: ['~/assets/css/main.css'],
   // Nuxt 4 srcDir is app/. Product pages live in the repo-root pages/ directory.
   dir: {
     pages: '../pages',
