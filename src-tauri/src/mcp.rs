@@ -82,7 +82,7 @@ fn fingerprint(command: &str, args: &[String]) -> String {
 fn allowlisted_command(command: &str) -> bool {
     matches!(
         command,
-        "node" | "nodejs" | "npx" | "bun" | "deno" | "python" | "python3"
+        "node" | "nodejs" | "npx" | "bun" | "deno" | "python" | "python3" | "uvx" | "docker"
     )
 }
 fn validate_args(args: &[String]) -> Result<(), String> {
@@ -734,6 +734,12 @@ mod tests {
     #[test]
     fn rejects_path_based_command() {
         assert!(validate_command("/usr/bin/node").is_err());
+    }
+
+    #[test]
+    fn allows_catalog_sidecar_runtimes() {
+        assert!(validate_command("uvx").is_ok());
+        assert!(validate_command("docker").is_ok());
     }
 
     #[test]

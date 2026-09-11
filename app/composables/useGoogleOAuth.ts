@@ -5,10 +5,12 @@ import {
   GOOGLE_CONNECTOR_IDS,
   GOOGLE_SECRET_KEYS,
   isGoogleConnectorId,
+  isGoogleOAuthConnectorId,
   loadOAuthState,
   scopesForConnectors,
   type GoogleConnectorId,
 } from '../../plugins/connectors/oauth/google-oauth'
+import { parseGoogleClientSecretJson } from '../../plugins/connectors/oauth/google-client-json'
 import { YOUTUBE_SCOPES } from '../../plugins/connectors/oauth/youtube-oauth'
 import {
   completeGoogleOAuth,
@@ -76,7 +78,7 @@ export function useGoogleOAuth() {
       const creds = await loadGoogleCredentials()
       if (!creds.clientId) throw new Error('Paste your Google Client ID (or client JSON) before connecting.')
       const requested = connectorIds.length ? connectorIds : [...GOOGLE_CONNECTOR_IDS]
-      const already = creds.connectedServices
+      const already = creds.connectedServices.filter(isGoogleConnectorId)
       const scopes = scopesForConnectors([...new Set([...already, ...requested])])
       const url = await buildGoogleAuthorizeUrl({
         clientId: creds.clientId,
@@ -99,14 +101,17 @@ export function useGoogleOAuth() {
     try {
       const state = loadOAuthState()
       if (!state) throw new Error('OAuth state expired. Start connect again from Connectors.')
-      const workspaceIds = state.connectorIds.filter(isGoogleConnectorId)
+      const connectorIds = state.connectorIds.filter(isGoogleOAuthConnectorId)
       await completeGoogleOAuth({
         code,
         redirectUri: state.redirectUri,
         codeVerifier: state.codeVerifier,
-        connectorIds: workspaceIds,
+        connectorIds,
       })
-      for (const id of workspaceIds) setConnectorEnabled(id, true)
+      for (const id of connectorIds) {
+        if (isGoogleConnectorId(id)) setConnectorEnabled(id, true)
+        else if (id === 'youtube') setConnectorEnabled('youtube-rag', true)
+      }
       clearOAuthState()
       await refreshStatus()
       return state.connectorIds
@@ -128,7 +133,6 @@ export function useGoogleOAuth() {
   }
 
   async function importClientJson(raw: string) {
-    const { parseGoogleClientSecretJson } = await import('../../plugins/connectors/oauth/google-client-json')
     const parsed = parseGoogleClientSecretJson(raw)
     await saveClientId(parsed.clientId)
     if (parsed.clientSecret) await saveClientSecret(parsed.clientSecret)

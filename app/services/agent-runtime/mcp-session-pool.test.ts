@@ -6,6 +6,7 @@ import {
   mcpSessionFingerprint,
 } from './mcp-session-pool'
 import type { McpServerRegistryEntry } from '../../../plugins/llm/mcp/servers'
+import { nativeMcpSessionCall } from './native-mcp'
 
 vi.mock('./native-mcp', () => ({
   nativeMcpSessionStart: vi.fn(async () => ({
@@ -13,7 +14,7 @@ vi.mock('./native-mcp', () => ({
     idle_timeout_ms: 300_000,
     max_lifetime_ms: 1_800_000,
   })),
-  nativeMcpSessionCall: vi.fn(async (_sessionId: string, method: string) => ({ method, ok: true })),
+  nativeMcpSessionCall: vi.fn(async (_sessionId: string, method: string, params: unknown) => ({ method, params, ok: true })),
   nativeMcpSessionClose: vi.fn(async () => true),
 }))
 
@@ -62,5 +63,33 @@ describe('mcp session pool', () => {
       method: 'tools/list',
       params: {},
     })).rejects.toThrow(/requires approval/)
+  })
+
+  it('enforces server tool policy before native execution', async () => {
+    const restrictedServer: McpServerRegistryEntry = {
+      ...server,
+      serverId: 'paper-search',
+      forcedToolArguments: {
+        download_with_fallback: { use_scihub: false },
+      },
+    }
+    await callMcpWithSession(restrictedServer, {
+      approvalToken: 'approve-1',
+      method: 'tools/call',
+      params: {
+        name: 'download_with_fallback',
+        arguments: { doi: '10.1000/example', use_scihub: true },
+      },
+    })
+
+    expect(vi.mocked(nativeMcpSessionCall)).toHaveBeenCalledWith(
+      'session-1',
+      'tools/call',
+      {
+        name: 'download_with_fallback',
+        arguments: { doi: '10.1000/example', use_scihub: false },
+      },
+      undefined,
+    )
   })
 })

@@ -6,6 +6,8 @@ export type McpServerRegistryEntry = StdioServerDefinition & {
   auth?: 'approval' | 'env' | 'none'
   envKeys?: string[]
   connectorId?: string
+  deniedTools?: readonly string[]
+  forcedToolArguments?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
 }
 
 export const MCP_SERVER_REGISTRY: McpServerRegistryEntry[] = [
@@ -102,6 +104,41 @@ export const MCP_SERVER_REGISTRY: McpServerRegistryEntry[] = [
     enabledByDefault: false,
     auth: 'env',
     envKeys: ['NOTION_API_KEY'],
+  },
+  {
+    serverId: 'paper-search',
+    connectorId: 'paper-search',
+    executable: 'uvx',
+    allowedArgs: ['paper-search-mcp'],
+    description: 'Open-access academic paper search (Sci-Hub is blocked by local policy)',
+    enabledByDefault: false,
+    auth: 'env',
+    envKeys: [
+      'PAPER_SEARCH_MCP_UNPAYWALL_EMAIL',
+      'PAPER_SEARCH_MCP_CORE_API_KEY',
+      'PAPER_SEARCH_MCP_SEMANTIC_SCHOLAR_API_KEY',
+      'PAPER_SEARCH_MCP_DOAJ_API_KEY',
+    ],
+    deniedTools: ['download_scihub'],
+    forcedToolArguments: {
+      download_with_fallback: { use_scihub: false },
+    },
+  },
+  {
+    serverId: 'local-deep-research',
+    connectorId: 'local-deep-research',
+    executable: 'uvx',
+    allowedArgs: ['--from', 'local-deep-research[mcp]', 'ldr-mcp'],
+    description: 'Local Deep Research cited-research sidecar over stdio',
+    enabledByDefault: false,
+    auth: 'env',
+    envKeys: [
+      'LDR_LLM_PROVIDER',
+      'LDR_LLM_MODEL',
+      'LDR_LLM_OPENAI_API_KEY',
+      'LDR_LLM_ANTHROPIC_API_KEY',
+      'LDR_SEARCH_TOOL',
+    ],
   },
   {
     serverId: 'transcriptor',

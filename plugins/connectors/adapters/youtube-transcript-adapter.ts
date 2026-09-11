@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core'
+
 export type YouTubeVideoRef = {
   videoId: string
   url: string
@@ -108,7 +110,6 @@ function extractChannelName(pageHtml: string): string | undefined {
 
 async function defaultTextFetcher(url: string): Promise<string> {
   if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
-    const { invoke } = await import('@tauri-apps/api/core')
     return invoke<string>('fetch_url_text', { url })
   }
   const response = await fetch(url)

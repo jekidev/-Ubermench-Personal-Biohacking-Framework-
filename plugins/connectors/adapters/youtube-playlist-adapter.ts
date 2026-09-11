@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core'
 import { parseYouTubeVideoId, youTubeWatchUrl, type TextFetcher } from './youtube-transcript-adapter'
 
 export function parsePlaylistId(input: string): string | null {
@@ -26,7 +27,6 @@ function extractVideoIdsFromHtml(html: string, limit: number): string[] {
 
 async function defaultTextFetcher(url: string): Promise<string> {
   if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
-    const { invoke } = await import('@tauri-apps/api/core')
     return invoke<string>('fetch_url_text', { url })
   }
   const response = await fetch(url)

@@ -1,6 +1,10 @@
-import { listChannelVideoUrls, listPlaylistVideoUrls } from './adapters/youtube-playlist-adapter'
+import {
+  listChannelVideoUrls,
+  listPlaylistVideoUrls,
+  parsePlaylistId,
+} from './adapters/youtube-playlist-adapter'
 import { listSubscriptionVideoUrls } from './adapters/youtube-api-adapter'
-import { isGoogleConnected } from './oauth/google-token-store'
+import { isGoogleServiceConnected } from './oauth/google-token-store'
 import { indexYouTubeUrlsToRag } from './youtube-rag-sync'
 
 export type YouTubeScheduleSourceType = 'playlist' | 'channel' | 'subscriptions'
@@ -49,11 +53,21 @@ export function saveYouTubeSchedulerStore(
   storage.setItem(STORAGE_KEY, JSON.stringify(store))
 }
 
+function scheduleSourceKey(source: Pick<YouTubeScheduleSource, 'type' | 'url'>): string {
+  if (source.type === 'subscriptions') return 'subscriptions'
+  if (source.type === 'playlist') {
+    return `playlist:${parsePlaylistId(source.url) ?? source.url.trim()}`
+  }
+  return `channel:${source.url.trim().replace(/\/+$/, '').toLowerCase()}`
+}
+
 export function addYouTubeScheduleSource(
   input: Omit<YouTubeScheduleSource, 'id'>,
   storage: Pick<Storage, 'getItem' | 'setItem'> = localStorage,
 ): YouTubeSchedulerStore {
   const store = loadYouTubeSchedulerStore(storage)
+  const key = scheduleSourceKey(input)
+  if (store.sources.some((source) => scheduleSourceKey(source) === key)) return store
   const next = {
     ...store,
     sources: [
@@ -90,7 +104,7 @@ async function resolveSourceUrls(source: YouTubeScheduleSource): Promise<string[
     return listChannelVideoUrls({ channelUrl: source.url, maxVideos: source.maxVideos })
   }
   if (source.type === 'subscriptions') {
-    if (!(await isGoogleConnected())) {
+    if (!(await isGoogleServiceConnected('youtube'))) {
       throw new Error('YouTube subscriptions require Google/YouTube OAuth on Connectors.')
     }
     return listSubscriptionVideoUrls(source.maxVideos, 10)

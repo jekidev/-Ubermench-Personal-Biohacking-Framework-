@@ -4,12 +4,14 @@ import {
   GOOGLE_SECRET_KEYS,
   exchangeGoogleAuthCode,
   googleTokenExpiryIso,
-  isGoogleConnectorId,
+  isGoogleOAuthConnectorId,
   isGoogleTokenExpired,
   parseGrantedScopes,
   refreshGoogleAccessToken,
   scopesCoverConnector,
+  scopesCoverOAuthConnector,
   type GoogleConnectorId,
+  type GoogleOAuthConnectorId,
   type GoogleTokenResponse,
 } from './google-oauth'
 
@@ -21,17 +23,17 @@ export type GoogleCredentials = {
   expiresAt?: string
   driveFolderId?: string
   grantedScopes: string[]
-  connectedServices: GoogleConnectorId[]
+  connectedServices: GoogleOAuthConnectorId[]
 }
 
-function parseConnectedServices(raw?: string): GoogleConnectorId[] {
+function parseConnectedServices(raw?: string): GoogleOAuthConnectorId[] {
   if (!raw?.trim()) return []
   try {
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((item): item is GoogleConnectorId => typeof item === 'string' && isGoogleConnectorId(item))
+    return parsed.filter((item): item is GoogleOAuthConnectorId => typeof item === 'string' && isGoogleOAuthConnectorId(item))
   } catch {
-    return raw.split(',').map((item) => item.trim()).filter(isGoogleConnectorId)
+    return raw.split(',').map((item) => item.trim()).filter(isGoogleOAuthConnectorId)
   }
 }
 
@@ -58,7 +60,7 @@ export async function loadGoogleCredentials(): Promise<GoogleCredentials> {
   }
 }
 
-export async function storeGoogleTokens(tokens: GoogleTokenResponse, connectorIds?: GoogleConnectorId[]): Promise<void> {
+export async function storeGoogleTokens(tokens: GoogleTokenResponse, connectorIds?: GoogleOAuthConnectorId[]): Promise<void> {
   await setSecret(GOOGLE_SECRET_KEYS.accessToken, tokens.access_token)
   if (tokens.refresh_token) await setSecret(GOOGLE_SECRET_KEYS.refreshToken, tokens.refresh_token)
   await setSecret(GOOGLE_SECRET_KEYS.expiresAt, googleTokenExpiryIso(tokens.expires_in))
@@ -96,7 +98,7 @@ export async function completeGoogleOAuth(input: {
   code: string
   redirectUri: string
   codeVerifier: string
-  connectorIds?: GoogleConnectorId[]
+  connectorIds?: GoogleOAuthConnectorId[]
   fetchImpl?: typeof fetch
 }): Promise<GoogleTokenResponse> {
   const creds = await loadGoogleCredentials()
@@ -118,11 +120,11 @@ export async function isGoogleConnected(): Promise<boolean> {
   return Boolean(creds.accessToken || creds.refreshToken)
 }
 
-export async function isGoogleServiceConnected(id: GoogleConnectorId): Promise<boolean> {
+export async function isGoogleServiceConnected(id: GoogleOAuthConnectorId): Promise<boolean> {
   const creds = await loadGoogleCredentials()
   if (!creds.accessToken && !creds.refreshToken) return false
   if (creds.connectedServices.includes(id)) return true
-  return scopesCoverConnector(creds.grantedScopes, id)
+  return scopesCoverOAuthConnector(creds.grantedScopes, id)
 }
 
 export async function googleWorkspaceStatus(): Promise<{

@@ -20,4 +20,12 @@ describe('mcp server tools', () => {
     expect(server?.executable).toBe('npx')
     expect(server?.envKeys).toContain('DISCORD_BOT_TOKEN')
   })
+
+  it('blocks raw JSON-RPC bypasses for policy-restricted servers', async () => {
+    const paperSearch = createMcpServerTools().find((tool) => tool.name === 'mcp.stdio:paper-search')
+    await expect(paperSearch?.execute({
+      __approvalToken: 'approve-1',
+      stdinPayload: '{"method":"tools/call","params":{"name":"download_scihub"}}',
+    })).rejects.toThrow(/policy-checked method calls/i)
+  })
 })

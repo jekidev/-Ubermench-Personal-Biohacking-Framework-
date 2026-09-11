@@ -58,6 +58,12 @@ export type GoogleTokenResponse = {
 
 export type GoogleOAuthConnectorId = GoogleConnectorId | 'youtube'
 
+export const GOOGLE_YOUTUBE_SCOPES = [
+  'https://www.googleapis.com/auth/youtube.readonly',
+  'openid',
+  'email',
+] as const
+
 export type GoogleOAuthState = {
   connectorIds: GoogleOAuthConnectorId[]
   codeVerifier: string
@@ -139,14 +145,27 @@ export function scopesCoverConnector(granted: readonly string[], connectorId: Go
   return required.every((scope) => granted.includes(scope))
 }
 
+export function scopesCoverOAuthConnector(granted: readonly string[], connectorId: GoogleOAuthConnectorId): boolean {
+  if (connectorId === 'youtube') {
+    return GOOGLE_YOUTUBE_SCOPES
+      .filter((scope) => scope !== 'openid' && scope !== 'email')
+      .every((scope) => granted.includes(scope))
+  }
+  return scopesCoverConnector(granted, connectorId)
+}
+
 export function isGoogleConnectorId(value: string): value is GoogleConnectorId {
   return GOOGLE_CONNECTOR_IDS.includes(value as GoogleConnectorId)
+}
+
+export function isGoogleOAuthConnectorId(value: string): value is GoogleOAuthConnectorId {
+  return value === 'youtube' || isGoogleConnectorId(value)
 }
 
 export async function buildGoogleAuthorizeUrl(input: {
   clientId: string
   redirectUri: string
-  scopes: string[]
+  scopes: readonly string[]
   connectorIds: GoogleOAuthConnectorId[]
   storage?: Pick<Storage, 'setItem'>
 }): Promise<string> {

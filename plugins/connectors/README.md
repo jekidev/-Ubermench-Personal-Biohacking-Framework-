@@ -23,6 +23,9 @@ Agent tools: connector.* | calendar.* | gmail.* | drive.* | mcp.*
 | Gmail, Drive, Calendar | live | Shared Google OAuth PKCE, adapters, agent tools |
 | Discord | live | MCP stdio + agent tool |
 | Hugging Face | live | Inference engine + MCP registry entry |
+| YouTube subscriptions | live | OAuth subscription graph, batched upload-playlist lookup, deduplicated transcript RAG scheduling |
+| Paper Search | scaffold | `uvx paper-search-mcp`; open-access-only policy blocks Sci-Hub |
+| Local Deep Research | scaffold | `uvx --from local-deep-research[mcp] ldr-mcp`; optional local cited-research sidecar |
 | GitHub, Slack, Tavily, Context7, Notion, filesystem, memory, fetch | catalog | Install via `mcp.install`; secrets stay in vault |
 | Sentry, Stripe, Supabase, Convex, Vercel | planned | Registry metadata only |
 
@@ -41,7 +44,7 @@ Videos must have captions/subtitles. For automation beyond single URLs:
 | --- | --- |
 | Playlists / channel search / no captions | `transcriptor` MCP (`get_playlist_transcripts`, `search_videos`, Whisper) |
 | Logged-in / members-only videos | Transcriptor self-host with `COOKIES_FILE_PATH` (Netscape cookies export) |
-| Subscription graph in vault | `EfficientStreet/youtube-subscriptions-ingest` (approved adapter candidate) |
+| Subscription graph in vault | Integrated from `EfficientStreet/youtube-subscriptions-ingest`: quota-efficient batched channel lookup, pagination, source/video deduplication |
 | Hosted MCP (no Docker) | `https://transcriptor.gateway.mcpal.io/mcp` |
 
 Enable Transcriptor on `/connectors`, then use `/youtube` in chat or `connector.youtube.index`.
