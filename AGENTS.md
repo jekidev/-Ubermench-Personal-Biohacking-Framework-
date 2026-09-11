@@ -30,3 +30,5 @@ Approved adapters from `jekidev/stararchive` (not wholesale merges):
 - Agent memory RAG: `plugins/longevity/rag/unified-search.ts` — merges document RAG + persisted agent memories (`rag.search`)
 - SuperMemory MCP: optional `supermemory-mcp` connector (local, no API key)
 - Mem0 cloud MCP: optional `@mem0/mcp-server` with `MEM0_API_KEY`
+- Research settings: `pages/settings.vue` Research tab — Paper Search, PaperQA local-RAG, LDR, Transcriptor
+- PaperQA local contract: `app/services/paper-qa.ts` (`research.paperqa.ask` agent tool)

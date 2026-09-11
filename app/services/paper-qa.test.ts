@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildPaperQaPlan, paperQaCitationsToEvidenceNotes, validatePaperQaAnswer } from './paper-qa'
+import { answerPaperQaFromLocalRag, buildPaperQaPlan, paperQaCitationsToEvidenceNotes, validatePaperQaAnswer } from './paper-qa'
 
 describe('paper-qa', () => {
   it('builds an approval-bound local plan without Sci-Hub', () => {
@@ -19,5 +19,14 @@ describe('paper-qa', () => {
       citations: [{ key: '1', title: 'Metformin trial', doi: '10.1/xyz' }],
     })
     expect(paperQaCitationsToEvidenceNotes(answer)[0]).toContain('10.1/xyz')
+  })
+
+  it('returns a local-rag fallback when no documents are indexed', () => {
+    const answer = answerPaperQaFromLocalRag('Does metformin change mortality?', {
+      getItem: () => null,
+      setItem: () => {},
+    })
+    expect(answer.backend).toBe('local-rag')
+    expect(answer.answer).toContain('No indexed local PDF')
   })
 })
