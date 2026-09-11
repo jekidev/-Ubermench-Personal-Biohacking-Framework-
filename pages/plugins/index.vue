@@ -48,8 +48,11 @@
           </div>
         </template>
         <p class="text-sm text-zinc-400">
-          RAG ingest pipelines for YouTube, research papers, and external data sources.
+          RAG ingest pipelines for YouTube, ChatGPT exports, Google Drive, research papers, and external data sources.
         </p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <NuxtLink to="/connectors"><UButton size="xs" variant="outline">Pipeline hub</UButton></NuxtLink>
+        </div>
       </UCard>
 
       <UCard>
@@ -60,8 +63,12 @@
           </div>
         </template>
         <p class="text-sm text-zinc-400">
-          LLM provider configuration, free-first routing, and model orchestration settings.
+          LLM provider configuration, biohacking model registry, free-first routing, and orchestration settings.
         </p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <NuxtLink to="/ai-models"><UButton size="xs" variant="outline">Model registry</UButton></NuxtLink>
+          <NuxtLink to="/settings"><UButton size="xs" variant="outline">LLM settings</UButton></NuxtLink>
+        </div>
       </UCard>
     </div>
   </div>

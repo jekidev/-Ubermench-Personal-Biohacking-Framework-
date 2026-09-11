@@ -58,6 +58,7 @@ const navigation = [
   { label: 'Longevity', to: '/longevity' },
   { label: 'Chat', to: '/chat' },
   { label: 'Agent', to: '/agent' },
+  { label: 'AI Models', to: '/ai-models' },
   { label: 'Biology', to: '/biology' },
   { label: 'Health Sync', to: '/health-sync' },
   { label: 'Experiments', to: '/experiments' },
