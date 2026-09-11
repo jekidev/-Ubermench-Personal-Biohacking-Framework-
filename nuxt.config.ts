@@ -20,4 +20,17 @@ export default defineNuxtConfig({
       meta: [{ name: 'theme-color', content: '#09090b' }],
     },
   },
+  devServer: {
+    host: '0.0.0.0',
+    port: 3000,
+  },
+  vite: {
+    server: {
+      strictPort: false,
+      hmr: {
+        protocol: 'wss',
+        clientPort: 443,
+      },
+    },
+  },
 })
