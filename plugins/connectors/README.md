@@ -25,6 +25,7 @@ Agent tools: connector.* | calendar.* | gmail.* | drive.* | mcp.*
 | Hugging Face | live | Inference engine + MCP registry entry |
 | YouTube subscriptions | live | OAuth subscription graph, batched upload-playlist lookup, deduplicated transcript RAG scheduling |
 | Paper Search | scaffold | `uvx paper-search-mcp`; open-access-only policy blocks Sci-Hub |
+| PaperQA | scaffold | Local citation RAG contract in `app/services/paper-qa.ts`; no upstream MCP server |
 | Local Deep Research | scaffold | `uvx --from local-deep-research[mcp] ldr-mcp`; optional local cited-research sidecar |
 | GitHub, Slack, Tavily, Context7, Notion, filesystem, memory, fetch | catalog | Install via `mcp.install`; secrets stay in vault |
 | Sentry, Stripe, Supabase, Convex, Vercel | planned | Registry metadata only |

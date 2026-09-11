@@ -12,3 +12,5 @@ plugins/fearprime/app/eslint.config.mjs
 .secrets/
 coverage/
 src-tauri/target/
+src-tauri/gen/
+dist/

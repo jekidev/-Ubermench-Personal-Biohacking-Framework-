@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { getMcpServer } from '../llm/mcp/servers'
 import { CONNECTOR_REGISTRY, getConnector } from './registry'
 import { loadConnectorSettings, setConnectorEnabled } from './connector-store'
 
@@ -39,5 +40,12 @@ describe('connector registry', () => {
   it('does not contain duplicate connector ids', () => {
     const ids = CONNECTOR_REGISTRY.map((entry) => entry.id)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('only references MCP servers that exist in the executable catalog', () => {
+    for (const connector of CONNECTOR_REGISTRY) {
+      if (!connector.mcpServerId) continue
+      expect(getMcpServer(connector.mcpServerId), `${connector.id} -> ${connector.mcpServerId}`).toBeDefined()
+    }
   })
 })

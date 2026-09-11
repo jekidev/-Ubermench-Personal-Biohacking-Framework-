@@ -233,7 +233,6 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     category: 'research',
     description: 'Citation-backed RAG over local scientific PDFs via PaperQA2. Optional local sidecar; does not replace intervention ranking.',
     transport: 'hybrid',
-    mcpServerId: 'paper-qa',
     auth: { type: 'none', vaultKeyPrefix: 'connector:paper-qa' },
     capabilities: ['pdf-rag', 'citations', 'retraction-check'],
     enabledByDefault: false,
