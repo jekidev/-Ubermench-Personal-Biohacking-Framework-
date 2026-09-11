@@ -100,6 +100,7 @@ export function createResearchTools(): AgentTool[] {
         try {
           const question = typeof args.question === 'string' ? args.question : ''
           const answer = answerPaperQaFromLocalRag(question)
+          if ('emptyIndex' in answer && answer.emptyIndex) return answer
           return {
             ...answer,
             evidenceNotes: paperQaCitationsToEvidenceNotes(answer),

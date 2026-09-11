@@ -56,7 +56,15 @@
     <UCard>
       <template #header><div class="font-medium">Native MCP approval</div></template>
       <div class="space-y-3">
-        <p class="text-sm text-zinc-500">Preflight is validated first. Native execution still requires this explicit approval action; the agent cannot mint the token itself. Multiple native servers in one pause are approved one command at a time.</p>
+        <p class="text-sm text-zinc-500">Preflight is validated first. Native execution still requires this explicit approval action; the agent cannot mint the token itself. Multiple native servers in one pause are approved one command at a time. Chat/Overview queue native MCP here via a deep-link that prefills the next server command.</p>
+        <UAlert
+          v-if="!isTauriRuntime()"
+          class="mt-3"
+          title="Desktop app required"
+          description="This browser preview cannot run uvx or Docker. Open the Tauri desktop app, then Approve native MCP. Use Check sidecar on Settings → Research/Memory — sidecars are never auto-started."
+          color="warning"
+          variant="subtle"
+        />
         <div class="grid gap-3 md:grid-cols-2">
           <input v-model="nativeCommand" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700" placeholder="node" />
           <input v-model="nativeArgs" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700" placeholder="server.js --stdio" />
@@ -75,11 +83,12 @@
       <div class="space-y-4">
         <div class="text-xs text-zinc-500">{{ runtime.activeRun.value.task.kind }} · {{ runtime.activeRun.value.status }} · {{ runtime.activeRun.value.selectedModel?.provider ?? 'no model' }} · retries {{ runtime.activeRun.value.retryCount ?? 0 }}</div>
         <p v-if="approvalNotice" class="text-xs text-amber-600">{{ approvalNotice }}</p>
+        <p v-if="queuedApprovalCount" class="text-xs text-amber-600">{{ queuedApprovalCount }} more run(s) waiting after this one.</p>
         <div v-if="runtime.activeRun.value.toolCalls.length" class="space-y-2">
           <div class="text-sm font-medium">Tool calls</div>
           <div
-            v-for="call in runtime.activeRun.value.toolCalls"
-            :key="call.id"
+            v-for="(call, index) in runtime.activeRun.value.toolCalls"
+            :key="`${call.id}:${call.name}:${index}`"
             class="rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-700"
           >
             <div class="flex flex-wrap items-center justify-between gap-2">
@@ -174,11 +183,13 @@ import type { AgentTaskKind } from '~/services/agent-superstack/types'
 import type { AgentAuditEvent, AgentRun, AgentToolCall } from '~/services/agent-runtime/types'
 import { exampleArgsForTool } from '~/services/agent-runtime/invoke-tool'
 import { formatNextNativePreflightLabel, resolveNativeMcpPreflightRequest } from '~/services/agent-runtime/mcp-server-tools'
+import { parseNativeMcpAgentQuery } from '~/services/agent-runtime/native-mcp-handoff'
 import { formatAgentRunReply, observationForToolCall } from '~/services/agent-runtime/run-reply'
 import { isPluginAgentToolName, isResearchAgentToolName, listAgentToolCatalog } from '~/services/agent-runtime/tool-catalog'
 import { isTauriRuntime } from '~/utils/runtime-platform'
-const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools, approvalNotice } = usePendingAgentApprovals()
+const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools, approvalNotice, queuedApprovalCount } = usePendingAgentApprovals()
 const native = useNativeMcpApproval()
+const route = useRoute()
 const prompt = ref('')
 const kind = ref<AgentTaskKind>('research')
 const auditEvents = ref<AgentAuditEvent[]>([])
@@ -241,6 +252,14 @@ watch(nativePreflightTarget, (target) => {
   if (!target) return
   nativeCommand.value = target.command
   nativeArgs.value = target.args.join(' ')
+}, { immediate: true })
+
+watch(() => route.query, (query) => {
+  if (nativePreflightTarget.value) return
+  const parsed = parseNativeMcpAgentQuery(query as Record<string, unknown>)
+  if (!parsed) return
+  nativeCommand.value = parsed.command
+  nativeArgs.value = parsed.args.join(' ')
 }, { immediate: true })
 
 function toolCallStatus(run: AgentRun, call: AgentToolCall) {

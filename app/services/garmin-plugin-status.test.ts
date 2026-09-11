@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { summarizeGarminObservations } from './garmin-plugin-status'
+import { GARMIN_UNCONFIGURED_MESSAGE, garminStatusNextStep, summarizeGarminObservations, withGarminStatusGuidance } from './garmin-plugin-status'
 import type { CanonicalObservation } from '~/types/personal-state'
 
 function observation(partial: Partial<CanonicalObservation> & Pick<CanonicalObservation, 'id' | 'metric' | 'observedAt'>): CanonicalObservation {
@@ -38,5 +38,23 @@ describe('garmin-plugin-status', () => {
     expect(summary.observationCount).toBe(2)
     expect(summary.lastObservedAt).toBe('2026-09-11T00:00:00.000Z')
     expect(summary.metrics).toEqual(['hrv', 'steps'])
+  })
+
+  it('explains the unconfigured Health Sync path without faking OAuth', () => {
+    const status = withGarminStatusGuidance({
+      oauthConfigured: false,
+      oauthConnected: false,
+      observationCount: 0,
+      lastObservedAt: null,
+      metrics: [],
+    })
+    expect(status.nextStep).toBe(GARMIN_UNCONFIGURED_MESSAGE)
+    expect(status.healthSyncHref).toBe('/health-sync')
+    expect(status.settingsHref).toContain('tab=plugins')
+    expect(garminStatusNextStep({
+      oauthConfigured: true,
+      oauthConnected: false,
+      observationCount: 0,
+    })).toMatch(/developer client/i)
   })
 })

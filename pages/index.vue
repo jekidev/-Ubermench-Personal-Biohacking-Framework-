@@ -120,7 +120,7 @@
         <textarea v-model="prompt" class="min-h-28 w-full rounded-md border border-zinc-200 bg-transparent p-3 text-sm dark:border-zinc-700" placeholder="Ask Ubermench to research, analyse or reason about a health optimisation question..." />
         <div class="flex flex-wrap items-center gap-3">
           <UButton type="submit" :loading="loading" :disabled="!prompt.trim()">Run agent</UButton>
-          <span class="text-xs text-zinc-500">Uses the agent kernel, including Garmin/PDF/research tools when they help. Waiting-approval is shared with Chat and Agent.</span>
+          <span class="text-xs text-zinc-500">Uses the agent kernel, including Garmin/PDF/research tools when they help. Waiting-approval is shared with Chat and Agent. Native MCP still needs desktop Agent.</span>
           <span v-if="displayedRun" class="text-xs text-zinc-500">{{ displayedRun.provider }} / {{ displayedRun.model }} · {{ displayedRun.status }}</span>
         </div>
         <div v-if="error" class="rounded-md border border-red-300 p-3 text-sm text-red-700">{{ error }}</div>
@@ -128,6 +128,7 @@
           <div class="font-medium text-amber-200">Active run waiting for approval</div>
           <p v-if="displayedRun.prompt" class="mt-1 text-xs text-zinc-500">{{ displayedRun.prompt }}</p>
           <p v-if="approvalNotice" class="mt-1 text-xs text-amber-300">{{ approvalNotice }}</p>
+          <p v-if="queuedApprovalCount" class="mt-1 text-xs text-amber-300">{{ queuedApprovalCount }} more run(s) waiting after this one.</p>
         </div>
         <div v-if="displayedRun" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">{{ displayedRun.text }}</div>
         <div v-if="laterRunText" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
@@ -150,7 +151,7 @@
             {{ nativeHandoff }}
           </p>
           <NuxtLink to="/chat"><UButton size="sm" variant="outline">Open Chat</UButton></NuxtLink>
-          <NuxtLink to="/agent"><UButton size="sm" variant="outline">Open Agent</UButton></NuxtLink>
+          <NuxtLink :to="pendingNativeTools.length ? nativeAgentHref : '/agent'"><UButton size="sm" variant="outline">Open Agent</UButton></NuxtLink>
         </div>
       </form>
     </UCard>
@@ -172,8 +173,9 @@ import { assessLongevity } from '~/services/longevity-engine'
 import { buildOverviewSummary } from '~/services/overview-dashboard'
 import { screenProfileSafety } from '~/services/profile-safety'
 import { formatAgentRunReply, formatNativeMcpAgentHandoff } from '~/services/agent-runtime/run-reply'
+import { nativeMcpAgentHref } from '~/services/agent-runtime/native-mcp-handoff'
 const llm = useLLM()
-const { runtime, pendingCatalogTools, pendingNativeTools, displayedRun, waitingApproval, approvalNotice } = usePendingAgentApprovals()
+const { runtime, pendingCatalogTools, pendingNativeTools, displayedRun, waitingApproval, approvalNotice, queuedApprovalCount } = usePendingAgentApprovals()
 const biology = usePersonalBiology()
 const experiments = useExperiments()
 const profile = biology.profile
@@ -181,6 +183,7 @@ const prompt = ref('')
 const loading = ref(false)
 const error = ref('')
 const nativeHandoff = computed(() => formatNativeMcpAgentHandoff(pendingNativeTools.value))
+const nativeAgentHref = computed(() => nativeMcpAgentHref(pendingNativeTools.value))
 const laterRunText = computed(() => {
   const latest = runtime.latestRun.value
   const focused = runtime.activeRun.value

@@ -1,4 +1,5 @@
 import { formatNextNativePreflightLabel } from './mcp-server-tools'
+import { NATIVE_MCP_TAURI_MESSAGE, nativeMcpAgentHref } from './native-mcp-handoff'
 import type { AgentObservation, AgentRun, AgentToolCall } from './types'
 import { partitionPendingByApprovalSurface, upsertToolCalls } from './tool-plan'
 
@@ -60,7 +61,8 @@ export function formatNativeMcpAgentHandoff(calls: AgentToolCall[]): string {
   const sequential = next
     ? ` Approve one native server at a time. ${next}`
     : ''
-  return `Native MCP still needs the Agent Control Center preflight token: ${names}.${sequential} Open Agent to continue those calls. Catalog tools can be approved here.`
+  const href = nativeMcpAgentHref(calls)
+  return `${NATIVE_MCP_TAURI_MESSAGE} Native MCP still needs the Agent Control Center preflight token: ${names}.${sequential} Open ${href} to continue those calls. Catalog tools can be approved here.`
 }
 
 export function observationForToolCall(run: AgentRun, callId: string): AgentObservation | undefined {

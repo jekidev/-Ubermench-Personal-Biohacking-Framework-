@@ -57,18 +57,20 @@ describe('plugin-tools', () => {
 
   it('searches exercise catalog', async () => {
     expect(searchTool).toBeDefined()
-    const results = await searchTool!.execute({ query: 'squat' }) as Array<{ name: string }>
-    expect(results.length).toBeGreaterThan(0)
-    expect(results[0]?.name.toLowerCase()).toContain('squat')
+    const result = await searchTool!.execute({ query: 'squat' }) as { results: Array<{ name: string }>; empty: boolean }
+    expect(result.empty).toBe(false)
+    expect(result.results.length).toBeGreaterThan(0)
+    expect(result.results[0]?.name.toLowerCase()).toContain('squat')
   })
 
   it('lists watchlist items and garmin schema', async () => {
     const watchlistTool = tools.find((tool) => tool.name === 'plugins.watchlist.list')
     const garminTool = tools.find((tool) => tool.name === 'plugins.garmin.schema')
-    const all = await watchlistTool!.execute({}) as Array<{ id: string; tier: string }>
-    const clocks = await watchlistTool!.execute({ tier: 'clock' }) as Array<{ tier: string }>
-    expect(all.length).toBeGreaterThan(0)
-    expect(clocks.every((item) => item.tier === 'clock')).toBe(true)
+    const all = await watchlistTool!.execute({}) as { items: Array<{ id: string; tier: string }>; empty: boolean }
+    const clocks = await watchlistTool!.execute({ tier: 'clock' }) as { items: Array<{ tier: string }>; empty: boolean }
+    expect(all.empty).toBe(false)
+    expect(all.items.length).toBeGreaterThan(0)
+    expect(clocks.items.every((item) => item.tier === 'clock')).toBe(true)
     const schema = await garminTool!.execute({}) as { provider: string; rejectedProviders: string[] }
     expect(schema.provider).toBe('garmin')
     expect(schema.rejectedProviders).toContain('oura')
@@ -80,9 +82,10 @@ describe('plugin-tools', () => {
 
   it('inspects sample and last cached PDFs without returning bytes', async () => {
     expect(pdfTool).toBeDefined()
-    const empty = await pdfTool!.execute({}) as { source: string; inspection: null }
+    const empty = await pdfTool!.execute({}) as { source: string; inspection: null; bloodsHref?: string }
     expect(empty.source).toBe('last')
     expect(empty.inspection).toBeNull()
+    expect(empty.bloodsHref).toContain('bloods')
 
     const sample = await pdfTool!.execute({ sample: true }) as {
       source: string
@@ -123,5 +126,16 @@ describe('plugin-tools', () => {
     expect(result.connectorId).toBe('pdf-inspector')
     expect(result.settingsHref).toContain('tab=plugins')
     expect(result.error).toMatch(/disabled/i)
+  })
+
+  it('returns an empty catalog payload instead of a silent no-op when no exercises match', async () => {
+    const result = await searchTool!.execute({ query: 'zzzz-not-an-exercise' }) as {
+      empty: boolean
+      results: unknown[]
+      settingsHref: string
+    }
+    expect(result.empty).toBe(true)
+    expect(result.results).toEqual([])
+    expect(result.settingsHref).toContain('tab=plugins')
   })
 })

@@ -34,7 +34,10 @@
             </div>
             <div class="whitespace-pre-wrap">{{ message.content }}</div>
           </div>
-          <p v-if="!chat.messages.length" class="text-sm text-zinc-500">Start with a question or try /help.</p>
+          <p v-if="!chat.messages.length" class="text-sm text-zinc-500">
+            Start with a question or try /help. Catalog tools (PaperQA, Garmin, PDF) approve here.
+            Native MCP (paper-search, LDR, Transcriptor, SuperMemory, Mem0) needs the desktop Agent preflight token — this page cannot run uvx or Docker.
+          </p>
         </div>
 
         <form class="mt-4 space-y-3" @submit.prevent="submit">
@@ -53,6 +56,7 @@
             <div class="font-medium text-amber-200">Waiting for approval</div>
             <p v-if="displayedRun?.prompt" class="mt-1 text-xs text-zinc-500">{{ displayedRun.prompt }}</p>
             <p v-if="approvalNotice" class="mt-1 text-xs text-amber-300">{{ approvalNotice }}</p>
+            <p v-if="queuedApprovalCount" class="mt-1 text-xs text-amber-300">{{ queuedApprovalCount }} more run(s) waiting after this one.</p>
             <p v-if="pendingCatalogTools.length" class="mt-1 text-zinc-400">
               Catalog tools can be approved here: {{ pendingCatalogTools.map((call) => call.name).join(', ') }}.
             </p>
@@ -68,7 +72,7 @@
               >
                 {{ pendingNativeTools.length ? 'Approve catalog tools' : 'Approve pending tools' }}
               </UButton>
-              <NuxtLink v-if="pendingNativeTools.length" to="/agent">
+              <NuxtLink v-if="pendingNativeTools.length" :to="nativeAgentHref">
                 <UButton size="sm" variant="outline">Open Agent for {{ pendingNativeTools.map((call) => call.name).join(', ') }}</UButton>
               </NuxtLink>
               <NuxtLink v-else to="/agent"><UButton size="sm" variant="outline">Open Agent</UButton></NuxtLink>
@@ -163,9 +167,10 @@ import { indexYouTubeUrlsToRag } from '../plugins/connectors/youtube-rag-sync'
 import { syncDrivePdfsToRag } from '../plugins/connectors/drive-rag-sync'
 import { runYouTubeScheduler } from '../plugins/connectors/youtube-scheduler'
 import { formatAgentRunReply, formatNativeMcpAgentHandoff } from '~/services/agent-runtime/run-reply'
+import { nativeMcpAgentHref } from '~/services/agent-runtime/native-mcp-handoff'
 
 const chat = useChatSession()
-const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools, displayedRun, approvalNotice } = usePendingAgentApprovals()
+const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools, displayedRun, approvalNotice, queuedApprovalCount } = usePendingAgentApprovals()
 const llm = useLLM()
 const scheduler = useYouTubeScheduler()
 const draft = ref('')
@@ -173,6 +178,7 @@ const newRuleName = ref('')
 const newRuleDescription = ref('')
 const newRulePrompt = ref('')
 const nativeHandoff = computed(() => formatNativeMcpAgentHandoff(pendingNativeTools.value))
+const nativeAgentHref = computed(() => nativeMcpAgentHref(pendingNativeTools.value))
 const commandHint = computed(() => chat.slashHelp().slice(0, 4).join(' · '))
 const builtInRules = computed(() => chat.allRules().filter((rule) => !rule.custom))
 

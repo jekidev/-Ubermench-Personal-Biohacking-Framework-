@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { answerPaperQaFromLocalRag, buildPaperQaPlan, PAPER_QA_CONNECTOR_OFF_MESSAGE, PAPER_QA_SETTINGS_HREF, paperQaCitationsToEvidenceNotes, paperQaConnectorOffResult, paperQaFailedResult, validatePaperQaAnswer } from './paper-qa'
+import { answerPaperQaFromLocalRag, buildPaperQaPlan, PAPER_QA_CONNECTOR_OFF_MESSAGE, PAPER_QA_EMPTY_INDEX_MESSAGE, PAPER_QA_SETTINGS_HREF, paperQaCitationsToEvidenceNotes, paperQaConnectorOffResult, paperQaFailedResult, validatePaperQaAnswer } from './paper-qa'
 
 describe('paper-qa', () => {
   it('builds an approval-bound local plan without Sci-Hub', () => {
@@ -27,7 +27,13 @@ describe('paper-qa', () => {
       setItem: () => {},
     })
     expect(answer.backend).toBe('local-rag')
-    expect(answer.answer).toContain('No indexed local PDF')
+    expect('emptyIndex' in answer && answer.emptyIndex).toBe(true)
+    expect(answer.answer).toBe(PAPER_QA_EMPTY_INDEX_MESSAGE)
+    expect(answer.answer).toMatch(/Bloods or Drive/)
+    if ('bloodsHref' in answer) {
+      expect(answer.bloodsHref).toBe('/longevity/bloods')
+      expect(answer.driveHref).toBe('/health-sync')
+    }
   })
 
   it('returns an actionable Settings → Research payload when the connector is off', () => {

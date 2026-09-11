@@ -62,4 +62,16 @@ describe('research tools', () => {
       error: expect.stringMatching(/cannot be empty/i),
     })
   })
+
+  it('returns a Bloods/Drive empty-index payload when no lab PDFs are indexed', async () => {
+    const tools = createResearchTools()
+    const ask = tools.find((tool) => tool.name === 'research.paperqa.ask')!
+    await expect(ask.execute({ question: 'CRP' })).resolves.toMatchObject({
+      ok: false,
+      emptyIndex: true,
+      bloodsHref: '/longevity/bloods',
+      driveHref: '/health-sync',
+      error: expect.stringMatching(/Bloods or Drive/i),
+    })
+  })
 })

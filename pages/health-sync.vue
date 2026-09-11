@@ -42,6 +42,7 @@
         <template #header><div class="font-medium">Garmin OAuth (Wellness API)</div></template>
         <p class="text-sm text-zinc-400">
           Connect with PKCE using your Garmin Connect Developer client ID and secret. Tokens stay in the secret vault and never enter biology backups or sample caches.
+          Without a developer client, use JSON import or a manual vault token — OAuth is not simulated.
         </p>
         <div class="mt-3 grid gap-3">
           <UInput v-model="garminClientId" placeholder="Garmin client ID" />
@@ -141,6 +142,15 @@
       <p v-if="garminPlugin.status.value.metrics.length" class="mt-3 text-xs text-zinc-500">
         Synced metrics: {{ garminPlugin.status.value.metrics.join(', ') }}
       </p>
+      <UAlert
+        v-if="!garminPlugin.status.value.oauthConfigured && !garminPlugin.status.value.oauthConnected && !garminPlugin.status.value.observationCount"
+        class="mt-3"
+        title="Garmin unconfigured"
+        :description="garminPlugin.status.value.nextStep"
+        color="warning"
+        variant="subtle"
+      />
+      <p v-else class="mt-3 text-xs text-zinc-400">{{ garminPlugin.status.value.nextStep }}</p>
       <div class="mt-3 flex flex-wrap gap-2">
         <UButton size="sm" variant="outline" @click="refreshGarminPlugins">Refresh status</UButton>
         <UButton size="sm" variant="ghost" to="/settings?tab=plugins">Open Plugins</UButton>

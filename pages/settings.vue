@@ -249,6 +249,16 @@
           Optional MCP sidecars add external memory graphs (<code>supermemory-mcp</code>, Mem0 cloud, or official server-memory).
         </p>
         <UAlert v-if="memory.error" class="mt-3" title="Memory error" :description="memory.error" color="error" variant="subtle" />
+        <UAlert
+          v-if="memory.sidecarCheck"
+          class="mt-3"
+          :title="memory.sidecarCheck.ok ? 'Sidecar ready' : 'Sidecar not started'"
+          :description="memory.sidecarCheck.ok
+            ? `${memory.sidecarCheck.serverId}: ${[memory.sidecarCheck.command, ...(memory.sidecarCheck.args ?? [])].join(' ')}`
+            : memory.sidecarCheck.error"
+          :color="memory.sidecarCheck.ok ? 'success' : 'warning'"
+          variant="subtle"
+        />
         <div class="mt-4 grid gap-2 text-sm sm:grid-cols-2">
           <div><span class="text-zinc-500">Persisted agent memories:</span> {{ memory.agentMemoryCount }}</div>
           <div>
@@ -283,6 +293,7 @@
               </label>
             </div>
             <p class="mt-2 text-xs text-zinc-500">MCP: {{ memory.mcpStatus('supermemory') }}</p>
+            <UButton size="xs" variant="outline" class="mt-2" :loading="memory.sidecarBusy" @click="memory.checkSidecar('supermemory')">Check sidecar</UButton>
           </div>
 
           <div class="rounded border border-zinc-800 p-3">
@@ -301,6 +312,7 @@
               </label>
             </div>
             <p class="mt-2 text-xs text-zinc-500">MCP: {{ memory.mcpStatus('memory') }}</p>
+            <UButton size="xs" variant="outline" class="mt-2" :loading="memory.sidecarBusy" @click="memory.checkSidecar('memory')">Check sidecar</UButton>
           </div>
 
           <div class="rounded border border-zinc-800 p-3">
@@ -319,6 +331,7 @@
               Enable Mem0 MCP
             </label>
             <p class="mt-2 text-xs text-zinc-500">MCP: {{ memory.mcpStatus('mem0') }}</p>
+            <UButton size="xs" variant="outline" class="mt-2" :loading="memory.sidecarBusy" @click="memory.checkSidecar('mem0')">Check sidecar</UButton>
           </div>
         </div>
       </UCard>
@@ -358,6 +371,17 @@
           Sci-Hub stays disabled. Europe PMC is always available via <code>research.europepmc</code>.
         </p>
         <UAlert v-if="research.error" class="mt-3" title="Research error" :description="research.error" color="error" variant="subtle" />
+        <p class="mt-3 text-xs text-zinc-400">Check sidecar is explicit and Tauri-only. The browser preview fails clearly and never auto-starts uvx or Docker.</p>
+        <UAlert
+          v-if="research.sidecarCheck"
+          class="mt-3"
+          :title="research.sidecarCheck.ok ? 'Sidecar ready' : 'Sidecar not started'"
+          :description="research.sidecarCheck.ok
+            ? `${research.sidecarCheck.serverId}: ${[research.sidecarCheck.command, ...(research.sidecarCheck.args ?? [])].join(' ')}`
+            : research.sidecarCheck.error"
+          :color="research.sidecarCheck.ok ? 'success' : 'warning'"
+          variant="subtle"
+        />
         <ul class="mt-4 space-y-1 text-sm text-zinc-400">
           <li v-for="provider in research.providers" :key="provider.id">
             {{ provider.name }} — {{ provider.enabled ? 'enabled' : 'disabled' }}
@@ -378,6 +402,7 @@
           Enable Paper Search
         </label>
         <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('paper-search') }}. Enabling installs the catalog entry. Sci-Hub download stays blocked.</p>
+        <UButton size="xs" variant="outline" class="mt-2" :loading="research.sidecarBusy" @click="research.checkSidecar('paper-search')">Check sidecar</UButton>
       </UCard>
 
       <UCard>
@@ -392,6 +417,7 @@
           Enable Local Deep Research
         </label>
         <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('local-deep-research') }}. Enabling installs ldr-mcp. Cited sidecar only — not a clinical conclusion.</p>
+        <UButton size="xs" variant="outline" class="mt-2" :loading="research.sidecarBusy" @click="research.checkSidecar('local-deep-research')">Check sidecar</UButton>
       </UCard>
 
       <UCard>
@@ -416,6 +442,10 @@
         <div v-if="research.paperQaAnswer" class="mt-4 rounded border border-zinc-800 p-3 text-sm">
           <div class="text-xs text-zinc-500">{{ research.paperQaAnswer.backend }} · confidence {{ research.paperQaAnswer.confidence.toFixed(2) }}</div>
           <p class="mt-2 text-zinc-300 whitespace-pre-wrap">{{ research.paperQaAnswer.answer.slice(0, 800) }}</p>
+          <div v-if="'emptyIndex' in research.paperQaAnswer && research.paperQaAnswer.emptyIndex" class="mt-3 flex flex-wrap gap-2">
+            <UButton size="xs" variant="outline" to="/longevity/bloods">Index via Bloods</UButton>
+            <UButton size="xs" variant="outline" to="/health-sync">Index via Drive / Health Sync</UButton>
+          </div>
         </div>
       </UCard>
 
@@ -427,6 +457,7 @@
           Enable Transcriptor MCP
         </label>
         <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('transcriptor') }}. Enabling installs the Transcriptor catalog entry.</p>
+        <UButton size="xs" variant="outline" class="mt-2" :loading="research.sidecarBusy" @click="research.checkSidecar('transcriptor')">Check sidecar</UButton>
       </UCard>
 
       <UCard>
@@ -606,6 +637,15 @@
           <p v-if="plugins.garminStatus.metrics.length" class="mt-3 text-xs text-zinc-500">
             Synced metrics: {{ plugins.garminStatus.metrics.join(', ') }}
           </p>
+          <UAlert
+            v-if="!plugins.garminStatus.oauthConfigured && !plugins.garminStatus.oauthConnected && !plugins.garminStatus.observationCount"
+            class="mt-3"
+            title="Garmin unconfigured"
+            :description="plugins.garminStatus.nextStep"
+            color="warning"
+            variant="subtle"
+          />
+          <p v-else class="mt-3 text-xs text-zinc-400">{{ plugins.garminStatus.nextStep }}</p>
           <p class="mt-4 text-xs text-zinc-500">Supported schema metrics:</p>
           <ul class="mt-2 space-y-1 font-mono text-xs text-zinc-400">
             <li v-for="metric in plugins.garminMetrics" :key="metric">{{ metric }}</li>

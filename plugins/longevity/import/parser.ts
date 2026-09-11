@@ -174,12 +174,13 @@ function pdfCandidateToObservation(
   collectedAt?: string,
   locator?: string,
   confidence = 0.85,
+  row = 1,
 ): ImportCandidate {
   const marker = canonicalMarker(biomarker)
   return {
     type: 'observation',
     value: {
-      id: observationId(sourceDocumentId, 0, marker),
+      id: observationId(sourceDocumentId, row, marker),
       sourceDocumentId,
       biomarker: marker,
       value,
@@ -239,6 +240,7 @@ async function parsePdf(
         item.collectedAt,
         item.locator ?? `page:${item.page}:${index}`,
         requiresReview ? Math.min(item.confidence, confidenceCap) : item.confidence,
+        index + 1,
       ),
     ),
   }

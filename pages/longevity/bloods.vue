@@ -110,6 +110,9 @@
         <UButton :loading="ragBusy" @click="runRagQuery">Ask</UButton>
       </div>
       <p v-if="ragAnswer" class="mt-4 whitespace-pre-wrap text-sm text-zinc-300">{{ ragAnswer }}</p>
+      <p v-else class="mt-4 text-xs text-zinc-500">
+        PaperQA and RAG only answer after a lab PDF is indexed here (or synced from Drive on Health Sync). Empty index is not a crash.
+      </p>
     </UCard>
 
     <UCard>

@@ -2,12 +2,20 @@ import type { CanonicalObservation } from '~/types/personal-state'
 import { emptyPersonalStateStore, loadPersonalStateStore } from './personal-state-store'
 import { garminOAuthStatus } from './health-adapters/garmin-oauth-flow'
 
+export const GARMIN_HEALTH_SYNC_HREF = '/health-sync'
+export const GARMIN_PLUGINS_HREF = '/settings?tab=plugins'
+export const GARMIN_UNCONFIGURED_MESSAGE =
+  'Garmin is unconfigured. Import Wellness JSON, save a vault token, or add a Garmin Connect developer client on Health Sync. OAuth is not simulated.'
+
 export type GarminPluginStatus = {
   oauthConfigured: boolean
   oauthConnected: boolean
   observationCount: number
   lastObservedAt: string | null
   metrics: string[]
+  nextStep: string
+  healthSyncHref: typeof GARMIN_HEALTH_SYNC_HREF
+  settingsHref: typeof GARMIN_PLUGINS_HREF
 }
 
 export function isGarminObservation(observation: CanonicalObservation): boolean {
@@ -30,14 +38,38 @@ export function summarizeGarminObservations(observations: CanonicalObservation[]
   }
 }
 
+export function garminStatusNextStep(status: Pick<GarminPluginStatus, 'oauthConfigured' | 'oauthConnected' | 'observationCount'>): string {
+  if (!status.oauthConfigured && !status.oauthConnected && status.observationCount === 0) {
+    return GARMIN_UNCONFIGURED_MESSAGE
+  }
+  if (status.oauthConfigured && !status.oauthConnected) {
+    return 'OAuth client is saved. Connect Garmin on Health Sync (developer client required), or save a vault token / import Wellness JSON.'
+  }
+  if (status.oauthConnected && status.observationCount === 0) {
+    return 'Token is present. Import Wellness JSON or sync authorized Garmin data on Health Sync.'
+  }
+  return 'Garmin samples are present. Refresh on Health Sync or Settings → Plugins.'
+}
+
+export function withGarminStatusGuidance(
+  status: Omit<GarminPluginStatus, 'nextStep' | 'healthSyncHref' | 'settingsHref'> & Partial<Pick<GarminPluginStatus, 'nextStep' | 'healthSyncHref' | 'settingsHref'>>,
+): GarminPluginStatus {
+  return {
+    ...status,
+    nextStep: garminStatusNextStep(status),
+    healthSyncHref: GARMIN_HEALTH_SYNC_HREF,
+    settingsHref: GARMIN_PLUGINS_HREF,
+  }
+}
+
 export async function loadGarminPluginStatus(
   storage: Pick<Storage, 'getItem'> | undefined = typeof localStorage === 'undefined' ? undefined : localStorage,
 ): Promise<GarminPluginStatus> {
   const oauth = await garminOAuthStatus()
   const store = storage ? loadPersonalStateStore(storage) : emptyPersonalStateStore()
-  return {
+  return withGarminStatusGuidance({
     oauthConfigured: oauth.configured,
     oauthConnected: oauth.connected,
     ...summarizeGarminObservations(store.observations),
-  }
+  })
 }

@@ -4,7 +4,8 @@ import { useConnectorEnablement } from './useConnectorEnablement'
 import type { ConnectorId } from '../../plugins/connectors/types'
 import { getInstalledMcpServer } from '../../plugins/llm/mcp/install-store'
 import { installMcpFromCatalog } from '../../plugins/llm/mcp/install'
-import { answerPaperQaFromLocalRag, PAPER_QA_CONNECTOR_OFF_MESSAGE, type PaperQaAnswer } from '../services/paper-qa'
+import { answerPaperQaFromLocalRag, PAPER_QA_CONNECTOR_OFF_MESSAGE, type PaperQaAnswer, type PaperQaEmptyIndexResult } from '../services/paper-qa'
+import { checkMcpSidecar, type McpSidecarCheck } from '../services/mcp-sidecar'
 import { listResearchProviders } from '../services/external-research-providers'
 import { setSecret } from '../services/secret-vault'
 
@@ -21,7 +22,9 @@ export function useResearchIntegration() {
   const unpaywallEmailDraft = ref('')
   const ldrProviderDraft = ref('')
   const paperQaQuestion = ref('')
-  const paperQaAnswer = ref<PaperQaAnswer | null>(null)
+  const paperQaAnswer = ref<PaperQaAnswer | PaperQaEmptyIndexResult | null>(null)
+  const sidecarBusy = ref(false)
+  const sidecarCheck = ref<McpSidecarCheck | null>(null)
 
   const providers = computed(() => {
     void settings.value.enabled
@@ -88,6 +91,16 @@ export function useResearchIntegration() {
     }
   }
 
+  async function checkSidecar(serverId: string) {
+    sidecarBusy.value = true
+    try {
+      sidecarCheck.value = await checkMcpSidecar(serverId)
+      return sidecarCheck.value
+    } finally {
+      sidecarBusy.value = false
+    }
+  }
+
   return {
     busy,
     error,
@@ -95,6 +108,8 @@ export function useResearchIntegration() {
     ldrProviderDraft,
     paperQaQuestion,
     paperQaAnswer,
+    sidecarBusy,
+    sidecarCheck,
     providers,
     mcpStatus,
     saveUnpaywallEmail,
@@ -102,6 +117,7 @@ export function useResearchIntegration() {
     setConnector,
     refreshConnectorStatus,
     runPaperQaPreview,
+    checkSidecar,
     isConnectorEnabled: isEnabled,
   }
 }
