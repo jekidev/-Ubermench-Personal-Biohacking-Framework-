@@ -1,4 +1,5 @@
 import type { McpServerRegistryEntry } from '../../../plugins/llm/mcp/servers'
+import { applyMcpRequestPolicy } from '../../../plugins/llm/mcp/tool-policy'
 import {
   nativeMcpSessionCall,
   nativeMcpSessionClose,
@@ -44,12 +45,13 @@ export async function callMcpWithSession(
 ): Promise<{ result: unknown; sessionId: string; reused: boolean }> {
   const fingerprint = mcpSessionFingerprint(server)
   const reuse = input.reuseSession !== false
+  const params = applyMcpRequestPolicy(server, input.method, input.params)
 
   if (reuse) {
     const cached = pool.get(server.serverId)
     if (cached && cached.fingerprint === fingerprint) {
       try {
-        const result = await nativeMcpSessionCall(cached.sessionId, input.method, input.params, input.timeoutMs)
+        const result = await nativeMcpSessionCall(cached.sessionId, input.method, params, input.timeoutMs)
         return { result, sessionId: cached.sessionId, reused: true }
       } catch {
         pool.delete(server.serverId)
@@ -73,7 +75,7 @@ export async function callMcpWithSession(
     serverId: server.serverId,
     fingerprint,
   })
-  const result = await nativeMcpSessionCall(started.session_id, input.method, input.params, input.timeoutMs)
+  const result = await nativeMcpSessionCall(started.session_id, input.method, params, input.timeoutMs)
   return { result, sessionId: started.session_id, reused: false }
 }
 

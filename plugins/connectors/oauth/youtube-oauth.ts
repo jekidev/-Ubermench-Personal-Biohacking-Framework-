@@ -2,6 +2,7 @@ import {
   buildGoogleAuthorizeUrl,
   defaultGoogleRedirectUri,
 } from './google-oauth'
+import { isGoogleConnected } from './google-token-store'
 
 export const YOUTUBE_SCOPES = [
   'https://www.googleapis.com/auth/youtube.readonly',
@@ -19,6 +20,5 @@ export async function buildYouTubeAuthorizeUrl(clientId: string): Promise<string
 }
 
 export async function isYouTubeOAuthConnected(): Promise<boolean> {
-  const { isGoogleConnected } = await import('./google-token-store')
   return isGoogleConnected()
 }

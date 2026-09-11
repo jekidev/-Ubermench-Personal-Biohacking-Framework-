@@ -4,6 +4,7 @@ import {
   normalizeMcpToolCallResult,
   normalizeMcpToolsListResult,
 } from '../../../../plugins/llm/mcp/tool-discovery'
+import { filterMcpToolsByPolicy } from '../../../../plugins/llm/mcp/tool-policy'
 import { validateStdioCommand } from '../../../../plugins/llm/mcp/stdio-allowlist'
 import { getInstalledMcpServer } from '../../../../plugins/llm/mcp/install-store'
 import { callMcpWithSession } from '../mcp-session-pool'
@@ -39,11 +40,12 @@ export function createMcpDiscoveryTools(): AgentTool[] {
           env,
           reuseSession: args.reuseSession !== false,
         })
+        const normalized = normalizeMcpToolsListResult(session.result)
         return {
           serverId,
           sessionId: session.sessionId,
           reusedSession: session.reused,
-          ...normalizeMcpToolsListResult(session.result),
+          tools: filterMcpToolsByPolicy(server, normalized.tools),
         }
       },
     },

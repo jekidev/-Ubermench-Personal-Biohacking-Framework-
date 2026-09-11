@@ -35,4 +35,9 @@ describe('connector registry', () => {
   it('resolves connector by id', () => {
     expect(getConnector('huggingface')?.transport).toBe('hybrid')
   })
+
+  it('does not contain duplicate connector ids', () => {
+    const ids = CONNECTOR_REGISTRY.map((entry) => entry.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
 })

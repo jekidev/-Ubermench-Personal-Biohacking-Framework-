@@ -59,6 +59,9 @@ export function createMcpServerTools(): AgentTool[] {
           reusedSession: session.reused,
         }
       }
+      if (server.deniedTools?.length || server.forcedToolArguments) {
+        throw new Error(`MCP server ${server.serverId} requires policy-checked method calls.`)
+      }
       return nativeMcpExecute(command, commandArgs, approvalToken, stdinPayload, timeoutMs, env)
     },
   }))
