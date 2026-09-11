@@ -86,6 +86,30 @@ export function applyCatalogApproval(
   })
 }
 
+export function callRequiresApproval(call: AgentToolCall): boolean {
+  return (call.requiresApproval === true || toolNameRequiresNativeApproval(call.name))
+    && !call.approvalToken?.trim()
+}
+
+export function partitionToolCalls(calls: AgentToolCall[]): {
+  executable: AgentToolCall[]
+  awaitingApproval: AgentToolCall[]
+} {
+  const executable = calls.filter((call) => !callRequiresApproval(call))
+  const awaitingApproval = calls.filter((call) => callRequiresApproval(call))
+  return { executable, awaitingApproval }
+}
+
+export function upsertToolCalls(existing: AgentToolCall[], incoming: AgentToolCall[]): AgentToolCall[] {
+  const merged = [...existing]
+  for (const call of incoming) {
+    const index = merged.findIndex((item) => item.id === call.id)
+    if (index >= 0) merged[index] = { ...merged[index], ...call }
+    else merged.push(call)
+  }
+  return merged
+}
+
 export function extractToolCalls(text: string, catalog: ToolApprovalLookup = []): AgentToolCall[] {
   const candidate = parseCandidate(text)
   const planned = candidate?.toolCalls

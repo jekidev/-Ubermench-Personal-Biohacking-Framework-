@@ -34,7 +34,7 @@ export function createDefaultSkillRegistry(): SkillRegistry {
     id: 'longevity-plugins',
     name: 'Longevity plugins',
     description: 'Garmin live status, lab PDF inspect, MIT exercise catalog, and geroscience watchlist.',
-    triggers: ['garmin', 'lab pdf', 'bloods pdf', 'exercise catalog', 'watchlist', 'geroscience'],
+    triggers: ['garmin', 'hrv', 'lab pdf', 'bloods pdf', 'pdf inspect', 'exercise catalog', 'exercises', 'watchlist', 'geroscience'],
     tools: ['plugins.status', 'plugins.garmin.status', 'plugins.pdf.inspect', 'plugins.exercises.search', 'plugins.watchlist.list'],
     enabled: true,
   })

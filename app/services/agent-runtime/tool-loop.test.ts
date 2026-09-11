@@ -55,4 +55,18 @@ describe('agent tool loop', () => {
     expect(run.observations[0]?.kind).toBe('tool')
     expect(run.observations[0]?.text).toContain('garmin')
   })
+
+  it('executes a previously recorded pending call once an approval token is supplied', async () => {
+    const run = runFixture()
+    run.toolCalls = [{ id: 'c1', name: 'plugins.garmin.schema', args: {}, requiresApproval: false }]
+    const result = await executeApprovedToolCalls(task, run, [{
+      id: 'c1',
+      name: 'plugins.garmin.schema',
+      args: {},
+      approvalToken: 'user-approved',
+    }])
+    expect(result.executed).toBe(1)
+    expect(run.observations[0]?.kind).toBe('tool')
+    expect(run.toolCalls).toHaveLength(1)
+  })
 })

@@ -35,6 +35,12 @@ describe('agent superstack', () => {
     expect(evaluateTask({ id: '1', kind: 'coding', prompt: 'rm -rf /', allowTools: true })).toMatchObject({ requiresConfirmation: true })
   })
 
+  it('matches longevity plugin tools for HRV and exercise catalog prompts', () => {
+    const skills = createDefaultSkillRegistry()
+    expect(skills.match('what is my hrv after garmin sync').some((skill) => skill.id === 'longevity-plugins')).toBe(true)
+    expect(skills.match('search the MIT exercises catalog').some((skill) => skill.id === 'longevity-plugins')).toBe(true)
+  })
+
   it('matches longevity plugin tools for Garmin and lab PDFs', () => {
     const skills = createDefaultSkillRegistry()
     const matched = skills.match('inspect garmin status after a lab pdf import')

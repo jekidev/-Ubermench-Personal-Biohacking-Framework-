@@ -16,5 +16,7 @@ describe('invoke catalog tool', () => {
     expect(exampleArgsForTool('plugins.exercises.search')).toEqual({ query: 'squat', limit: 5 })
     expect(exampleArgsForTool('plugins.pdf.inspect')).toEqual({ sample: true })
     expect(exampleArgsForTool('research.europepmc').goal).toBe('metformin longevity')
+    expect(exampleArgsForTool('mcp.stdio:paper-search')).toMatchObject({ method: 'search_pubmed' })
+    expect(exampleArgsForTool('plugins.garmin.status')).toEqual({})
   })
 })

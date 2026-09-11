@@ -8,10 +8,10 @@ import { recordAudit } from './audit'
 import { withRecovery } from './recovery'
 import { SkillEvolutionEngine } from './skill-evolution'
 import { executeApprovedToolCalls } from './tool-loop'
-import { extractToolCalls, toolNameRequiresNativeApproval } from './tool-plan'
+import { extractToolCalls, partitionToolCalls, upsertToolCalls } from './tool-plan'
 import { formatAgentToolCatalog, listAgentToolCatalog } from './tool-catalog'
+import { formatSuggestedTools, resolveToolCallsFromModel } from './suggest-tools'
 import { auditTaskSecurity } from './security-audit'
-import { isMcpStdioToolName } from './mcp-server-tools'
 import { listAllChatRules, listEnabledChatRules } from '~/services/chat-session/rule-registry'
 import { buildStackSynergySnapshot, formatStackSynergyContext } from '~/services/chat-session/stack-synergy'
 
@@ -21,13 +21,8 @@ function auditEvent(runId: string, type: Parameters<typeof recordAudit>[1]['type
   return { id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, runId, type, detail, createdAt: new Date().toISOString(), metadata }
 }
 
-function splitToolCalls(calls: AgentToolCall[]): { executable: AgentToolCall[]; awaitingApproval: AgentToolCall[] } {
-  const approvalRequired = (call: AgentToolCall) =>
-    (call.requiresApproval === true || toolNameRequiresNativeApproval(call.name) || isMcpStdioToolName(call.name))
-    && !call.approvalToken?.trim()
-  const executable = calls.filter((call) => !approvalRequired(call))
-  const awaitingApproval = calls.filter((call) => approvalRequired(call))
-  return { executable, awaitingApproval }
+function mergeRunToolCalls(run: AgentRun, calls: AgentToolCall[]) {
+  run.toolCalls = upsertToolCalls(run.toolCalls, calls)
 }
 
 export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
@@ -83,10 +78,13 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
         workflowId: task.chatOptions?.workflowId,
       }))
       : ''
+    const catalog = listAgentToolCatalog()
+    const suggested = formatSuggestedTools(resolveToolCallsFromModel('', task.prompt, catalog, extractToolCalls).calls)
     const system = [
       'You are the Uberm3nch agent kernel. Follow policy and never bypass approval gates.',
-      'When a tool would materially help, return a JSON object with a toolCalls array and do not claim the tool ran.',
-      'Each tool call must contain id, name and args. Set requiresApproval for risky actions. Never invent approval tokens.',
+      'When a registered tool would materially help (Garmin status, PDF inspect, exercise catalog, watchlist, Europe PMC, PaperQA, research.status), emit a JSON object with a toolCalls array BEFORE answering. Do not claim a tool ran unless its result is in observations.',
+      'Each tool call must contain id, name and args. Never invent approval tokens. Approval-gated tools (mcp.stdio:*, research.paperqa.ask) pause the run.',
+      'Sci-Hub is disabled. Prefer research.europepmc or mcp.stdio:paper-search for literature.',
       task.chatOptions?.workflowId === 'stack' || task.kind === 'biohacking'
         ? 'When discussing supplements, protocols, or interventions, explain synergies, timing interactions, and conflicts between stacks. Separate evidence quality from personal N-of-1 data.'
         : '',
@@ -95,7 +93,8 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       `Selected model: ${context.selectedModel?.provider ?? 'unavailable'}/${context.selectedModel?.model ?? 'unavailable'}`,
       memoryContext ? `Relevant memory:\n${memoryContext}` : 'Relevant memory: none',
       skillContext ? `Active skills:\n${skillContext}` : 'Active skills: none',
-      formatAgentToolCatalog(),
+      formatAgentToolCatalog(catalog),
+      suggested,
       ruleContext ? `Active rules:\n${ruleContext}` : 'Active rules: none',
       task.chatOptions?.conversationHistory ? `Conversation history:\n${task.chatOptions.conversationHistory}` : '',
       task.chatOptions?.ragContext ? `Indexed document excerpts:\n${task.chatOptions.ragContext}` : '',
@@ -121,26 +120,25 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     run.activeModel = response.model
     run.fallbackUsed = response.fallbackUsed
     run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() } as AgentObservation)
-    const calls = extractToolCalls(response.text, listAgentToolCatalog())
-    for (const call of calls) await recordAudit(store, auditEvent(id, 'tool.requested', `Tool requested: ${call.name}`, { toolCallId: call.id, requiresApproval: call.requiresApproval === true || toolNameRequiresNativeApproval(call.name) }))
-
-    const { executable, awaitingApproval } = splitToolCalls(calls)
-    if (awaitingApproval.length) {
-      run.toolCalls.push(...awaitingApproval.filter((call) => !run.toolCalls.some((existingCall) => existingCall.id === call.id)))
-      run.status = 'waiting-approval'
-      await store.appendRun(run)
-      await recordAudit(store, auditEvent(id, 'tool.blocked', 'Execution paused pending explicit approval', { toolCalls: awaitingApproval.map((call) => call.name) }))
-      return run
+    const resolved = resolveToolCallsFromModel(response.text, task.prompt, catalog, extractToolCalls)
+    const calls = resolved.calls
+    for (const call of calls) {
+      await recordAudit(store, auditEvent(id, 'tool.requested', `Tool requested: ${call.name}`, {
+        toolCallId: call.id,
+        requiresApproval: call.requiresApproval === true,
+        source: resolved.source,
+      }))
     }
 
+    const { executable, awaitingApproval } = partitionToolCalls(calls)
     if (executable.length) {
       const result = await executeApprovedToolCalls(task, run, executable)
-      await recordAudit(store, auditEvent(id, 'tool.completed', `Executed ${result.executed} tool call(s)`))
+      await recordAudit(store, auditEvent(id, 'tool.completed', `Executed ${result.executed} tool call(s)`, { source: resolved.source }))
       const toolContext = run.observations.filter((observation) => observation.kind === 'tool').slice(-8).map((observation) => observation.text).join('\n')
       const continuation = await withRecovery(
         () => orchestrateLLM({
           prompt: `${task.prompt}\n\nVerified tool results:\n${toolContext}`,
-          system: 'Continue using only verified tool results. Never claim a tool ran unless present in the observations. If another risky tool is needed, return a structured toolCalls JSON object without executing it.',
+          system: 'Continue using only verified tool results. Never claim a tool ran unless present in the observations. If another risky tool is needed, return a structured toolCalls JSON object without executing it. Never invent approval tokens. Sci-Hub stays off.',
           mode: task.kind === 'research' ? 'researcher' : 'biohacker',
           preferredProvider: context.selectedModel?.provider as LLMProvider | undefined,
           preferredModel: context.selectedModel?.model,
@@ -155,7 +153,15 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       run.observations.push({ kind: 'model', text: continuation.text, createdAt: new Date().toISOString() })
     }
 
-    await recordAudit(store, auditEvent(id, 'model.completed', 'Model execution completed', { provider: response.provider, model: response.model, attempts: response.attempts, toolCalls: calls.length }))
+    if (awaitingApproval.length) {
+      mergeRunToolCalls(run, awaitingApproval)
+      run.status = 'waiting-approval'
+      await store.appendRun(run)
+      await recordAudit(store, auditEvent(id, 'tool.blocked', 'Execution paused pending explicit approval', { toolCalls: awaitingApproval.map((call) => call.name) }))
+      return run
+    }
+
+    await recordAudit(store, auditEvent(id, 'model.completed', 'Model execution completed', { provider: response.provider, model: response.model, attempts: response.attempts, toolCalls: calls.length, toolSource: resolved.source }))
     run.status = 'completed'
     run.completedAt = new Date().toISOString()
     skillEvolution.propose(task.prompt, 'success: model response completed')
@@ -199,10 +205,27 @@ export async function continueAgentWithTools(task: AgentTask, run: AgentRun, cal
     },
   )
   run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() })
-  const pending = extractToolCalls(response.text, listAgentToolCatalog()).some((call) => call.requiresApproval && !call.approvalToken)
-  run.status = pending ? 'waiting-approval' : 'completed'
-  run.completedAt = pending ? undefined : new Date().toISOString()
-  await recordAudit(store, auditEvent(run.id, 'model.completed', 'Continuation model execution completed', { provider: response.provider, model: response.model, pendingApproval: pending }))
+  const catalog = listAgentToolCatalog()
+  const followUp = extractToolCalls(response.text, catalog).filter((call) => {
+    const observed = run.observations.some((item) => item.kind === 'tool' && item.toolCallId === call.id)
+    return !observed
+  })
+  const { executable: moreAuto, awaitingApproval } = partitionToolCalls(followUp)
+  if (moreAuto.length) {
+    const extra = await executeApprovedToolCalls(task, run, moreAuto, maxToolCalls)
+    await recordAudit(store, auditEvent(run.id, 'tool.completed', `Executed ${extra.executed} follow-up tool call(s)`))
+  }
+  if (awaitingApproval.length) {
+    mergeRunToolCalls(run, awaitingApproval)
+    run.status = 'waiting-approval'
+    run.completedAt = undefined
+    await recordAudit(store, auditEvent(run.id, 'tool.blocked', 'Continuation paused pending explicit approval', { toolCalls: awaitingApproval.map((call) => call.name) }))
+    await store.appendRun(run)
+    return run
+  }
+  run.status = 'completed'
+  run.completedAt = new Date().toISOString()
+  await recordAudit(store, auditEvent(run.id, 'model.completed', 'Continuation model execution completed', { provider: response.provider, model: response.model, pendingApproval: false }))
   await store.appendRun(run)
   return run
 }

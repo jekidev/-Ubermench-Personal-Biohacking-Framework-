@@ -55,6 +55,15 @@ export function useAgentRuntime() {
     return run(task)
   }
 
+  async function approvePending(approvalToken?: string) {
+    const run = activeRun.value
+    if (!run) throw new Error('No active agent run to approve.')
+    const pending = pendingAgentToolCalls(run)
+    if (!pending.length) return run
+    const token = approvalToken?.trim() || `user-approved-${Date.now()}`
+    return continueRun(run.task, run, pending.map((call) => ({ ...call, approvalToken: token })))
+  }
+
   async function invokeTool(name: string, args: Record<string, unknown> = {}, approvalToken?: string) {
     status.value = 'running'
     error.value = null
@@ -73,5 +82,5 @@ export function useAgentRuntime() {
   async function audit(limit = 100) { return recentAudit(createRuntimeStore(), limit) }
   function providerHealthSnapshot() { return providerHealth.snapshot() }
 
-  return { activeRun, status, error, run, resume, continueRun, invokeTool, recentRuns, audit, providerHealthSnapshot }
+  return { activeRun, status, error, run, resume, continueRun, approvePending, invokeTool, recentRuns, audit, providerHealthSnapshot }
 }

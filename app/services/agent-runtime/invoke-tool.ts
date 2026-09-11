@@ -17,6 +17,20 @@ export function exampleArgsForTool(name: string): Record<string, unknown> {
       return { question: 'What is my latest CRP?' }
     case 'research.paperqa.ask':
       return { question: 'What is my latest CRP?' }
+    case 'plugins.garmin.status':
+      return {}
+    case 'plugins.status':
+      return {}
+    case 'research.status':
+      return {}
+    case 'research.providers':
+      return {}
+    case 'mcp.stdio:paper-search':
+      return { method: 'search_pubmed', params: { query: 'metformin longevity' } }
+    case 'mcp.stdio:local-deep-research':
+      return { method: 'quick_search', params: { query: 'metformin longevity' } }
+    case 'mcp.stdio:transcriptor':
+      return { method: 'get_transcript', params: { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } }
     case 'memory.search':
       return { query: 'longevity', limit: 5 }
     default:

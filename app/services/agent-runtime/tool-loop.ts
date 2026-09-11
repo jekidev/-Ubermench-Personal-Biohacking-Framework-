@@ -25,8 +25,11 @@ export function executeApprovedToolCalls(
     let executed = 0
 
     for (const call of bounded) {
-      if (run.toolCalls.some((existing) => existing.id === call.id)) continue
-      run.toolCalls.push(call)
+      const alreadyObserved = run.observations.some((item) => item.kind === 'tool' && item.toolCallId === call.id)
+      if (alreadyObserved) continue
+      const existingIndex = run.toolCalls.findIndex((existing) => existing.id === call.id)
+      if (existingIndex >= 0) run.toolCalls[existingIndex] = { ...run.toolCalls[existingIndex], ...call }
+      else run.toolCalls.push(call)
       run.status = call.requiresApproval || gateway.get(call.name)?.requiresApproval ? 'waiting-approval' : 'executing'
       try {
         const result = await (call.requiresApproval || gateway.get(call.name)?.requiresApproval

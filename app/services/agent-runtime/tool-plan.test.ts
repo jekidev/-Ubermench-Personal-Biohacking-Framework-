@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractToolCalls } from './tool-plan'
+import { extractToolCalls, partitionToolCalls, upsertToolCalls } from './tool-plan'
 
 describe('agent tool plan parser', () => {
   it('extracts a bounded structured tool plan', () => {
@@ -33,5 +33,24 @@ describe('agent tool plan parser', () => {
       [{ name: 'research.paperqa.ask', requiresApproval: true }],
     )
     expect(calls[0]?.requiresApproval).toBe(true)
+  })
+
+  it('partitions mixed auto and approval-gated calls', () => {
+    const { executable, awaitingApproval } = partitionToolCalls([
+      { id: 'a', name: 'plugins.garmin.status', args: {}, requiresApproval: false },
+      { id: 'b', name: 'research.paperqa.ask', args: { question: 'CRP' }, requiresApproval: true },
+    ])
+    expect(executable.map((call) => call.name)).toEqual(['plugins.garmin.status'])
+    expect(awaitingApproval.map((call) => call.name)).toEqual(['research.paperqa.ask'])
+  })
+
+  it('upserts tool calls by id without dropping pending ones', () => {
+    const merged = upsertToolCalls(
+      [{ id: 'c1', name: 'research.paperqa.ask', args: {}, requiresApproval: true }],
+      [{ id: 'c1', name: 'research.paperqa.ask', args: { question: 'CRP' }, requiresApproval: true, approvalToken: 'user-1' }],
+    )
+    expect(merged).toHaveLength(1)
+    expect(merged[0]?.approvalToken).toBe('user-1')
+    expect(merged[0]?.args.question).toBe('CRP')
   })
 })
