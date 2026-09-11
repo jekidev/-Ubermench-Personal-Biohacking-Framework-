@@ -24,6 +24,15 @@ describe('chat-session slash commands', () => {
     expect(result.workflowId).toBe('youtube-schedule')
   })
 
+  it('parses /research with catalog tool names and no Sci-Hub', () => {
+    const result = parseSlashCommand('/research NAD+ sleep', enabled)
+    expect(result.workflowId).toBe('research')
+    expect(result.prompt).toContain('research.europepmc')
+    expect(result.prompt).toContain('mcp.stdio:paper-search')
+    expect(result.prompt.toLowerCase()).not.toContain('sci-hub is required')
+    expect(result.prompt).toContain('Do not use Sci-Hub')
+  })
+
   it('lists enabled slash commands', () => {
     expect(listSlashCommands(enabled).some((line) => line.startsWith('/help'))).toBe(true)
   })

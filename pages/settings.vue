@@ -377,7 +377,7 @@
           <input type="checkbox" :checked="research.isConnectorEnabled('paper-search')" @change="research.setConnector('paper-search', ($event.target as HTMLInputElement).checked)" />
           Enable Paper Search
         </label>
-        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('paper-search') }}</p>
+        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('paper-search') }}. Enabling installs the catalog entry. Sci-Hub download stays blocked.</p>
       </UCard>
 
       <UCard>
@@ -391,7 +391,7 @@
           <input type="checkbox" :checked="research.isConnectorEnabled('local-deep-research')" @change="research.setConnector('local-deep-research', ($event.target as HTMLInputElement).checked)" />
           Enable Local Deep Research
         </label>
-        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('local-deep-research') }}</p>
+        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('local-deep-research') }}. Enabling installs ldr-mcp. Cited sidecar only — not a clinical conclusion.</p>
       </UCard>
 
       <UCard>
@@ -418,7 +418,7 @@
           <input type="checkbox" :checked="research.isConnectorEnabled('transcriptor')" @change="research.setConnector('transcriptor', ($event.target as HTMLInputElement).checked)" />
           Enable Transcriptor MCP
         </label>
-        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('transcriptor') }}</p>
+        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('transcriptor') }}. Enabling installs the Transcriptor catalog entry.</p>
       </UCard>
 
       <UCard>
@@ -429,7 +429,10 @@
           <li><code>research.paperqa.plan</code> / <code>research.paperqa.ask</code></li>
           <li><code>mcp.stdio:paper-search</code> / <code>mcp.stdio:local-deep-research</code> / <code>mcp.stdio:transcriptor</code></li>
         </ul>
-        <UButton class="mt-3" size="sm" variant="outline" to="/agent">Try from Agent Control Center</UButton>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <UButton size="sm" variant="outline" to="/agent">Try from Agent Control Center</UButton>
+          <UButton size="sm" variant="ghost" to="/chat">Approve from Chat</UButton>
+        </div>
       </UCard>
     </template>
 

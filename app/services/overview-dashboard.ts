@@ -58,6 +58,8 @@ export const OVERVIEW_NAVIGATION: OverviewNavigationCard[] = [
   { label: 'Evidence', to: '/longevity/evidence', description: 'Normalized research records' },
   { label: 'Timeline', to: '/longevity/timeline', description: 'Longitudinal series and evidence overlay' },
   { label: 'Plugins', to: '/settings?tab=plugins', description: 'Domain plugins and starred integrations' },
+  { label: 'Research', to: '/settings?tab=research', description: 'Paper search, PaperQA, LDR, Transcriptor' },
+  { label: 'Chat', to: '/chat', description: 'Multi-turn chat with agent tools' },
   { label: 'Safety', to: '/safety', description: 'Interaction, contraindication and monitoring' },
   { label: 'Agent', to: '/agent', description: 'Local agent runtime' },
 ]

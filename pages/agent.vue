@@ -123,7 +123,7 @@
           <span class="text-xs text-zinc-500">{{ agentTools.length }} registered</span>
         </div>
       </template>
-      <p class="text-sm text-zinc-500">The agent receives this catalog in its system prompt. Plugin tools include Garmin status and PDF inspect.</p>
+      <p class="text-sm text-zinc-500">The agent receives this catalog in its system prompt and will run matching auto tools even if the model omits toolCalls. Plugin tools include Garmin status and PDF inspect.</p>
       <ul class="mt-3 space-y-1 font-mono text-xs text-zinc-400">
         <li v-for="tool in pluginAgentTools" :key="tool.name">
           <code>{{ tool.name }}</code> — {{ tool.description }}
@@ -253,7 +253,7 @@ async function approvePending() {
     token = native.token.value ?? ''
   }
   if (!token) token = `user-approved-${Date.now()}`
-  await runtime.continueRun(run.task, run, pending.map((call) => ({ ...call, approvalToken: token })))
+  await runtime.approvePending(token)
   await Promise.all([refreshAudit(), refreshRecoverable()])
 }
 

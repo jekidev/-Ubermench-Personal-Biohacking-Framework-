@@ -76,7 +76,9 @@ export function parseSlashCommand(input: string, enabledWorkflowIds: string[]): 
 
   if (workflow.id === 'research') {
     return {
-      prompt: args || 'Run an evidence-oriented literature review for my current biohacking question.',
+      prompt: args
+        ? `Search open literature for: ${args}. Use research.europepmc first. Do not use Sci-Hub. If paper-search MCP is needed, emit mcp.stdio:paper-search toolCalls without inventing approval tokens.`
+        : 'Run an evidence-oriented literature review using research.europepmc. Never use Sci-Hub.',
       workflowId: workflow.id,
       kind: workflow.kind,
       handled: true,

@@ -55,6 +55,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
       { label: 'Connectors', to: '/connectors' },
       { label: 'Settings', to: '/settings' },
       { label: 'Plugins', to: '/settings?tab=plugins' },
+      { label: 'Research', to: '/settings?tab=research' },
     ],
   },
 ]

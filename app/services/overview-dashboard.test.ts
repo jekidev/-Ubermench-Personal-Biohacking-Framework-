@@ -19,6 +19,8 @@ describe('overview dashboard helpers', () => {
     expect(summary.navigation.some((item) => item.to === '/safety')).toBe(true)
     expect(summary.navigation.some((item) => item.to === '/longevity/fitness')).toBe(true)
     expect(summary.navigation.some((item) => item.to === '/settings?tab=plugins')).toBe(true)
+    expect(summary.navigation.some((item) => item.to === '/settings?tab=research')).toBe(true)
+    expect(summary.navigation.some((item) => item.to === '/chat')).toBe(true)
     expect(summary.backupNote).toMatch(/no biology backup/i)
   })
 

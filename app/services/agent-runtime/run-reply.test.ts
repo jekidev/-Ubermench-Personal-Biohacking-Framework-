@@ -40,5 +40,6 @@ describe('agent run reply', () => {
     })
     expect(pendingAgentToolCalls(run).map((call) => call.name)).toEqual(['research.paperqa.ask'])
     expect(formatAgentRunReply(run)).toContain('Waiting for approval: research.paperqa.ask')
+    expect(formatAgentRunReply(run)).toContain('Approve on Chat or Agent Control Center')
   })
 })

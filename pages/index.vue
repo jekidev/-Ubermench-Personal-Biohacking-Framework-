@@ -119,11 +119,16 @@
       <form class="space-y-3" @submit.prevent="runAI">
         <textarea v-model="prompt" class="min-h-28 w-full rounded-md border border-zinc-200 bg-transparent p-3 text-sm dark:border-zinc-700" placeholder="Ask Ubermench to research, analyse or reason about a health optimisation question..." />
         <div class="flex flex-wrap items-center gap-3">
-          <UButton type="submit" :loading="loading" :disabled="!prompt.trim()">Run</UButton>
-          <span v-if="lastRun" class="text-xs text-zinc-500">{{ lastRun.provider }} / {{ lastRun.model }} · {{ lastRun.latencyMs }} ms · {{ lastRun.attempts }} attempt{{ lastRun.attempts === 1 ? '' : 's' }}</span>
+          <UButton type="submit" :loading="loading" :disabled="!prompt.trim()">Run agent</UButton>
+          <span class="text-xs text-zinc-500">Uses the agent kernel, including Garmin/PDF/research tools when they help.</span>
+          <span v-if="lastRun" class="text-xs text-zinc-500">{{ lastRun.provider }} / {{ lastRun.model }} · {{ lastRun.status }}</span>
         </div>
         <div v-if="error" class="rounded-md border border-red-300 p-3 text-sm text-red-700">{{ error }}</div>
         <div v-if="lastRun" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">{{ lastRun.text }}</div>
+        <div v-if="lastRun?.status === 'waiting-approval'" class="flex flex-wrap gap-2">
+          <NuxtLink to="/chat"><UButton size="sm" variant="outline">Approve on Chat</UButton></NuxtLink>
+          <NuxtLink to="/agent"><UButton size="sm" variant="outline">Open Agent</UButton></NuxtLink>
+        </div>
       </form>
     </UCard>
 
@@ -143,16 +148,17 @@ import { loadBackupStatus } from '~/services/backup-status'
 import { assessLongevity } from '~/services/longevity-engine'
 import { buildOverviewSummary } from '~/services/overview-dashboard'
 import { screenProfileSafety } from '~/services/profile-safety'
+import { formatAgentRunReply } from '~/services/agent-runtime/run-reply'
 
 const llm = useLLM()
-const ai = useBiohackingAI()
+const runtime = useAgentRuntime()
 const biology = usePersonalBiology()
 const experiments = useExperiments()
 const profile = biology.profile
 const prompt = ref('')
 const loading = ref(false)
 const error = ref('')
-const lastRun = ref<Awaited<ReturnType<typeof ai.ask>> | null>(null)
+const lastRun = ref<{ text: string; provider: string; model: string; status: string } | null>(null)
 
 await biology.initialize()
 await experiments.initialize()
@@ -195,11 +201,19 @@ async function runAI() {
   lastRun.value = null
   loading.value = true
   try {
-    lastRun.value = await ai.ask({
+    const looksLikeResearch = /pubmed|arxiv|paper|literature|europe pmc|paperqa|research/i.test(prompt.value)
+    const run = await runtime.run({
+      id: `overview_${Date.now()}`,
+      kind: looksLikeResearch ? 'research' : 'chat',
       prompt: prompt.value,
-      mode: 'biohacker',
-      system: 'You are the Uberm3nch research assistant. Separate evidence from speculation. Do not invent sources. Flag uncertainty and safety concerns. Do not autonomously prescribe, start, stop or titrate medical treatment.',
+      requiredCapabilities: looksLikeResearch ? ['research'] : ['reasoning'],
     })
+    lastRun.value = {
+      text: formatAgentRunReply(run),
+      provider: run.activeProvider ?? run.selectedModel?.provider ?? 'none',
+      model: run.activeModel ?? run.selectedModel?.model ?? 'none',
+      status: run.status,
+    }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
   } finally {

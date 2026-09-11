@@ -56,6 +56,10 @@
           · Configured {{ garminOAuth.configured.value ? 'yes' : 'no' }}
           · Token {{ garminOAuth.connected.value ? 'present' : 'missing' }}
         </p>
+        <div class="mt-3 grid gap-1 text-xs text-zinc-500">
+          <div>Plugins Garmin samples: {{ garminPlugin.status.value.observationCount }}</div>
+          <div>Last Garmin sample: {{ garminPlugin.status.value.lastObservedAt ? new Date(garminPlugin.status.value.lastObservedAt).toLocaleString() : 'none' }}</div>
+        </div>
         <UAlert v-if="garminOAuth.error.value" class="mt-3" title="Garmin OAuth" :description="garminOAuth.error.value" color="warning" variant="subtle" />
       </UCard>
 
@@ -126,6 +130,24 @@
     </div>
 
     <UCard>
+      <template #header><div class="font-medium">Live Garmin plugin status</div></template>
+      <p class="text-sm text-zinc-400">Same cache as Settings → Plugins and <code>plugins.garmin.status</code>.</p>
+      <div class="mt-3 grid gap-2 text-sm">
+        <div><span class="text-zinc-500">OAuth client:</span> {{ garminPlugin.status.value.oauthConfigured ? 'configured' : 'missing' }}</div>
+        <div><span class="text-zinc-500">Access token:</span> {{ garminPlugin.status.value.oauthConnected ? 'present' : 'missing' }}</div>
+        <div><span class="text-zinc-500">Persisted samples:</span> {{ garminPlugin.status.value.observationCount }}</div>
+        <div><span class="text-zinc-500">Last sample:</span> {{ garminPlugin.status.value.lastObservedAt ? new Date(garminPlugin.status.value.lastObservedAt).toLocaleString() : 'None' }}</div>
+      </div>
+      <p v-if="garminPlugin.status.value.metrics.length" class="mt-3 text-xs text-zinc-500">
+        Synced metrics: {{ garminPlugin.status.value.metrics.join(', ') }}
+      </p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UButton size="sm" variant="outline" @click="refreshGarminPlugins">Refresh status</UButton>
+        <UButton size="sm" variant="ghost" to="/settings?tab=plugins">Open Plugins</UButton>
+      </div>
+    </UCard>
+
+    <UCard>
       <template #header><div class="font-medium">Google Drive (lab PDFs)</div></template>
       <p class="text-sm text-zinc-400">
         Drive sync works in Android Chrome. Use the same redirect URI in Google Cloud Console:
@@ -170,6 +192,7 @@ const redirectUri = defaultGoogleRedirectUri()
 onMounted(async () => {
   hcMode.value = await detectHealthConnectRuntimeMode()
   await garminOAuth.refreshStatus()
+  await refreshGarminPlugins()
 })
 
 async function refreshGarminPlugins() {
@@ -223,6 +246,7 @@ async function saveGarminToken() {
     garminToken.value = ''
     tokenStatus.value = 'Garmin access token stored in the secret vault.'
     await garminOAuth.refreshStatus()
+    await refreshGarminPlugins()
   } catch (error) {
     tokenStatus.value = error instanceof Error ? error.message : String(error)
   } finally {

@@ -8,6 +8,7 @@
       <div class="flex gap-2">
         <UButton variant="outline" @click="chat.startNewConversation()">New chat</UButton>
         <UButton variant="outline" @click="chat.clearMessages()">Clear</UButton>
+        <NuxtLink to="/agent"><UButton variant="outline">Agent</UButton></NuxtLink>
         <NuxtLink to="/connectors"><UButton variant="outline">Connectors</UButton></NuxtLink>
       </div>
     </div>
@@ -48,6 +49,14 @@
             <span class="text-xs text-zinc-500">{{ commandHint }}</span>
           </div>
           <div v-if="runtime.error.value" class="rounded-md border border-red-900/50 p-3 text-sm text-red-300">{{ runtime.error.value }}</div>
+          <div v-if="pendingTools.length" class="rounded-md border border-amber-800/70 bg-amber-950/30 p-3 text-sm">
+            <div class="font-medium text-amber-200">Waiting for approval</div>
+            <p class="mt-1 text-zinc-400">The run paused before: {{ pendingTools.map((call) => call.name).join(', ') }}. Approve here or continue in Agent Control Center.</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <UButton size="sm" :loading="runtime.status.value === 'running'" @click="approvePending">Approve pending tools</UButton>
+              <NuxtLink to="/agent"><UButton size="sm" variant="outline">Open Agent</UButton></NuxtLink>
+            </div>
+          </div>
         </form>
       </UCard>
 
@@ -136,7 +145,8 @@
 import { indexYouTubeUrlsToRag } from '../plugins/connectors/youtube-rag-sync'
 import { syncDrivePdfsToRag } from '../plugins/connectors/drive-rag-sync'
 import { runYouTubeScheduler } from '../plugins/connectors/youtube-scheduler'
-import { formatAgentRunReply } from '~/services/agent-runtime/run-reply'
+import { formatAgentRunReply, pendingAgentToolCalls } from '~/services/agent-runtime/run-reply'
+import { toolNameRequiresNativeApproval } from '~/services/agent-runtime/tool-plan'
 
 const chat = useChatSession()
 const runtime = useAgentRuntime()
@@ -148,6 +158,7 @@ const newRuleDescription = ref('')
 const newRulePrompt = ref('')
 const commandHint = computed(() => chat.slashHelp().slice(0, 4).join(' · '))
 const builtInRules = computed(() => chat.allRules().filter((rule) => !rule.custom))
+const pendingTools = computed(() => runtime.activeRun.value ? pendingAgentToolCalls(runtime.activeRun.value) : [])
 
 async function runAutomationWorkflow(workflowId: string | undefined, prompt: string) {
   if (workflowId === 'youtube-rag' && /https?:\/\//.test(prompt)) {
@@ -201,6 +212,24 @@ async function submit() {
     ? `${run.activeProvider}/${run.activeModel}${run.fallbackUsed ? ' (fallback)' : ''}`
     : undefined
   chat.pushMessage({ role: 'assistant', content: latest, workflowId: task.parsed.workflowId, modelLabel })
+}
+
+async function approvePending() {
+  const run = runtime.activeRun.value
+  if (!run) return
+  const pending = pendingAgentToolCalls(run)
+  const needsNative = pending.some((call) => toolNameRequiresNativeApproval(call.name))
+  const token = needsNative ? undefined : `user-approved-${Date.now()}`
+  if (needsNative && !token) {
+    chat.pushMessage({
+      role: 'system',
+      content: 'Native MCP tools need approval in Agent Control Center (preflight + token). Open Agent to continue.',
+    })
+    return
+  }
+  const updated = await runtime.approvePending(token)
+  const latest = formatAgentRunReply(updated)
+  chat.pushMessage({ role: 'assistant', content: latest, workflowId: run.task.chatOptions?.workflowId })
 }
 
 function onKeydown(event: KeyboardEvent) {

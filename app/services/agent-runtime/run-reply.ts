@@ -35,7 +35,7 @@ export function formatAgentRunReply(run: AgentRun): string {
     sections.push(`Tool results:\n${lines.join('\n')}`)
   }
   if (pending.length) {
-    sections.push(`Waiting for approval: ${pending.map((call) => call.name).join(', ')}`)
+    sections.push(`Waiting for approval: ${pending.map((call) => call.name).join(', ')}\nApprove on Chat or Agent Control Center. Native MCP (mcp.stdio:*) still needs the Agent preflight token.`)
   }
   if (lastModel.trim()) sections.push(lastModel.trim())
   if (run.error && !sections.length) return run.error

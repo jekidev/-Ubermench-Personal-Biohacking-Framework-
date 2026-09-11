@@ -8,6 +8,7 @@ describe('app-navigation', () => {
     expect(hrefs).toContain('/longevity/bloods')
     expect(hrefs).toContain('/fearprime')
     expect(hrefs).toContain('/settings?tab=plugins')
+    expect(hrefs).toContain('/settings?tab=research')
     expect(LONGEVITY_NAV.some((item) => item.to === '/longevity/cardiovascular')).toBe(true)
     expect(APP_NAV_GROUPS.map((group) => group.label)).toContain('Longevity')
   })

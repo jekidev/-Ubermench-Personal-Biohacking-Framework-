@@ -4,7 +4,7 @@ export const CHAT_WORKFLOWS: ChatWorkflow[] = [
   {
     id: 'research',
     name: 'Research workflow',
-    description: 'Europe PMC literature search with normalized evidence records.',
+    description: 'Europe PMC + paper-search MCP literature lookup. Sci-Hub stays off.',
     slash: '/research',
     kind: 'research',
     enabled: true,

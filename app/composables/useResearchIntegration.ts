@@ -28,7 +28,10 @@ export function useResearchIntegration() {
     return listResearchProviders()
   })
 
+  const mcpEpoch = ref(0)
+
   function mcpStatus(serverId: string) {
+    void mcpEpoch.value
     const installed = getInstalledMcpServer(serverId)
     if (!installed) return 'not installed'
     return installed.enabled ? 'installed + enabled' : 'installed, disabled'
@@ -65,6 +68,7 @@ export function useResearchIntegration() {
     const serverId = MCP_BY_CONNECTOR[id]
     if (serverId) syncConnectorMcpInstall(id, enabled)
     if (enabled && serverId) installMcpFromCatalog(serverId)
+    mcpEpoch.value += 1
   }
 
   async function refreshConnectorStatus(id: ConnectorId) {
