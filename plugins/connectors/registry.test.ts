@@ -25,6 +25,10 @@ describe('connector registry', () => {
     expect(ids).toContain('paper-qa')
     expect(ids).toContain('local-deep-research')
     expect(ids).toContain('pdf-inspector')
+    expect(ids).toContain('agent-memory')
+    expect(ids).toContain('supermemory')
+    expect(ids).toContain('mem0')
+    expect(ids).toContain('mcp-memory')
   })
 
   it('tracks enabled state in local storage', () => {

@@ -23,6 +23,13 @@
       >
         GitHub
       </UButton>
+      <UButton
+        size="sm"
+        :variant="activeTab === 'memory' ? 'solid' : 'ghost'"
+        @click="activeTab = 'memory'"
+      >
+        Memory
+      </UButton>
     </div>
 
     <template v-if="activeTab === 'general'">
@@ -105,7 +112,7 @@
       </div>
     </template>
 
-    <template v-else>
+    <template v-else-if="activeTab === 'github'">
       <UCard>
         <template #header>
           <div class="flex flex-wrap items-center justify-between gap-3">
@@ -219,6 +226,115 @@
         </ul>
       </UCard>
     </template>
+
+    <template v-else-if="activeTab === 'memory'">
+      <UCard>
+        <template #header><div class="font-medium">Unified RAG memory</div></template>
+        <p class="text-sm text-zinc-400">
+          Persisted agent memories are merged into local RAG search alongside lab PDFs and transcripts.
+          Optional MCP sidecars add external memory graphs (<code>supermemory-mcp</code>, Mem0 cloud, or official server-memory).
+        </p>
+        <UAlert v-if="memory.error" class="mt-3" title="Memory error" :description="memory.error" color="error" variant="subtle" />
+        <div class="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+          <div><span class="text-zinc-500">Persisted agent memories:</span> {{ memory.agentMemoryCount }}</div>
+          <div>
+            <label class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                :checked="memory.connectorEnabled"
+                @change="memory.setAgentMemoryConnector(($event.target as HTMLInputElement).checked)"
+              />
+              Agent Memory RAG enabled
+            </label>
+          </div>
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Memory MCP sidecars</div></template>
+        <div class="space-y-4">
+          <div class="rounded border border-zinc-800 p-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div class="font-medium">SuperMemory (local)</div>
+                <p class="text-xs text-zinc-500">npx supermemory-mcp · no API key</p>
+              </div>
+              <label class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  :checked="memory.isConnectorEnabled('supermemory')"
+                  @change="memory.setMemoryMcpConnector('supermemory', ($event.target as HTMLInputElement).checked)"
+                />
+                Enable
+              </label>
+            </div>
+            <p class="mt-2 text-xs text-zinc-500">MCP: {{ memory.mcpStatus('supermemory') }}</p>
+          </div>
+
+          <div class="rounded border border-zinc-800 p-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div class="font-medium">MCP Knowledge Graph</div>
+                <p class="text-xs text-zinc-500">@modelcontextprotocol/server-memory</p>
+              </div>
+              <label class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  :checked="memory.isConnectorEnabled('mcp-memory')"
+                  @change="memory.setMemoryMcpConnector('mcp-memory', ($event.target as HTMLInputElement).checked)"
+                />
+                Enable
+              </label>
+            </div>
+            <p class="mt-2 text-xs text-zinc-500">MCP: {{ memory.mcpStatus('memory') }}</p>
+          </div>
+
+          <div class="rounded border border-zinc-800 p-3">
+            <div class="font-medium">Mem0 Cloud (optional)</div>
+            <p class="text-xs text-zinc-500">Requires MEM0_API_KEY · @mem0/mcp-server</p>
+            <div class="mt-3 flex gap-2">
+              <UInput v-model="memory.mem0KeyDraft" type="password" placeholder="MEM0_API_KEY" class="flex-1" :disabled="!vaultUnlocked" />
+              <UButton size="sm" :loading="memory.busy" :disabled="!vaultUnlocked" @click="memory.saveMem0Key()">Save</UButton>
+            </div>
+            <label class="mt-3 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                :checked="memory.isConnectorEnabled('mem0')"
+                @change="memory.setMemoryMcpConnector('mem0', ($event.target as HTMLInputElement).checked)"
+              />
+              Enable Mem0 MCP
+            </label>
+            <p class="mt-2 text-xs text-zinc-500">MCP: {{ memory.mcpStatus('mem0') }}</p>
+          </div>
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Search unified RAG</div></template>
+        <div class="flex flex-wrap gap-2">
+          <UInput v-model="memory.searchQuery" placeholder="Search documents and agent memories" class="flex-1 min-w-[12rem]" @keyup.enter="memory.runSearch()" />
+          <UButton @click="memory.runSearch()">Search</UButton>
+        </div>
+        <ul v-if="memory.searchResults.length" class="mt-4 space-y-2 text-sm">
+          <li v-for="hit in memory.searchResults" :key="hit.id" class="rounded border border-zinc-800 p-3">
+            <div class="font-medium">{{ hit.title }}</div>
+            <div class="text-xs text-zinc-500">{{ hit.kind }} · {{ hit.source }} · score {{ hit.score.toFixed(2) }}</div>
+            <p class="mt-1 text-zinc-400">{{ hit.content.slice(0, 240) }}</p>
+          </li>
+        </ul>
+        <p v-else class="mt-4 text-sm text-zinc-500">No matches yet.</p>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Agent tools</div></template>
+        <ul class="space-y-1 font-mono text-xs text-zinc-400">
+          <li><code>rag.search</code> — unified documents + agent memory search</li>
+          <li><code>memory.search</code> — persisted agent memories</li>
+          <li><code>documents.search</code> — document RAG only</li>
+          <li><code>mcp.stdio:supermemory</code> / <code>mcp.stdio:mem0</code> / <code>mcp.stdio:memory</code></li>
+        </ul>
+      </UCard>
+    </template>
   </div>
 </template>
 
@@ -231,14 +347,15 @@ import {
 import { isTauriRuntime } from '~/utils/runtime-platform'
 
 const route = useRoute()
-const activeTab = ref<'general' | 'github'>('general')
+const activeTab = ref<'general' | 'github' | 'memory'>('general')
 
 watch(() => route.query.tab, (tab) => {
-  if (tab === 'github') activeTab.value = 'github'
+  if (tab === 'github' || tab === 'memory') activeTab.value = tab
 }, { immediate: true })
 
 const { settings, vaultUnlocked, unlockVault: unlock, lockVault: lock, update, setProviderKey, clearKeys: clearProviderKeys, reset: resetSettings } = useLLM()
 const github = useGitHubIntegration()
+const memory = useMemoryIntegration()
 const browserDevPath = computed(() => !isTauriRuntime())
 const vaultPassword = ref('')
 const vaultBusy = ref(false)
@@ -274,6 +391,8 @@ onMounted(async () => {
   await github.loadCredentials()
   github.runSearch()
   githubConnectorStatus.value = (await github.refreshStatus()).status
+  await memory.loadCredentials()
+  memory.runSearch()
 })
 
 async function refreshGitHubStatus() {

@@ -4,6 +4,7 @@ import { evaluateTask } from '~/services/agent-superstack/governance'
 import { nativeMcpExecute } from './native-mcp'
 import { createMcpServerTools } from './mcp-server-tools'
 import { createDocumentsSearchTool } from './tools/documents-search'
+import { createRagSearchTool } from './tools/rag-search'
 import { createConnectorTools } from './tools/connector-tools'
 import { createGoogleWorkspaceTools } from './tools/google-workspace-tools'
 import { createMcpInstallTools } from './tools/mcp-install-tools'
@@ -12,6 +13,7 @@ import { createMcpDiscoveryTools } from './tools/mcp-discovery-tools'
 import { createMcpHttpTools } from './tools/mcp-http-tools'
 import { createFrameworkTools } from './tools/framework-tools'
 import { createGitHubTools } from './tools/github-tools'
+import { searchAgentMemories } from '../../../plugins/longevity/rag/agent-memory-index'
 import { assertToolPolicyAllowed } from './tool-policy-guard'
 import type { AgentTool, AgentToolCall } from './types'
 
@@ -49,12 +51,24 @@ export function createDefaultToolGateway(): AgentToolGateway {
   const gateway = new AgentToolGateway()
   gateway.register({
     name: 'memory.search',
-    description: 'Search persistent agent memory.',
+    description: 'Search persisted agent memory (local store plus in-session kernel cache).',
     risk: 'low',
     requiresApproval: false,
     async execute(args) {
       const query = typeof args.query === 'string' ? args.query : ''
-      return agentKernel.memory.search(query)
+      const limit = typeof args.limit === 'number' ? args.limit : 8
+      const persisted = searchAgentMemories(query, limit)
+      if (persisted.length) {
+        return persisted.map((item) => ({
+          id: item.id,
+          text: item.content,
+          type: item.tags.find((tag) => tag !== 'agent-memory') ?? 'semantic',
+          tags: item.tags,
+          score: item.score,
+          source: item.source,
+        }))
+      }
+      return agentKernel.memory.search(query, limit)
     },
   })
   gateway.register({
@@ -83,6 +97,7 @@ export function createDefaultToolGateway(): AgentToolGateway {
     },
   })
   gateway.register(createDocumentsSearchTool())
+  gateway.register(createRagSearchTool())
   for (const tool of createConnectorTools()) {
     gateway.register(tool)
   }

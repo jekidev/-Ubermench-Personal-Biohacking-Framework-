@@ -27,3 +27,6 @@ Approved adapters from `jekidev/stararchive` (not wholesale merges):
 - Longevity watchlist: `plugins/longevity/evidence/watchlist.ts`
 - Garmin-only biometric map: `app/services/health-adapters/garmin-biometric-schema.ts`
 - PDF inspector: `plugins/longevity/pdf/pdf-inspector.ts`
+- Agent memory RAG: `plugins/longevity/rag/unified-search.ts` — merges document RAG + persisted agent memories (`rag.search`)
+- SuperMemory MCP: optional `supermemory-mcp` connector (local, no API key)
+- Mem0 cloud MCP: optional `@mem0/mcp-server` with `MEM0_API_KEY`
