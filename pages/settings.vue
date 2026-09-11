@@ -577,7 +577,16 @@
       <div class="grid gap-4 lg:grid-cols-2">
         <UCard>
           <template #header><div class="font-medium">Garmin biometric map</div></template>
-          <p class="text-xs text-zinc-500">Supported metrics:</p>
+          <div class="grid gap-2 text-sm">
+            <div><span class="text-zinc-500">OAuth client:</span> {{ plugins.garminStatus.oauthConfigured ? 'configured' : 'missing' }}</div>
+            <div><span class="text-zinc-500">Access token:</span> {{ plugins.garminStatus.oauthConnected ? 'present' : 'missing' }}</div>
+            <div><span class="text-zinc-500">Persisted samples:</span> {{ plugins.garminStatus.observationCount }}</div>
+            <div><span class="text-zinc-500">Last sample:</span> {{ plugins.garminStatus.lastObservedAt ? new Date(plugins.garminStatus.lastObservedAt).toLocaleString() : 'None' }}</div>
+          </div>
+          <p v-if="plugins.garminStatus.metrics.length" class="mt-3 text-xs text-zinc-500">
+            Synced metrics: {{ plugins.garminStatus.metrics.join(', ') }}
+          </p>
+          <p class="mt-4 text-xs text-zinc-500">Supported schema metrics:</p>
           <ul class="mt-2 space-y-1 font-mono text-xs text-zinc-400">
             <li v-for="metric in plugins.garminMetrics" :key="metric">{{ metric }}</li>
           </ul>
@@ -598,6 +607,7 @@
           </div>
           <div v-if="plugins.pdfInspection" class="mt-4 rounded border border-zinc-800 p-3 text-sm">
             <div class="font-medium capitalize">{{ plugins.pdfInspection.kind }}</div>
+            <div v-if="plugins.pdfInspectionFilename" class="text-xs text-zinc-400">{{ plugins.pdfInspectionFilename }}</div>
             <div class="text-xs text-zinc-500">
               text streams {{ plugins.pdfInspection.textStreamCount }} · images {{ plugins.pdfInspection.imageXObjectCount }}
               · OCR {{ plugins.pdfInspection.recommendOcr ? 'recommended' : 'not needed' }}
@@ -613,6 +623,8 @@
           <li><code>plugins.exercises.search</code> — search MIT exercise catalog</li>
           <li><code>plugins.watchlist.list</code> — geroscience watchlist</li>
           <li><code>plugins.garmin.schema</code> — Garmin-only biometric map</li>
+          <li><code>plugins.garmin.status</code> — OAuth + persisted Garmin samples</li>
+          <li><code>plugins.pdf.inspect</code> — last/sample/base64 PDF classification (no file bytes)</li>
         </ul>
       </UCard>
     </template>
@@ -679,6 +691,8 @@ onMounted(async () => {
   await memory.loadCredentials()
   memory.runSearch()
   plugins.runExerciseSearch()
+  plugins.applyCachedPdfInspection()
+  await plugins.refreshGarminStatus()
 })
 
 async function refreshGitHubStatus() {

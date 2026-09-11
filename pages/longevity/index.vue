@@ -84,6 +84,7 @@
 
 <script setup lang="ts">
 import { assessLongevity } from '~/services/longevity-engine'
+import { LONGEVITY_NAV } from '~/utils/app-navigation'
 
 const biology = usePersonalBiology()
 const profile = biology.profile
@@ -99,18 +100,7 @@ const recentBiomarkers = computed(() =>
 )
 
 const modules = [
-  { label: 'Bloods', to: '/longevity/bloods' },
-  { label: 'Genetics', to: '/longevity/genetics' },
-  { label: 'Fitness', to: '/longevity/fitness' },
-  { label: 'Evidence', to: '/longevity/evidence' },
-  { label: 'Timeline', to: '/longevity/timeline' },
-  { label: 'Mito', to: '/longevity/mito' },
-  { label: 'Cardiovascular', to: '/longevity/cardiovascular' },
-  { label: 'Metabolic', to: '/longevity/metabolic' },
-  { label: 'Recovery', to: '/longevity/recovery' },
-  { label: 'Organs', to: '/longevity/organs' },
-  { label: 'Prevention', to: '/longevity/prevention' },
-  { label: 'Interventions', to: '/longevity/interventions' },
+  ...LONGEVITY_NAV.filter((item) => item.to !== '/longevity'),
   { label: 'Plugins', to: '/settings?tab=plugins' },
 ]
 

@@ -10,6 +10,14 @@ import {
 } from '../../../../plugins/plugin-registry'
 import { FEARPRIME_INTERVENTION_REGISTRY } from '../../../../plugins/fearprime/interventions/registry'
 import { REJECTED_BIOMETRIC_PROVIDERS } from '../../health-adapters/garmin-biometric-schema'
+import { loadGarminPluginStatus } from '../../garmin-plugin-status'
+import {
+  decodePdfBase64,
+  getLastPdfInspection,
+  inspectAndCachePdfBytes,
+  inspectSamplePdfAndCache,
+  MAX_PDF_INSPECT_BYTES,
+} from '../../pdf-inspect-cache'
 
 const PLUGIN_CONNECTORS: ConnectorId[] = ['pdf-inspector']
 
@@ -96,6 +104,58 @@ export function createPluginTools(): AgentTool[] {
           metrics: ['sleep_score', 'hrv_rmssd', 'resting_hr', 'steps', 'training_load', 'spo2', 'body_weight', 'workout_duration'],
           rejectedProviders: REJECTED_BIOMETRIC_PROVIDERS,
         }
+      },
+    },
+    {
+      name: 'plugins.garmin.status',
+      description: 'Garmin OAuth configuration plus persisted wearable observations mapped from Garmin.',
+      risk: 'low',
+      requiresApproval: false,
+      async execute() {
+        return loadGarminPluginStatus()
+      },
+    },
+    {
+      name: 'plugins.pdf.inspect',
+      description: 'Inspect a lab PDF as text, scanned, mixed, or empty. Pass sample:true, base64 (optional filename), or omit args for the last cached inspection. Does not return file bytes.',
+      risk: 'low',
+      requiresApproval: false,
+      async execute(args) {
+        if (!isConnectorEnabled('pdf-inspector')) {
+          throw new Error('PDF inspector is disabled. Enable it in Settings → Plugins.')
+        }
+
+        const sample = args.sample === true || args.sample === 'true'
+        const filename = typeof args.filename === 'string' && args.filename.trim()
+          ? args.filename.trim()
+          : 'upload.pdf'
+        const base64 = typeof args.base64 === 'string'
+          ? args.base64
+          : typeof args.bytes === 'string'
+            ? args.bytes
+            : ''
+
+        if (sample) {
+          return { source: 'sample', ...inspectSamplePdfAndCache() }
+        }
+
+        if (base64.trim()) {
+          const bytes = decodePdfBase64(base64)
+          if (bytes.byteLength > MAX_PDF_INSPECT_BYTES) {
+            throw new Error(`PDF exceeds the ${MAX_PDF_INSPECT_BYTES} byte inspect limit.`)
+          }
+          return { source: 'upload', ...inspectAndCachePdfBytes(bytes, filename) }
+        }
+
+        const last = getLastPdfInspection()
+        if (!last) {
+          return {
+            source: 'last',
+            inspection: null,
+            message: 'No PDF inspection cached. Pass sample:true or base64.',
+          }
+        }
+        return { source: 'last', ...last }
       },
     },
   ]

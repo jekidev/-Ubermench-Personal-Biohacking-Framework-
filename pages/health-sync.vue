@@ -150,6 +150,7 @@ import {
 import { defaultGoogleRedirectUri } from '~~/plugins/connectors/oauth/google-oauth'
 
 const garminOAuth = useGarminOAuth()
+const garminPlugin = useGarminPluginStatus()
 const garminJson = ref('')
 const garminToken = ref('')
 const garminClientId = ref('')
@@ -170,6 +171,14 @@ onMounted(async () => {
   hcMode.value = await detectHealthConnectRuntimeMode()
   await garminOAuth.refreshStatus()
 })
+
+async function refreshGarminPlugins() {
+  try {
+    await garminPlugin.refresh()
+  } catch {
+    // Plugins Garmin status is best-effort and must not block Health Sync.
+  }
+}
 
 async function saveGarminOAuthConfig() {
   if (garminClientId.value.trim()) await garminOAuth.saveClientId(garminClientId.value.trim())
@@ -198,6 +207,7 @@ async function importGarmin() {
     importedSamples.value = result.samples
     persistedCount.value = result.observations.length
     garminStatus.value = `Imported ${result.samples.length} Garmin sample(s) and persisted ${result.observations.length} observation(s).`
+    await refreshGarminPlugins()
   } catch (error) {
     garminError.value = error instanceof Error ? error.message : String(error)
   } finally {
@@ -212,6 +222,7 @@ async function saveGarminToken() {
     await storeGarminAccessToken(garminToken.value)
     garminToken.value = ''
     tokenStatus.value = 'Garmin access token stored in the secret vault.'
+    await refreshGarminPlugins()
   } catch (error) {
     tokenStatus.value = error instanceof Error ? error.message : String(error)
   } finally {
@@ -230,6 +241,7 @@ async function connectAndSync(provider: 'garmin' | 'health-connect') {
     if (provider === 'garmin') {
       garminStatus.value = message
       if (state.samples.length) importedSamples.value = state.samples
+      await refreshGarminPlugins()
     } else {
       healthConnectStatus.value = message
     }
@@ -247,6 +259,7 @@ async function syncAllPersisted() {
   try {
     const result = await syncAndPersistAllHealth()
     persistedCount.value = result.observations.length
+    await refreshGarminPlugins()
   } finally {
     persistBusy.value = false
   }

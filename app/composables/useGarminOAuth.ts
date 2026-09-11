@@ -8,6 +8,7 @@ import {
   saveGarminClientId,
   saveGarminClientSecret,
 } from '../services/health-adapters/garmin-oauth-flow'
+import { useGarminPluginStatus } from './useGarminPluginStatus'
 
 export function useGarminOAuth() {
   const busy = ref(false)
@@ -15,11 +16,17 @@ export function useGarminOAuth() {
   const configured = ref(false)
   const connected = ref(false)
   const redirectUri = defaultGarminRedirectUri()
+  const garminPlugin = useGarminPluginStatus()
 
   async function refreshStatus() {
     const status = await garminOAuthStatus()
     configured.value = status.configured
     connected.value = status.connected
+    try {
+      await garminPlugin.refresh()
+    } catch {
+      // Plugins Garmin status is best-effort and must not block OAuth.
+    }
   }
 
   async function saveClientId(clientId: string) {

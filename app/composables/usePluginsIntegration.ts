@@ -2,7 +2,7 @@ import { getConnectorStatus } from '../../plugins/connectors/connector-runtime'
 import type { ConnectorId } from '../../plugins/connectors/types'
 import { loadExerciseCatalog, searchExercises, type ExerciseRecord } from '../../plugins/longevity/fitness/exercises'
 import { LONGEVITY_WATCHLIST, type LongevityWatchlistItem } from '../../plugins/longevity/evidence/watchlist'
-import { inspectPdfBytes, type PdfInspection } from '../../plugins/longevity/pdf/pdf-inspector'
+import type { PdfInspection } from '../../plugins/longevity/pdf/pdf-inspector'
 import {
   listDomainPlugins,
   listStarredIntegrations,
@@ -12,7 +12,13 @@ import {
 import { FEARPRIME_INTERVENTION_REGISTRY } from '../../plugins/fearprime/interventions/registry'
 import type { GarminBiometricMetric } from '../services/health-adapters/garmin-biometric-schema'
 import { REJECTED_BIOMETRIC_PROVIDERS } from '../services/health-adapters/garmin-biometric-schema'
+import {
+  getLastPdfInspection,
+  inspectAndCachePdfBytes,
+  inspectSamplePdfAndCache,
+} from '../services/pdf-inspect-cache'
 import { useConnectorEnablement } from './useConnectorEnablement'
+import { useGarminPluginStatus } from './useGarminPluginStatus'
 
 const GARMIN_METRICS: GarminBiometricMetric[] = [
   'sleep_score',
@@ -27,12 +33,14 @@ const GARMIN_METRICS: GarminBiometricMetric[] = [
 
 export function usePluginsIntegration() {
   const { isEnabled, setEnabled } = useConnectorEnablement()
+  const { status: garminStatus, refresh: refreshGarminStatus } = useGarminPluginStatus()
   const busy = ref(false)
   const error = ref('')
   const exerciseSearchQuery = ref('')
   const exerciseResults = ref<ExerciseRecord[]>([])
   const watchlistTier = ref<'all' | 'resource' | 'clock' | 'organization' | 'reading'>('all')
   const pdfInspection = ref<PdfInspection | null>(null)
+  const pdfInspectionFilename = ref('')
 
   const domainPlugins = computed<DomainPlugin[]>(() => listDomainPlugins())
   const starredIntegrations = computed<StarredIntegration[]>(() => listStarredIntegrations())
@@ -72,16 +80,25 @@ export function usePluginsIntegration() {
     }
   }
 
+  function applyCachedPdfInspection() {
+    const last = getLastPdfInspection()
+    pdfInspection.value = last?.inspection ?? null
+    pdfInspectionFilename.value = last?.filename ?? ''
+  }
+
   function inspectPdfFile(file: File) {
     error.value = ''
     busy.value = true
     file.arrayBuffer()
       .then((buffer) => {
-        pdfInspection.value = inspectPdfBytes(new Uint8Array(buffer))
+        const cached = inspectAndCachePdfBytes(new Uint8Array(buffer), file.name)
+        pdfInspection.value = cached.inspection
+        pdfInspectionFilename.value = cached.filename
       })
       .catch((cause) => {
         error.value = cause instanceof Error ? cause.message : 'PDF inspection failed'
         pdfInspection.value = null
+        pdfInspectionFilename.value = ''
       })
       .finally(() => {
         busy.value = false
@@ -90,8 +107,17 @@ export function usePluginsIntegration() {
 
   function inspectSamplePdf() {
     error.value = ''
-    const sample = new TextEncoder().encode('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF')
-    pdfInspection.value = inspectPdfBytes(sample)
+    const cached = inspectSamplePdfAndCache()
+    pdfInspection.value = cached.inspection
+    pdfInspectionFilename.value = cached.filename
+  }
+
+  async function refreshGarminPluginStatus() {
+    try {
+      await refreshGarminStatus()
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : 'Garmin status failed'
+    }
   }
 
   return {
@@ -107,12 +133,16 @@ export function usePluginsIntegration() {
     watchlistItems,
     garminMetrics,
     rejectedProviders,
+    garminStatus,
     pdfInspection,
+    pdfInspectionFilename,
     isIntegrationEnabled,
     setIntegrationConnector,
     refreshConnectorStatus,
     runExerciseSearch,
     inspectPdfFile,
     inspectSamplePdf,
+    applyCachedPdfInspection,
+    refreshGarminStatus: refreshGarminPluginStatus,
   }
 }
