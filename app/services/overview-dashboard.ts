@@ -52,9 +52,12 @@ export const OVERVIEW_NAVIGATION: OverviewNavigationCard[] = [
   { label: 'Experiments', to: '/experiments', description: 'N-of-1 protocols and conclusions' },
   { label: 'Data health', to: '/data-health', description: 'Coverage, gaps and diagnostics' },
   { label: 'Health Sync', to: '/health-sync', description: 'Garmin and Health Connect adapters' },
+  { label: 'Fearprime', to: '/fearprime', description: 'PTSD and fear-learning plugin' },
   { label: 'Bloods', to: '/longevity/bloods', description: 'Laboratory results and review' },
+  { label: 'Fitness', to: '/longevity/fitness', description: 'Training records and exercise catalog' },
   { label: 'Evidence', to: '/longevity/evidence', description: 'Normalized research records' },
   { label: 'Timeline', to: '/longevity/timeline', description: 'Longitudinal series and evidence overlay' },
+  { label: 'Plugins', to: '/settings?tab=plugins', description: 'Domain plugins and starred integrations' },
   { label: 'Safety', to: '/safety', description: 'Interaction, contraindication and monitoring' },
   { label: 'Agent', to: '/agent', description: 'Local agent runtime' },
 ]

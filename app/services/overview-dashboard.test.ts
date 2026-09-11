@@ -17,6 +17,8 @@ describe('overview dashboard helpers', () => {
     expect(summary.safetySeverity).toBe('green')
     expect(summary.navigation.some((item) => item.to === '/data-health')).toBe(true)
     expect(summary.navigation.some((item) => item.to === '/safety')).toBe(true)
+    expect(summary.navigation.some((item) => item.to === '/longevity/fitness')).toBe(true)
+    expect(summary.navigation.some((item) => item.to === '/settings?tab=plugins')).toBe(true)
     expect(summary.backupNote).toMatch(/no biology backup/i)
   })
 

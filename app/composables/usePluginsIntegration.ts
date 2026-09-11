@@ -12,6 +12,7 @@ import {
 import { FEARPRIME_INTERVENTION_REGISTRY } from '../../plugins/fearprime/interventions/registry'
 import type { GarminBiometricMetric } from '../services/health-adapters/garmin-biometric-schema'
 import { REJECTED_BIOMETRIC_PROVIDERS } from '../services/health-adapters/garmin-biometric-schema'
+import { loadGarminPluginStatus, type GarminPluginStatus } from '../services/garmin-plugin-status'
 import { useConnectorEnablement } from './useConnectorEnablement'
 
 const GARMIN_METRICS: GarminBiometricMetric[] = [
@@ -47,6 +48,13 @@ export function usePluginsIntegration() {
 
   const garminMetrics = computed(() => GARMIN_METRICS)
   const rejectedProviders = computed(() => [...REJECTED_BIOMETRIC_PROVIDERS])
+  const garminStatus = ref<GarminPluginStatus>({
+    oauthConfigured: false,
+    oauthConnected: false,
+    observationCount: 0,
+    lastObservedAt: null,
+    metrics: [],
+  })
 
   function isIntegrationEnabled(integration: StarredIntegration): boolean | null {
     if (!integration.connectorId) return null
@@ -94,6 +102,14 @@ export function usePluginsIntegration() {
     pdfInspection.value = inspectPdfBytes(sample)
   }
 
+  async function refreshGarminStatus() {
+    try {
+      garminStatus.value = await loadGarminPluginStatus()
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : 'Garmin status failed'
+    }
+  }
+
   return {
     busy,
     error,
@@ -107,6 +123,7 @@ export function usePluginsIntegration() {
     watchlistItems,
     garminMetrics,
     rejectedProviders,
+    garminStatus,
     pdfInspection,
     isIntegrationEnabled,
     setIntegrationConnector,
@@ -114,5 +131,6 @@ export function usePluginsIntegration() {
     runExerciseSearch,
     inspectPdfFile,
     inspectSamplePdf,
+    refreshGarminStatus,
   }
 }

@@ -13,6 +13,16 @@ vi.mock('../../../../plugins/connectors/connector-store', () => ({
   isConnectorEnabled: vi.fn(() => true),
 }))
 
+vi.mock('../../garmin-plugin-status', () => ({
+  loadGarminPluginStatus: vi.fn(async () => ({
+    oauthConfigured: true,
+    oauthConnected: false,
+    observationCount: 2,
+    lastObservedAt: '2026-09-11T00:00:00.000Z',
+    metrics: ['hrv', 'steps'],
+  })),
+}))
+
 describe('plugin-tools', () => {
   const tools = createPluginTools()
   const statusTool = tools.find((tool) => tool.name === 'plugins.status')
@@ -45,5 +55,9 @@ describe('plugin-tools', () => {
     const schema = await garminTool!.execute({}) as { provider: string; rejectedProviders: string[] }
     expect(schema.provider).toBe('garmin')
     expect(schema.rejectedProviders).toContain('oura')
+    const statusToolGarmin = tools.find((tool) => tool.name === 'plugins.garmin.status')
+    const garminStatus = await statusToolGarmin!.execute({}) as { observationCount: number; oauthConfigured: boolean }
+    expect(garminStatus.oauthConfigured).toBe(true)
+    expect(garminStatus.observationCount).toBe(2)
   })
 })

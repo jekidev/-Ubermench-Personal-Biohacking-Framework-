@@ -13,23 +13,28 @@
 
       <div class="min-h-[calc(100vh-65px)] md:flex">
         <aside class="hidden w-64 shrink-0 border-r border-zinc-800 p-3 md:block">
-          <nav aria-label="Primary" class="space-y-1">
-            <NuxtLink
-              v-for="item in navigation"
-              :key="item.to"
-              :to="item.to"
-              class="block rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-900"
-              :class="{ 'nav-link-active': isCurrent(item.to) }"
-              :aria-current="isCurrent(item.to) ? 'page' : undefined"
-            >
-              {{ item.label }}
-            </NuxtLink>
+          <nav aria-label="Primary" class="space-y-4">
+            <div v-for="group in navGroups" :key="group.label">
+              <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">{{ group.label }}</div>
+              <div class="space-y-1">
+                <NuxtLink
+                  v-for="item in group.items"
+                  :key="item.to"
+                  :to="item.to"
+                  class="block rounded-lg px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
+                  :class="{ 'nav-link-active': isCurrent(item.to) }"
+                  :aria-current="isCurrent(item.to) ? 'page' : undefined"
+                >
+                  {{ item.label }}
+                </NuxtLink>
+              </div>
+            </div>
           </nav>
         </aside>
 
         <nav aria-label="Primary" class="flex gap-1 overflow-x-auto border-b border-zinc-800 p-2 md:hidden">
           <NuxtLink
-            v-for="item in navigation"
+            v-for="item in flatNav"
             :key="item.to"
             :to="item.to"
             class="shrink-0 rounded-lg px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-900"
@@ -49,32 +54,13 @@
 </template>
 
 <script setup lang="ts">
-const route = useRoute()
+import { APP_NAV_GROUPS, flattenAppNav, isNavCurrent } from '~/utils/app-navigation'
 
-const navigation = [
-  { label: 'Overview', to: '/' },
-  { label: 'Chat', to: '/chat' },
-  { label: 'Agent', to: '/agent' },
-  { label: 'AI Models', to: '/ai-models' },
-  { label: 'Biology', to: '/biology' },
-  { label: 'Health Sync', to: '/health-sync' },
-  { label: 'Experiments', to: '/experiments' },
-  { label: 'Safety', to: '/safety' },
-  { label: 'Data health', to: '/data-health' },
-  { label: 'Fearprime', to: '/fearprime' },
-  { label: 'Longevity', to: '/longevity' },
-  { label: 'Evidence', to: '/longevity/evidence' },
-  { label: 'Timeline', to: '/longevity/timeline' },
-  { label: 'Connectors', to: '/connectors' },
-  { label: 'Settings', to: '/settings' },
-  { label: 'Plugins', to: '/settings?tab=plugins' },
-]
+const route = useRoute()
+const navGroups = APP_NAV_GROUPS
+const flatNav = flattenAppNav()
 
 function isCurrent(to: string) {
-  const [path, queryString] = to.split('?')
-  if (path !== route.path) return false
-  if (!queryString) return !route.query.tab || path !== '/settings'
-  const params = new URLSearchParams(queryString)
-  return params.get('tab') === String(route.query.tab ?? '')
+  return isNavCurrent(to, route.path, route.query.tab)
 }
 </script>

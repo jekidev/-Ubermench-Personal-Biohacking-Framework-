@@ -10,6 +10,7 @@ import {
 } from '../../../../plugins/plugin-registry'
 import { FEARPRIME_INTERVENTION_REGISTRY } from '../../../../plugins/fearprime/interventions/registry'
 import { REJECTED_BIOMETRIC_PROVIDERS } from '../../health-adapters/garmin-biometric-schema'
+import { loadGarminPluginStatus } from '../../garmin-plugin-status'
 
 const PLUGIN_CONNECTORS: ConnectorId[] = ['pdf-inspector']
 
@@ -96,6 +97,15 @@ export function createPluginTools(): AgentTool[] {
           metrics: ['sleep_score', 'hrv_rmssd', 'resting_hr', 'steps', 'training_load', 'spo2', 'body_weight', 'workout_duration'],
           rejectedProviders: REJECTED_BIOMETRIC_PROVIDERS,
         }
+      },
+    },
+    {
+      name: 'plugins.garmin.status',
+      description: 'Garmin OAuth configuration plus persisted wearable observations mapped from Garmin.',
+      risk: 'low',
+      requiresApproval: false,
+      async execute() {
+        return loadGarminPluginStatus()
       },
     },
   ]
