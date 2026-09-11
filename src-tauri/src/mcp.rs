@@ -82,15 +82,7 @@ fn fingerprint(command: &str, args: &[String]) -> String {
 fn allowlisted_command(command: &str) -> bool {
     matches!(
         command,
-        "node"
-            | "nodejs"
-            | "npx"
-            | "bun"
-            | "deno"
-            | "python"
-            | "python3"
-            | "uvx"
-            | "docker"
+        "node" | "nodejs" | "npx" | "bun" | "deno" | "python" | "python3" | "uvx" | "docker"
     )
 }
 fn validate_args(args: &[String]) -> Result<(), String> {

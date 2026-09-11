@@ -36,6 +36,7 @@
     "@types/node": "^22.0.0",
     "oxc-parser": "^0.149.0",
     "typescript": "^5.0.0",
+    "vite": "^7.3.6",
     "vitest": "^5.0.0",
     "vue-tsc": "^3.0.0"
   },
