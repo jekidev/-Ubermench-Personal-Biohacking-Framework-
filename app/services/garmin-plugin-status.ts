@@ -5,7 +5,7 @@ import { garminOAuthStatus } from './health-adapters/garmin-oauth-flow'
 export const GARMIN_HEALTH_SYNC_HREF = '/health-sync'
 export const GARMIN_PLUGINS_HREF = '/settings?tab=plugins'
 export const GARMIN_UNCONFIGURED_MESSAGE =
-  'Garmin is unconfigured. Import Wellness JSON, save a vault token, or add a Garmin Connect developer client on Health Sync. OAuth is not simulated.'
+  'Garmin is unconfigured. On this phone, import Wellness JSON or save a vault token on Health Sync. A Garmin Connect developer client is optional for OAuth — OAuth is not simulated.'
 
 export type GarminPluginStatus = {
   oauthConfigured: boolean
@@ -43,7 +43,7 @@ export function garminStatusNextStep(status: Pick<GarminPluginStatus, 'oauthConf
     return GARMIN_UNCONFIGURED_MESSAGE
   }
   if (status.oauthConfigured && !status.oauthConnected) {
-    return 'OAuth client is saved. Connect Garmin on Health Sync (developer client required), or save a vault token / import Wellness JSON.'
+    return 'OAuth client is saved. JSON import and vault token still work on this phone. Connect Garmin only if the developer redirect works in Chrome — OAuth is not simulated.'
   }
   if (status.oauthConnected && status.observationCount === 0) {
     return 'Token is present. Import Wellness JSON or sync authorized Garmin data on Health Sync.'

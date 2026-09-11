@@ -68,6 +68,9 @@ describe('agent run reply', () => {
       { id: 'c1', name: 'mcp.stdio:paper-search', args: { method: 'search_pubmed' }, requiresApproval: true },
       { id: 'c2', name: 'mcp.stdio:local-deep-research', args: { method: 'quick_search' }, requiresApproval: true },
     ])).toContain('Then: mcp.stdio:local-deep-research')
+    expect(formatNativeMcpAgentHandoff(pendingNativeAgentToolCalls(run), 'android-browser')).toContain('research.europepmc')
+    expect(formatNativeMcpAgentHandoff(pendingNativeAgentToolCalls(run), 'android-browser')).not.toContain('/agent?')
+    expect(formatNativeMcpAgentHandoff(pendingNativeAgentToolCalls(run), 'android-browser')).not.toContain('Open the Tauri desktop app')
   })
 
   it('keeps catalog approvable when native MCP is also pending', () => {

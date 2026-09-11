@@ -47,7 +47,7 @@ describe('data-health-diagnostics', () => {
       isTauriRuntime: false,
     })
     expect(diagnostics.credentialStorage).toBe('browser-dev')
-    expect(diagnostics.warnings.some((warning) => warning.includes('browser development path'))).toBe(true)
+    expect(diagnostics.warnings.some((warning) => warning.includes('browser local vault'))).toBe(true)
     expect(diagnostics.warnings.some((warning) => warning.includes('experiment backup'))).toBe(true)
     expect(diagnostics.warnings.some((warning) => warning.includes('stopping rules'))).toBe(true)
   })

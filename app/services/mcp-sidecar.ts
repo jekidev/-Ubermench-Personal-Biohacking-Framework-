@@ -1,11 +1,12 @@
 import { resolveMcpServer } from './agent-runtime/mcp-server-tools'
 import { nativeMcpPreflight } from './agent-runtime/native-mcp'
-import { isTauriRuntime } from '~/utils/runtime-platform'
+import { mcpSidecarUnavailableMessage } from './android-fallbacks'
+import { detectProductRuntime, isTauriRuntime, nativeMcpCanRunHere } from '~/utils/runtime-platform'
 
 export const MCP_SIDECAR_SETTINGS_HREF = '/settings?tab=research'
 export const MCP_SIDECAR_MEMORY_HREF = '/settings?tab=memory'
-export const MCP_SIDECAR_BROWSER_MESSAGE =
-  'Sidecars are not started from the browser. Open the Tauri desktop app, then use Check sidecar. uvx and Docker are never auto-started.'
+export const MCP_SIDECAR_BROWSER_MESSAGE = mcpSidecarUnavailableMessage('browser')
+export const MCP_SIDECAR_ANDROID_MESSAGE = mcpSidecarUnavailableMessage('android-browser')
 
 export type McpSidecarCheck = {
   ok: boolean
@@ -40,14 +41,14 @@ export async function checkMcpSidecar(serverId: string): Promise<McpSidecarCheck
   }
   const command = server.executable
   const args = server.allowedArgs ? [...server.allowedArgs] : []
-  if (!tauri) {
+  if (!nativeMcpCanRunHere(detectProductRuntime()) || !tauri) {
     return {
       ok: false,
-      tauri: false,
+      tauri,
       serverId: trimmed,
       command,
       args,
-      error: MCP_SIDECAR_BROWSER_MESSAGE,
+      error: mcpSidecarUnavailableMessage(),
       settingsHref: href,
     }
   }

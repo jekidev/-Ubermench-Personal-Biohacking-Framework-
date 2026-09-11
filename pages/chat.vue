@@ -35,8 +35,10 @@
             <div class="whitespace-pre-wrap">{{ message.content }}</div>
           </div>
           <p v-if="!chat.messages.length" class="text-sm text-zinc-500">
-            Start with a question or try /help. Catalog tools (PaperQA, Garmin, PDF) approve here.
-            Native MCP (paper-search, LDR, Transcriptor, SuperMemory, Mem0) needs the desktop Agent preflight token — this page cannot run uvx or Docker.
+            Start with a question or try /help. Catalog tools (PaperQA, Garmin, PDF, Europe PMC) approve here.
+            {{ androidPhone
+              ? 'Native MCP (paper-search, LDR, Transcriptor, SuperMemory, Mem0) cannot run on this Android phone — use research.europepmc, PaperQA, Garmin JSON, or Bloods PDF instead.'
+              : 'Native MCP (paper-search, LDR, Transcriptor, SuperMemory, Mem0) needs a desktop Tauri sidecar. This page cannot run uvx or Docker, and cannot mint that token.' }}
           </p>
         </div>
 
@@ -73,7 +75,7 @@
                 {{ pendingNativeTools.length ? 'Approve catalog tools' : 'Approve pending tools' }}
               </UButton>
               <NuxtLink v-if="pendingNativeTools.length" :to="nativeAgentHref">
-                <UButton size="sm" variant="outline">Open Agent for {{ pendingNativeTools.map((call) => call.name).join(', ') }}</UButton>
+                <UButton size="sm" variant="outline">{{ nativeContinueCta }}</UButton>
               </NuxtLink>
               <NuxtLink v-else to="/agent"><UButton size="sm" variant="outline">Open Agent</UButton></NuxtLink>
             </div>
@@ -167,7 +169,8 @@ import { indexYouTubeUrlsToRag } from '../plugins/connectors/youtube-rag-sync'
 import { syncDrivePdfsToRag } from '../plugins/connectors/drive-rag-sync'
 import { runYouTubeScheduler } from '../plugins/connectors/youtube-scheduler'
 import { formatAgentRunReply, formatNativeMcpAgentHandoff } from '~/services/agent-runtime/run-reply'
-import { nativeMcpAgentHref } from '~/services/agent-runtime/native-mcp-handoff'
+import { nativeMcpAgentHref, nativeMcpContinueCta } from '~/services/agent-runtime/native-mcp-handoff'
+import { isAndroidUserAgent } from '~/utils/runtime-platform'
 
 const chat = useChatSession()
 const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools, displayedRun, approvalNotice, queuedApprovalCount } = usePendingAgentApprovals()
@@ -177,8 +180,10 @@ const draft = ref('')
 const newRuleName = ref('')
 const newRuleDescription = ref('')
 const newRulePrompt = ref('')
+const androidPhone = computed(() => isAndroidUserAgent())
 const nativeHandoff = computed(() => formatNativeMcpAgentHandoff(pendingNativeTools.value))
 const nativeAgentHref = computed(() => nativeMcpAgentHref(pendingNativeTools.value))
+const nativeContinueCta = computed(() => nativeMcpContinueCta())
 const commandHint = computed(() => chat.slashHelp().slice(0, 4).join(' · '))
 const builtInRules = computed(() => chat.allRules().filter((rule) => !rule.custom))
 

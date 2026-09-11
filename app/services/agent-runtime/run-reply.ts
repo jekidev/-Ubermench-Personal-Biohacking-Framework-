@@ -1,5 +1,7 @@
+import { detectProductRuntime, isAndroidProduct, type ProductRuntime } from '~/utils/runtime-platform'
+import { formatAndroidNativeHandoff, nativeMcpUnavailableMessage } from '../android-fallbacks'
 import { formatNextNativePreflightLabel } from './mcp-server-tools'
-import { NATIVE_MCP_TAURI_MESSAGE, nativeMcpAgentHref } from './native-mcp-handoff'
+import { nativeMcpAgentHref } from './native-mcp-handoff'
 import type { AgentObservation, AgentRun, AgentToolCall } from './types'
 import { partitionPendingByApprovalSurface, upsertToolCalls } from './tool-plan'
 
@@ -55,14 +57,20 @@ export function summarizeAgentRunForUi(run: AgentRun): {
   }
 }
 
-export function formatNativeMcpAgentHandoff(calls: AgentToolCall[]): string {
+export function formatNativeMcpAgentHandoff(
+  calls: AgentToolCall[],
+  runtime: ProductRuntime = detectProductRuntime(),
+): string {
   const names = calls.map((call) => call.name).join(', ')
+  if (isAndroidProduct(runtime)) {
+    return formatAndroidNativeHandoff(names, runtime)
+  }
   const next = formatNextNativePreflightLabel(calls)
   const sequential = next
     ? ` Approve one native server at a time. ${next}`
     : ''
-  const href = nativeMcpAgentHref(calls)
-  return `${NATIVE_MCP_TAURI_MESSAGE} Native MCP still needs the Agent Control Center preflight token: ${names}.${sequential} Open ${href} to continue those calls. Catalog tools can be approved here.`
+  const href = nativeMcpAgentHref(calls, runtime)
+  return `${nativeMcpUnavailableMessage(runtime)} Native MCP still needs the Agent Control Center preflight token: ${names}.${sequential} Open ${href} to continue those calls. Catalog tools can be approved here.`
 }
 
 export function observationForToolCall(run: AgentRun, callId: string): AgentObservation | undefined {

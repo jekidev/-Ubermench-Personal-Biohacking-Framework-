@@ -7,6 +7,7 @@ import { installMcpFromCatalog } from '../../plugins/llm/mcp/install'
 import { answerPaperQaFromLocalRag, PAPER_QA_CONNECTOR_OFF_MESSAGE, type PaperQaAnswer, type PaperQaEmptyIndexResult } from '../services/paper-qa'
 import { checkMcpSidecar, type McpSidecarCheck } from '../services/mcp-sidecar'
 import { listResearchProviders } from '../services/external-research-providers'
+import { runResearchWorkflow } from '../services/research-workflow'
 import { setSecret } from '../services/secret-vault'
 
 const MCP_BY_CONNECTOR: Partial<Record<ConnectorId, string>> = {
@@ -23,6 +24,9 @@ export function useResearchIntegration() {
   const ldrProviderDraft = ref('')
   const paperQaQuestion = ref('')
   const paperQaAnswer = ref<PaperQaAnswer | PaperQaEmptyIndexResult | null>(null)
+  const europePmcQuery = ref('')
+  const europePmcBusy = ref(false)
+  const europePmcHits = ref<Array<{ id: string; title: string; journal?: string; doi?: string; url?: string }>>([])
   const sidecarBusy = ref(false)
   const sidecarCheck = ref<McpSidecarCheck | null>(null)
 
@@ -91,6 +95,31 @@ export function useResearchIntegration() {
     }
   }
 
+  async function runEuropePmcPreview() {
+    const goal = europePmcQuery.value.trim()
+    if (!goal) {
+      error.value = 'Enter a literature question for Europe PMC.'
+      return
+    }
+    europePmcBusy.value = true
+    error.value = ''
+    try {
+      const result = await runResearchWorkflow({ goal, pageSize: 5 })
+      europePmcHits.value = result.hits.slice(0, 5).map((hit) => ({
+        id: hit.id,
+        title: hit.title,
+        journal: hit.journal,
+        doi: hit.doi,
+        url: hit.url,
+      }))
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : 'Europe PMC search failed'
+      europePmcHits.value = []
+    } finally {
+      europePmcBusy.value = false
+    }
+  }
+
   async function checkSidecar(serverId: string) {
     sidecarBusy.value = true
     try {
@@ -108,6 +137,9 @@ export function useResearchIntegration() {
     ldrProviderDraft,
     paperQaQuestion,
     paperQaAnswer,
+    europePmcQuery,
+    europePmcBusy,
+    europePmcHits,
     sidecarBusy,
     sidecarCheck,
     providers,
@@ -117,6 +149,7 @@ export function useResearchIntegration() {
     setConnector,
     refreshConnectorStatus,
     runPaperQaPreview,
+    runEuropePmcPreview,
     checkSidecar,
     isConnectorEnabled: isEnabled,
   }

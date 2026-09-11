@@ -51,17 +51,17 @@ export const OVERVIEW_NAVIGATION: OverviewNavigationCard[] = [
   { label: 'Biology', to: '/biology', description: 'Profile, backup and biomarker trends' },
   { label: 'Experiments', to: '/experiments', description: 'N-of-1 protocols and conclusions' },
   { label: 'Data health', to: '/data-health', description: 'Coverage, gaps and diagnostics' },
-  { label: 'Health Sync', to: '/health-sync', description: 'Garmin and Health Connect adapters' },
+  { label: 'Health Sync', to: '/health-sync', description: 'Garmin JSON/token on this phone. Health Connect needs the Android app.' },
   { label: 'Fearprime', to: '/fearprime', description: 'PTSD and fear-learning plugin' },
   { label: 'Bloods', to: '/longevity/bloods', description: 'Laboratory results and review' },
   { label: 'Fitness', to: '/longevity/fitness', description: 'Training records and exercise catalog' },
   { label: 'Evidence', to: '/longevity/evidence', description: 'Normalized research records' },
   { label: 'Timeline', to: '/longevity/timeline', description: 'Longitudinal series and evidence overlay' },
   { label: 'Plugins', to: '/settings?tab=plugins', description: 'Domain plugins and starred integrations' },
-  { label: 'Research', to: '/settings?tab=research', description: 'Paper search, PaperQA, LDR, Transcriptor' },
+  { label: 'Research', to: '/settings?tab=research', description: 'Europe PMC and PaperQA on this phone. Sidecars need desktop.' },
   { label: 'Chat', to: '/chat', description: 'Multi-turn chat with agent tools' },
   { label: 'Safety', to: '/safety', description: 'Interaction, contraindication and monitoring' },
-  { label: 'Agent', to: '/agent', description: 'Local agent runtime' },
+  { label: 'Agent', to: '/agent', description: 'Catalog tools on this phone. Native MCP needs a desktop sidecar.' },
 ]
 
 export function latestExperiment<T extends OverviewExperiment>(

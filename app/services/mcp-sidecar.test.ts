@@ -3,6 +3,11 @@ import { checkMcpSidecar, MCP_SIDECAR_BROWSER_MESSAGE } from './mcp-sidecar'
 
 vi.mock('~/utils/runtime-platform', () => ({
   isTauriRuntime: () => false,
+  detectProductRuntime: () => 'browser' as const,
+  nativeMcpCanRunHere: () => false,
+  isAndroidProduct: () => false,
+  isAndroidUserAgent: () => false,
+  isAndroidBrowser: () => false,
 }))
 
 describe('mcp sidecar check', () => {
@@ -13,6 +18,7 @@ describe('mcp sidecar check', () => {
     expect(result.command).toBe('uvx')
     expect(result.args).toEqual(['paper-search-mcp'])
     expect(result.error).toBe(MCP_SIDECAR_BROWSER_MESSAGE)
+    expect(MCP_SIDECAR_BROWSER_MESSAGE).toMatch(/Europe PMC|Bloods/)
     expect(result.settingsHref).toContain('tab=research')
   })
 

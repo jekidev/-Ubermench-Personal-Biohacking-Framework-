@@ -12,7 +12,7 @@
     <UAlert
       v-if="hcMode === 'browser-blocked'"
       title="Android browser detected"
-      description="Health Connect cannot be accessed from Chrome or a PWA. Build and install the Android app with: npm run tauri:android:init then npm run tauri:android:dev"
+      :description="healthConnectBrowserMessage"
       color="warning"
       variant="subtle"
     />
@@ -22,7 +22,7 @@
         <template #header><div class="font-medium">Garmin Wellness import</div></template>
         <p class="text-sm text-zinc-400">
           Paste or upload Garmin Wellness API JSON (`dailies`, `sleeps`, `hrv`, `bodyComps`, `pulseOx`, `activities`).
-          Oura, WHOOP and Apple Health payloads are rejected.
+          This is the Android path when you do not have a Garmin developer client. Oura, WHOOP and Apple Health payloads are rejected.
         </p>
         <textarea
           v-model="garminJson"
@@ -41,8 +41,8 @@
       <UCard>
         <template #header><div class="font-medium">Garmin OAuth (Wellness API)</div></template>
         <p class="text-sm text-zinc-400">
-          Connect with PKCE using your Garmin Connect Developer client ID and secret. Tokens stay in the secret vault and never enter biology backups or sample caches.
-          Without a developer client, use JSON import or a manual vault token — OAuth is not simulated.
+          Optional. Connect with PKCE using your Garmin Connect Developer client ID and secret.
+          If mobile Chrome blocks the redirect, keep using JSON import above — OAuth is not required and is not simulated.
         </p>
         <div class="mt-3 grid gap-3">
           <UInput v-model="garminClientId" placeholder="Garmin client ID" />
@@ -67,7 +67,7 @@
       <UCard>
         <template #header><div class="font-medium">Garmin access token (manual)</div></template>
         <p class="text-sm text-zinc-400">
-          Development fallback when OAuth is unavailable. Stored in the secret vault (Stronghold on desktop, browser secret store in preview).
+          Development fallback when OAuth is unavailable. Stored in this browser's local vault on Android Chrome (Stronghold on desktop Tauri).
         </p>
         <UInput v-model="garminToken" type="password" placeholder="Garmin access token" autocomplete="off" class="mt-3" />
         <UButton class="mt-3" :loading="garminBusy" :disabled="!garminToken.trim()" @click="saveGarminToken">Save token to vault</UButton>
@@ -108,7 +108,7 @@
       <UCard>
         <template #header><div class="font-medium">Android Health Connect</div></template>
         <p class="text-sm text-zinc-400">
-          Native Android/Tauri only. Browser preview cannot read Health Connect and will not invent step counts.
+          Native Android app only. Chrome/PWA cannot read Health Connect and will not invent step counts.
         </p>
         <UButton
           class="mt-3"
@@ -160,12 +160,13 @@
     <UCard>
       <template #header><div class="font-medium">Google Drive (lab PDFs)</div></template>
       <p class="text-sm text-zinc-400">
-        Drive sync works in Android Chrome. Use the same redirect URI in Google Cloud Console:
+        Drive lab PDFs work in Android Chrome. Register this redirect URI in Google Cloud Console, then connect on Connectors:
         <code class="break-all">{{ redirectUri }}</code>
       </p>
-      <NuxtLink to="/connectors" class="mt-3 inline-block">
-        <UButton variant="outline">Open Connectors</UButton>
-      </NuxtLink>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UButton variant="outline" to="/connectors">Connect Drive</UButton>
+        <UButton variant="ghost" to="/longevity/bloods">Upload PDF on Bloods</UButton>
+      </div>
     </UCard>
   </div>
 </template>
@@ -180,6 +181,7 @@ import {
   syncAndPersistAllHealth,
 } from '~/services/health-sync-runtime'
 import { defaultGoogleRedirectUri } from '~~/plugins/connectors/oauth/google-oauth'
+import { HEALTH_CONNECT_BROWSER_MESSAGE } from '~/services/android-fallbacks'
 
 const garminOAuth = useGarminOAuth()
 const garminPlugin = useGarminPluginStatus()
@@ -198,6 +200,7 @@ const healthConnectBusy = ref(false)
 const persistBusy = ref(false)
 const hcMode = ref<Awaited<ReturnType<typeof detectHealthConnectRuntimeMode>>>('unavailable')
 const redirectUri = defaultGoogleRedirectUri()
+const healthConnectBrowserMessage = HEALTH_CONNECT_BROWSER_MESSAGE
 
 onMounted(async () => {
   hcMode.value = await detectHealthConnectRuntimeMode()

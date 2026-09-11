@@ -111,8 +111,24 @@
       </div>
       <p v-if="ragAnswer" class="mt-4 whitespace-pre-wrap text-sm text-zinc-300">{{ ragAnswer }}</p>
       <p v-else class="mt-4 text-xs text-zinc-500">
-        PaperQA and RAG only answer after a lab PDF is indexed here (or synced from Drive on Health Sync). Empty index is not a crash.
+        PaperQA and RAG only answer after a lab PDF is indexed here (or synced from Drive). Empty index is not a crash.
       </p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UButton size="xs" variant="outline" to="/connectors">Connect Drive</UButton>
+        <UButton size="xs" variant="ghost" to="/health-sync">Health Sync</UButton>
+        <UButton size="xs" variant="ghost" to="/settings?tab=research">Europe PMC / PaperQA</UButton>
+      </div>
+    </UCard>
+
+    <UCard>
+      <template #header><div class="font-medium">Google Drive lab PDFs</div></template>
+      <p class="text-sm text-zinc-400">
+        Android Chrome can OAuth to Drive, then sync PDFs into the same RAG index PaperQA uses. Upload a file here if you already have it on the phone.
+      </p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UButton size="sm" variant="outline" to="/connectors">Open Connectors → Drive</UButton>
+        <UButton size="sm" variant="ghost" to="/health-sync">Health Sync redirect URI</UButton>
+      </div>
     </UCard>
 
     <UCard>

@@ -90,7 +90,7 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       'You are the Uberm3nch agent kernel. Follow policy and never bypass approval gates.',
       'When a registered tool would materially help (Garmin status, PDF inspect, exercise catalog, watchlist, Europe PMC, PaperQA, research.status), emit a JSON object with a toolCalls array BEFORE answering. Do not claim a tool ran unless its result is in observations.',
       'Each tool call must contain id, name and args. Never invent approval tokens. Approval-gated tools (mcp.stdio:*, research.paperqa.ask) pause the run.',
-      'Sci-Hub is disabled. Prefer research.europepmc or mcp.stdio:paper-search for literature.',
+      'Sci-Hub is disabled. Prefer research.europepmc for literature. mcp.stdio:* (paper-search, LDR, Transcriptor, SuperMemory, Mem0) cannot run in Android Chrome — do not plan those tools unless a desktop Tauri sidecar is available.',
       task.chatOptions?.workflowId === 'stack' || task.kind === 'biohacking'
         ? 'When discussing supplements, protocols, or interventions, explain synergies, timing interactions, and conflicts between stacks. Separate evidence quality from personal N-of-1 data.'
         : '',

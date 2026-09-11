@@ -7,7 +7,7 @@ export const PAPER_QA_DRIVE_HREF = '/health-sync'
 export const PAPER_QA_CONNECTOR_OFF_MESSAGE =
   'PaperQA connector is off. Enable it in Settings → Research, then retry research.paperqa.ask.'
 export const PAPER_QA_EMPTY_INDEX_MESSAGE =
-  'No indexed lab PDFs matched this question. Index a lab PDF via Bloods or Drive first, then retry research.paperqa.ask.'
+  'No indexed lab PDFs matched this question. On this phone, index a lab PDF via Bloods or Drive first, then retry research.paperqa.ask.'
 
 export type PaperQaConnectorOffResult = {
   ok: false

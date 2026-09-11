@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { nativeMcpAgentHref, nativeMcpAgentQuery, parseNativeMcpAgentQuery } from './native-mcp-handoff'
+import { ANDROID_RESEARCH_HREF } from '../android-fallbacks'
 
 describe('native MCP Agent handoff', () => {
   it('builds a deep-link with the next server command', () => {
@@ -16,6 +17,8 @@ describe('native MCP Agent handoff', () => {
     expect(nativeMcpAgentHref(calls)).toContain('command=uvx')
     expect(nativeMcpAgentHref(calls)).toContain('paper-search-mcp')
     expect(nativeMcpAgentHref([])).toBe('/agent')
+    expect(nativeMcpAgentHref(calls, 'android-browser')).toBe(ANDROID_RESEARCH_HREF)
+    expect(nativeMcpAgentHref(calls, 'android-browser')).not.toContain('command=uvx')
   })
 
   it('parses Agent query params for preflight fields', () => {

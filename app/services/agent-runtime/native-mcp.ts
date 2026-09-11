@@ -1,4 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
+import { nativeMcpUnavailableMessage } from '../android-fallbacks'
+import { isAndroidProduct, isTauriRuntime, nativeMcpCanRunHere } from '~/utils/runtime-platform'
 
 export interface NativeMcpPreflight {
   transport: 'stdio'
@@ -14,12 +16,19 @@ export interface NativeMcpResult {
   timed_out: boolean
 }
 
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+function assertNativeMcpRuntime(kind: 'execution' | 'approval' | 'JSON-RPC' | 'sessions' = 'execution'): void {
+  if (isAndroidProduct() || !nativeMcpCanRunHere()) {
+    throw new Error(isAndroidProduct()
+      ? nativeMcpUnavailableMessage()
+      : `Native MCP ${kind} is available only in the Tauri runtime.`)
+  }
+  if (!isTauriRuntime()) {
+    throw new Error(`Native MCP ${kind} is available only in the Tauri runtime.`)
+  }
 }
 
 export async function nativeMcpPreflight(command: string, args: string[], timeoutMs?: number): Promise<NativeMcpPreflight> {
-  if (!isTauriRuntime()) throw new Error('Native MCP execution is available only in the Tauri runtime.')
+  assertNativeMcpRuntime('execution')
   return invoke<NativeMcpPreflight>('mcp_stdio_preflight', {
     request: { command, args, approval_token: '', timeout_ms: timeoutMs },
   })
@@ -33,7 +42,7 @@ export async function nativeMcpExecute(
   timeoutMs?: number,
   env?: Record<string, string>,
 ): Promise<NativeMcpResult> {
-  if (!isTauriRuntime()) throw new Error('Native MCP execution is available only in the Tauri runtime.')
+  assertNativeMcpRuntime('execution')
   if (!approvalToken.trim()) throw new Error('Native MCP execution requires an explicit approval token.')
   return invoke<NativeMcpResult>('mcp_stdio_execute', {
     request: { command, args, approval_token: approvalToken, timeout_ms: timeoutMs, env },
@@ -42,7 +51,7 @@ export async function nativeMcpExecute(
 }
 
 export async function issueNativeMcpApproval(command: string, args: string[]) {
-  if (!isTauriRuntime()) throw new Error('Native MCP approval is available only in the Tauri runtime.')
+  assertNativeMcpRuntime('approval')
   return invoke<{ token: string; expires_in_ms: number }>('mcp_issue_approval', {
     request: { command, args },
   })
@@ -56,7 +65,7 @@ export async function nativeMcpJsonRpc(
   params: unknown,
   options?: { timeoutMs?: number; env?: Record<string, string>; withInitialize?: boolean },
 ): Promise<unknown> {
-  if (!isTauriRuntime()) throw new Error('Native MCP JSON-RPC is available only in the Tauri runtime.')
+  assertNativeMcpRuntime('JSON-RPC')
   if (!approvalToken.trim()) throw new Error('Native MCP JSON-RPC requires an explicit approval token.')
   return invoke<unknown>('mcp_stdio_jsonrpc', {
     request: {
@@ -93,7 +102,7 @@ export async function nativeMcpSessionStart(
   approvalToken: string,
   options?: { timeoutMs?: number; env?: Record<string, string> },
 ): Promise<NativeMcpSessionStartResult> {
-  if (!isTauriRuntime()) throw new Error('Native MCP sessions are available only in the Tauri runtime.')
+  assertNativeMcpRuntime('sessions')
   if (!approvalToken.trim()) throw new Error('Native MCP session start requires an explicit approval token.')
   return invoke<NativeMcpSessionStartResult>('mcp_stdio_session_start', {
     request: {
@@ -112,7 +121,7 @@ export async function nativeMcpSessionCall(
   params: unknown,
   timeoutMs?: number,
 ): Promise<unknown> {
-  if (!isTauriRuntime()) throw new Error('Native MCP sessions are available only in the Tauri runtime.')
+  assertNativeMcpRuntime('sessions')
   return invoke<unknown>('mcp_stdio_session_call', {
     request: {
       session_id: sessionId,
@@ -124,13 +133,13 @@ export async function nativeMcpSessionCall(
 }
 
 export async function nativeMcpSessionClose(sessionId: string): Promise<boolean> {
-  if (!isTauriRuntime()) throw new Error('Native MCP sessions are available only in the Tauri runtime.')
+  assertNativeMcpRuntime('sessions')
   return invoke<boolean>('mcp_stdio_session_close', {
     request: { session_id: sessionId },
   })
 }
 
 export async function nativeMcpSessionList(): Promise<NativeMcpSessionStatus[]> {
-  if (!isTauriRuntime()) throw new Error('Native MCP sessions are available only in the Tauri runtime.')
+  assertNativeMcpRuntime('sessions')
   return invoke<NativeMcpSessionStatus[]>('mcp_stdio_session_list')
 }

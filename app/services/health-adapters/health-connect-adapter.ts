@@ -1,6 +1,7 @@
 import type { ExternalHealthSample } from '../health-data-adapters'
 import type { HealthProviderAdapter } from '../health-provider-lifecycle'
 import { isAndroidBrowser, isTauriAndroid } from '../../utils/runtime-platform'
+import { HEALTH_CONNECT_BROWSER_MESSAGE } from '../android-fallbacks'
 import {
   healthConnectGetPermissionStatus,
   healthConnectIsNativeAvailable,
@@ -26,7 +27,7 @@ export class HealthConnectAdapter implements HealthProviderAdapter {
   async connect(): Promise<void> {
     this.mode = await detectHealthConnectRuntimeMode()
     if (this.mode === 'browser-blocked') {
-      throw new Error('Health Connect cannot run in Android Chrome/PWA. Install the Ubermench Android app (Tauri build).')
+      throw new Error(HEALTH_CONNECT_BROWSER_MESSAGE)
     }
     if (this.mode !== 'native') {
       throw new Error('Health Connect is not available on this device.')

@@ -56,24 +56,45 @@
     <UCard>
       <template #header><div class="font-medium">Native MCP approval</div></template>
       <div class="space-y-3">
-        <p class="text-sm text-zinc-500">Preflight is validated first. Native execution still requires this explicit approval action; the agent cannot mint the token itself. Multiple native servers in one pause are approved one command at a time. Chat/Overview queue native MCP here via a deep-link that prefills the next server command.</p>
+        <p v-if="canRunNativeMcp" class="text-sm text-zinc-500">Preflight is validated first. Native execution still requires this explicit approval action; the agent cannot mint the token itself. Multiple native servers in one pause are approved one command at a time.</p>
+        <p v-else class="text-sm text-zinc-500">
+          {{ androidPhone
+            ? 'uvx / Docker native MCP cannot run on this Android phone. Use the catalog tools below (Europe PMC, PaperQA, Garmin, PDF) instead of a preflight token.'
+            : 'Native MCP needs a desktop Tauri sidecar. This browser cannot run uvx or Docker, and cannot mint a preflight token.' }}
+        </p>
         <UAlert
-          v-if="!isTauriRuntime()"
+          v-if="androidPhone"
           class="mt-3"
-          title="Desktop app required"
-          description="This browser preview cannot run uvx or Docker. Open the Tauri desktop app, then Approve native MCP. Use Check sidecar on Settings → Research/Memory — sidecars are never auto-started."
+          title="Android — use tools that work on this phone"
+          :description="androidNativeAlert"
           color="warning"
           variant="subtle"
         />
-        <div class="grid gap-3 md:grid-cols-2">
-          <input v-model="nativeCommand" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700" placeholder="node" />
-          <input v-model="nativeArgs" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700" placeholder="server.js --stdio" />
+        <UAlert
+          v-else-if="!canRunNativeMcp"
+          class="mt-3"
+          title="Desktop sidecar required"
+          description="This browser cannot run uvx or Docker. On a desktop Tauri install, Approve native MCP here. On Android, use Europe PMC / PaperQA / Bloods / Garmin JSON instead — sidecars are never auto-started."
+          color="warning"
+          variant="subtle"
+        />
+        <div v-if="androidPhone" class="flex flex-wrap gap-2">
+          <UButton size="sm" variant="outline" to="/settings?tab=research">Europe PMC / PaperQA</UButton>
+          <UButton size="sm" variant="outline" to="/longevity/bloods">Bloods PDF</UButton>
+          <UButton size="sm" variant="outline" to="/connectors">Drive lab PDFs</UButton>
+          <UButton size="sm" variant="outline" to="/health-sync">Garmin JSON</UButton>
         </div>
-        <div v-if="nextNativeLabel" class="text-xs text-zinc-500">{{ nextNativeLabel }}</div>
-        <div class="flex flex-wrap items-center gap-3">
-          <UButton :loading="native.state.value === 'preflight'" :disabled="!nativeCommand.trim()" @click="approveNative">Approve native MCP action</UButton>
-          <span v-if="native.state.value === 'approved'" class="text-xs text-zinc-500">Approved for {{ native.expiresInMs.value }} ms</span>
-        </div>
+        <template v-else>
+          <div class="grid gap-3 md:grid-cols-2">
+            <input v-model="nativeCommand" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700" placeholder="node" />
+            <input v-model="nativeArgs" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700" placeholder="server.js --stdio" />
+          </div>
+          <div v-if="nextNativeLabel" class="text-xs text-zinc-500">{{ nextNativeLabel }}</div>
+          <div class="flex flex-wrap items-center gap-3">
+            <UButton :loading="native.state.value === 'preflight'" :disabled="!nativeCommand.trim() || !canRunNativeMcp" @click="approveNative">Approve native MCP action</UButton>
+            <span v-if="native.state.value === 'approved'" class="text-xs text-zinc-500">Approved for {{ native.expiresInMs.value }} ms</span>
+          </div>
+        </template>
         <div v-if="native.error.value" class="rounded-md border border-red-300 p-3 text-sm text-red-700">{{ native.error.value }}</div>
       </div>
     </UCard>
@@ -183,10 +204,10 @@ import type { AgentTaskKind } from '~/services/agent-superstack/types'
 import type { AgentAuditEvent, AgentRun, AgentToolCall } from '~/services/agent-runtime/types'
 import { exampleArgsForTool } from '~/services/agent-runtime/invoke-tool'
 import { formatNextNativePreflightLabel, resolveNativeMcpPreflightRequest } from '~/services/agent-runtime/mcp-server-tools'
-import { parseNativeMcpAgentQuery } from '~/services/agent-runtime/native-mcp-handoff'
+import { parseNativeMcpAgentQuery, NATIVE_MCP_ANDROID_MESSAGE } from '~/services/agent-runtime/native-mcp-handoff'
 import { formatAgentRunReply, observationForToolCall } from '~/services/agent-runtime/run-reply'
 import { isPluginAgentToolName, isResearchAgentToolName, listAgentToolCatalog } from '~/services/agent-runtime/tool-catalog'
-import { isTauriRuntime } from '~/utils/runtime-platform'
+import { isAndroidUserAgent, nativeMcpCanRunHere } from '~/utils/runtime-platform'
 const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools, approvalNotice, queuedApprovalCount } = usePendingAgentApprovals()
 const native = useNativeMcpApproval()
 const route = useRoute()
@@ -209,6 +230,9 @@ const tryToolArgs = ref(JSON.stringify(exampleArgsForTool(tryToolName.value), nu
 const tryToolResult = ref('')
 const tryToolError = ref('')
 const tryToolBusy = ref(false)
+const androidPhone = computed(() => isAndroidUserAgent())
+const canRunNativeMcp = computed(() => nativeMcpCanRunHere())
+const androidNativeAlert = NATIVE_MCP_ANDROID_MESSAGE
 
 watch(tryToolName, (name) => {
   tryToolArgs.value = JSON.stringify(exampleArgsForTool(name), null, 2)
@@ -238,11 +262,11 @@ const waitingApprovalHeader = computed(() => (
 const approvePendingLabel = computed(() => {
   const nextNative = nativePreflightTarget.value?.name
   if (pendingCatalogTools.value.length && pendingNativeTools.value.length) {
-    return native.token.value && isTauriRuntime() && nextNative
+    return native.token.value && canRunNativeMcp.value && nextNative
       ? `Approve catalog + ${nextNative}`
       : 'Approve catalog tools'
   }
-  if (pendingNativeTools.value.length && nextNative && native.token.value && isTauriRuntime()) {
+  if (pendingNativeTools.value.length && nextNative && native.token.value && canRunNativeMcp.value) {
     return `Approve ${nextNative}`
   }
   return 'Approve pending tools'
@@ -327,7 +351,7 @@ async function approvePending() {
     nativeArgs.value = target.args.join(' ')
   }
   let nativeToken = native.token.value ?? ''
-  if (needsNative && !nativeToken) {
+  if (needsNative && !nativeToken && canRunNativeMcp.value) {
     try {
       await native.request(command, args)
       nativeToken = native.token.value ?? ''
@@ -346,7 +370,9 @@ async function approvePending() {
     } else if (needsNative && !pendingCatalogTools.value.length) {
       runtime.error.value = native.error.value
         ?? nextNativeLabel.value
-        ?? `Native MCP still needs a Tauri preflight token for ${pendingNativeTools.value.map((call) => call.name).join(', ')}.`
+        ?? (androidPhone.value
+          ? NATIVE_MCP_ANDROID_MESSAGE
+          : `Native MCP still needs a desktop Tauri preflight token for ${pendingNativeTools.value.map((call) => call.name).join(', ')}.`)
       return
     } else {
       await runtime.approvePending(`user-approved-${Date.now()}`, { includeNative: false })

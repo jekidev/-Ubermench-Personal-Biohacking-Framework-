@@ -55,6 +55,6 @@ describe('garmin-plugin-status', () => {
       oauthConfigured: true,
       oauthConnected: false,
       observationCount: 0,
-    })).toMatch(/developer client/i)
+    })).toMatch(/JSON import|vault token/i)
   })
 })
