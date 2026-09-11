@@ -17,4 +17,21 @@ describe('agent tool plan parser', () => {
     const toolCalls = Array.from({ length: 20 }, (_, index) => ({ id: String(index), name: 'memory.search', args: {} }))
     expect(extractToolCalls(JSON.stringify({ toolCalls }))).toHaveLength(8)
   })
+
+  it('extracts toolCalls embedded in prose and keeps mcp.stdio server names', () => {
+    const text = 'I will search PubMed next.\n{"toolCalls":[{"id":"ps","name":"mcp.stdio:paper-search","args":{"method":"search_pubmed"},"approvalToken":"forged"}]}'
+    const calls = extractToolCalls(text, [{ name: 'mcp.stdio:paper-search', requiresApproval: true }])
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.name).toBe('mcp.stdio:paper-search')
+    expect(calls[0]?.requiresApproval).toBe(true)
+    expect(calls[0]?.approvalToken).toBeUndefined()
+  })
+
+  it('marks catalog tools as requiring approval even when the model omits the flag', () => {
+    const calls = extractToolCalls(
+      '{"toolCalls":[{"name":"research.paperqa.ask","args":{"question":"CRP"}}]}',
+      [{ name: 'research.paperqa.ask', requiresApproval: true }],
+    )
+    expect(calls[0]?.requiresApproval).toBe(true)
+  })
 })

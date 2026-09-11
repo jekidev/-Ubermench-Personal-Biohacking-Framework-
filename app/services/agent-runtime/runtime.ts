@@ -8,8 +8,8 @@ import { recordAudit } from './audit'
 import { withRecovery } from './recovery'
 import { SkillEvolutionEngine } from './skill-evolution'
 import { executeApprovedToolCalls } from './tool-loop'
-import { extractToolCalls } from './tool-plan'
-import { formatAgentToolCatalog } from './tool-catalog'
+import { extractToolCalls, toolNameRequiresNativeApproval } from './tool-plan'
+import { formatAgentToolCatalog, listAgentToolCatalog } from './tool-catalog'
 import { auditTaskSecurity } from './security-audit'
 import { isMcpStdioToolName } from './mcp-server-tools'
 import { listAllChatRules, listEnabledChatRules } from '~/services/chat-session/rule-registry'
@@ -22,9 +22,11 @@ function auditEvent(runId: string, type: Parameters<typeof recordAudit>[1]['type
 }
 
 function splitToolCalls(calls: AgentToolCall[]): { executable: AgentToolCall[]; awaitingApproval: AgentToolCall[] } {
-  const approvalRequired = (call: AgentToolCall) => call.requiresApproval === true || isMcpStdioToolName(call.name)
-  const executable = calls.filter((call) => !approvalRequired(call) || Boolean(call.approvalToken?.trim()))
-  const awaitingApproval = calls.filter((call) => approvalRequired(call) && !call.approvalToken?.trim())
+  const approvalRequired = (call: AgentToolCall) =>
+    (call.requiresApproval === true || toolNameRequiresNativeApproval(call.name) || isMcpStdioToolName(call.name))
+    && !call.approvalToken?.trim()
+  const executable = calls.filter((call) => !approvalRequired(call))
+  const awaitingApproval = calls.filter((call) => approvalRequired(call))
   return { executable, awaitingApproval }
 }
 
@@ -119,8 +121,8 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
     run.activeModel = response.model
     run.fallbackUsed = response.fallbackUsed
     run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() } as AgentObservation)
-    const calls = extractToolCalls(response.text)
-    for (const call of calls) await recordAudit(store, auditEvent(id, 'tool.requested', `Tool requested: ${call.name}`, { toolCallId: call.id, requiresApproval: call.requiresApproval === true || call.name === 'mcp.stdio' }))
+    const calls = extractToolCalls(response.text, listAgentToolCatalog())
+    for (const call of calls) await recordAudit(store, auditEvent(id, 'tool.requested', `Tool requested: ${call.name}`, { toolCallId: call.id, requiresApproval: call.requiresApproval === true || toolNameRequiresNativeApproval(call.name) }))
 
     const { executable, awaitingApproval } = splitToolCalls(calls)
     if (awaitingApproval.length) {
@@ -197,7 +199,7 @@ export async function continueAgentWithTools(task: AgentTask, run: AgentRun, cal
     },
   )
   run.observations.push({ kind: 'model', text: response.text, createdAt: new Date().toISOString() })
-  const pending = extractToolCalls(response.text).some((call) => (call.requiresApproval || call.name === 'mcp.stdio') && !call.approvalToken)
+  const pending = extractToolCalls(response.text, listAgentToolCatalog()).some((call) => call.requiresApproval && !call.approvalToken)
   run.status = pending ? 'waiting-approval' : 'completed'
   run.completedAt = pending ? undefined : new Date().toISOString()
   await recordAudit(store, auditEvent(run.id, 'model.completed', 'Continuation model execution completed', { provider: response.provider, model: response.model, pendingApproval: pending }))

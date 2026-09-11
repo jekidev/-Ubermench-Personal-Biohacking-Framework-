@@ -43,6 +43,18 @@ describe('agent superstack', () => {
     expect(matched.find((skill) => skill.id === 'longevity-plugins')?.tools).toContain('plugins.garmin.status')
   })
 
+  it('uses registered catalog tool names for paper-search and LDR skills', () => {
+    const skills = createDefaultSkillRegistry()
+    const literature = skills.match('search pubmed and europe pmc literature')
+    const ldr = skills.match('run local deep research for a cited report')
+    expect(literature.find((skill) => skill.id === 'scientific-literature-search')?.tools).toEqual(expect.arrayContaining([
+      'research.europepmc',
+      'mcp.stdio:paper-search',
+    ]))
+    expect(literature.find((skill) => skill.id === 'scientific-literature-search')?.tools).not.toContain('paper-search')
+    expect(ldr.find((skill) => skill.id === 'local-deep-research')?.tools).toContain('mcp.stdio:local-deep-research')
+  })
+
   it('builds an execution context', () => {
     const kernel = new AgentKernel()
     const context = kernel.prepare({ id: '1', kind: 'biohacking', prompt: 'research biomarkers', requiredCapabilities: ['research'] })

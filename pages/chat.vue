@@ -136,6 +136,7 @@
 import { indexYouTubeUrlsToRag } from '../plugins/connectors/youtube-rag-sync'
 import { syncDrivePdfsToRag } from '../plugins/connectors/drive-rag-sync'
 import { runYouTubeScheduler } from '../plugins/connectors/youtube-scheduler'
+import { formatAgentRunReply } from '~/services/agent-runtime/run-reply'
 
 const chat = useChatSession()
 const runtime = useAgentRuntime()
@@ -195,7 +196,7 @@ async function submit() {
     requiredCapabilities: task.kind === 'research' ? ['research'] : ['reasoning'],
     chatOptions: task.chatOptions,
   })
-  const latest = run.observations.at(-1)?.text ?? 'No response.'
+  const latest = formatAgentRunReply(run)
   const modelLabel = llm.settings.value.showModel && run.activeProvider && run.activeModel
     ? `${run.activeProvider}/${run.activeModel}${run.fallbackUsed ? ' (fallback)' : ''}`
     : undefined

@@ -73,8 +73,47 @@
       <template #header><div class="font-medium">Latest run</div></template>
       <div class="space-y-4">
         <div class="text-xs text-zinc-500">{{ runtime.activeRun.value.task.kind }} · {{ runtime.activeRun.value.status }} · {{ runtime.activeRun.value.selectedModel?.provider ?? 'no model' }} · retries {{ runtime.activeRun.value.retryCount ?? 0 }}</div>
-        <div v-for="(item, index) in runtime.activeRun.value.observations" :key="`${item.createdAt}-${index}`" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">{{ item.text }}</div>
+        <div v-if="runtime.activeRun.value.toolCalls.length" class="space-y-2">
+          <div class="text-sm font-medium">Tool calls</div>
+          <div
+            v-for="call in runtime.activeRun.value.toolCalls"
+            :key="call.id"
+            class="rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-700"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <code>{{ call.name }}</code>
+              <span class="text-xs text-zinc-500">{{ toolCallStatus(runtime.activeRun.value, call) }}</span>
+            </div>
+            <pre v-if="observationForToolCall(runtime.activeRun.value, call.id)" class="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-xs text-zinc-500">{{ observationForToolCall(runtime.activeRun.value, call.id)?.text }}</pre>
+          </div>
+          <UButton
+            v-if="pendingTools.length"
+            size="sm"
+            :loading="runtime.status.value === 'running'"
+            @click="approvePending"
+          >
+            Approve pending tools
+          </UButton>
+        </div>
+        <div v-for="(item, index) in runtime.activeRun.value.observations" :key="`${item.createdAt}-${index}`" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+          <div class="mb-1 text-xs uppercase tracking-wide text-zinc-500">{{ item.kind }}</div>
+          {{ item.text }}
+        </div>
       </div>
+    </UCard>
+
+    <UCard>
+      <template #header><div class="font-medium">Try a plugin or research tool</div></template>
+      <p class="text-sm text-zinc-500">Runs the registered tool directly (no model required). Approval-gated tools stay off this list.</p>
+      <div class="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+        <select v-model="tryToolName" class="rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700">
+          <option v-for="tool in tryableTools" :key="tool.name" :value="tool.name">{{ tool.name }}</option>
+        </select>
+        <UButton :loading="tryToolBusy" :disabled="!tryToolName" @click="runTryTool">Run tool</UButton>
+      </div>
+      <textarea v-model="tryToolArgs" class="mt-3 min-h-24 w-full rounded-md border border-zinc-200 bg-transparent p-3 font-mono text-xs dark:border-zinc-700" />
+      <div v-if="tryToolError" class="mt-3 rounded-md border border-red-300 p-3 text-sm text-red-700">{{ tryToolError }}</div>
+      <pre v-if="tryToolResult" class="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-md border border-zinc-200 p-3 text-xs dark:border-zinc-700">{{ tryToolResult }}</pre>
     </UCard>
 
     <UCard>
@@ -116,8 +155,11 @@
 
 <script setup lang="ts">
 import type { AgentTaskKind } from '~/services/agent-superstack/types'
-import type { AgentAuditEvent, AgentRun } from '~/services/agent-runtime/types'
-import { isPluginAgentToolName, listAgentToolCatalog } from '~/services/agent-runtime/tool-catalog'
+import type { AgentAuditEvent, AgentRun, AgentToolCall } from '~/services/agent-runtime/types'
+import { exampleArgsForTool } from '~/services/agent-runtime/invoke-tool'
+import { observationForToolCall, pendingAgentToolCalls } from '~/services/agent-runtime/run-reply'
+import { isPluginAgentToolName, isResearchAgentToolName, listAgentToolCatalog } from '~/services/agent-runtime/tool-catalog'
+import { toolNameRequiresNativeApproval } from '~/services/agent-runtime/tool-plan'
 const runtime = useAgentRuntime()
 const native = useNativeMcpApproval()
 const prompt = ref('')
@@ -131,6 +173,27 @@ const nativeCommand = ref('node')
 const nativeArgs = ref('server.js')
 const agentTools = listAgentToolCatalog()
 const pluginAgentTools = agentTools.filter((tool) => isPluginAgentToolName(tool.name))
+const tryableTools = agentTools.filter((tool) =>
+  !tool.requiresApproval && (isPluginAgentToolName(tool.name) || isResearchAgentToolName(tool.name)),
+)
+const tryToolName = ref(tryableTools[0]?.name ?? 'plugins.status')
+const tryToolArgs = ref(JSON.stringify(exampleArgsForTool(tryToolName.value), null, 2))
+const tryToolResult = ref('')
+const tryToolError = ref('')
+const tryToolBusy = ref(false)
+const pendingTools = computed(() => runtime.activeRun.value ? pendingAgentToolCalls(runtime.activeRun.value) : [])
+
+watch(tryToolName, (name) => {
+  tryToolArgs.value = JSON.stringify(exampleArgsForTool(name), null, 2)
+  tryToolResult.value = ''
+  tryToolError.value = ''
+})
+
+function toolCallStatus(run: AgentRun, call: AgentToolCall) {
+  if (observationForToolCall(run, call.id)) return 'completed'
+  if (call.requiresApproval && !call.approvalToken) return 'waiting-approval'
+  return run.status
+}
 
 async function refreshAudit() {
   auditLoading.value = true
@@ -150,7 +213,47 @@ async function approveNative() {
 }
 
 async function resume(run: AgentRun) {
-  await runtime.resume(run.task)
+  await runtime.resume(run.task, native.token.value ?? undefined)
+  await Promise.all([refreshAudit(), refreshRecoverable()])
+}
+
+function parseTryToolArgs(): Record<string, unknown> {
+  const trimmed = tryToolArgs.value.trim()
+  if (!trimmed) return {}
+  const parsed = JSON.parse(trimmed) as unknown
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Tool args must be a JSON object.')
+  }
+  return parsed as Record<string, unknown>
+}
+
+async function runTryTool() {
+  tryToolBusy.value = true
+  tryToolError.value = ''
+  tryToolResult.value = ''
+  try {
+    const result = await runtime.invokeTool(tryToolName.value, parseTryToolArgs())
+    tryToolResult.value = typeof result.value === 'string' ? result.value : JSON.stringify(result.value, null, 2)
+  } catch (cause) {
+    tryToolError.value = cause instanceof Error ? cause.message : String(cause)
+  } finally {
+    tryToolBusy.value = false
+  }
+}
+
+async function approvePending() {
+  const run = runtime.activeRun.value
+  if (!run) return
+  const pending = pendingAgentToolCalls(run)
+  if (!pending.length) return
+  const needsNative = pending.some((call) => toolNameRequiresNativeApproval(call.name))
+  let token = native.token.value ?? ''
+  if (needsNative && !token) {
+    await native.request(nativeCommand.value, nativeArgs.value.split(/\s+/).filter(Boolean))
+    token = native.token.value ?? ''
+  }
+  if (!token) token = `user-approved-${Date.now()}`
+  await runtime.continueRun(run.task, run, pending.map((call) => ({ ...call, approvalToken: token })))
   await Promise.all([refreshAudit(), refreshRecoverable()])
 }
 

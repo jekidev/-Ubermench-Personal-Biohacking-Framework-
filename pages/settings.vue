@@ -429,6 +429,7 @@
           <li><code>research.paperqa.plan</code> / <code>research.paperqa.ask</code></li>
           <li><code>mcp.stdio:paper-search</code> / <code>mcp.stdio:local-deep-research</code> / <code>mcp.stdio:transcriptor</code></li>
         </ul>
+        <UButton class="mt-3" size="sm" variant="outline" to="/agent">Try from Agent Control Center</UButton>
       </UCard>
     </template>
 
@@ -637,6 +638,7 @@
           <li><code>plugins.garmin.status</code> — OAuth + persisted Garmin samples</li>
           <li><code>plugins.pdf.inspect</code> — last/sample/base64 PDF classification (no file bytes)</li>
         </ul>
+        <UButton class="mt-3" size="sm" variant="outline" to="/agent">Try from Agent Control Center</UButton>
       </UCard>
     </template>
   </div>

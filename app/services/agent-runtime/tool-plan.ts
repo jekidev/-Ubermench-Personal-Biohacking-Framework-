@@ -1,30 +1,110 @@
 import type { AgentToolCall } from './types'
 
 const MAX_TOOL_CALLS = 8
-const TOOL_NAME = /^[a-z][a-z0-9._-]{1,63}$/
+const TOOL_NAME = /^[a-z][a-z0-9._:-]{1,80}$/
 
-function parseCandidate(text: string): unknown {
-  const trimmed = text.trim()
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
-  if (fenced?.[1]) {
-    try { return JSON.parse(fenced[1]) }
-    catch { return undefined }
-  }
-  try { return JSON.parse(trimmed) }
+function tryParseJson(text: string): unknown {
+  try { return JSON.parse(text) }
   catch { return undefined }
 }
 
-export function extractToolCalls(text: string): AgentToolCall[] {
-  const candidate = parseCandidate(text) as { toolCalls?: unknown } | undefined
+function asToolEnvelope(value: unknown): { toolCalls?: unknown } | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  if (!Array.isArray((value as { toolCalls?: unknown }).toolCalls)) return undefined
+  return value as { toolCalls: unknown }
+}
+
+function extractBalancedObject(text: string, openIndex: number): string | undefined {
+  if (text[openIndex] !== '{') return undefined
+  let depth = 0
+  let inString = false
+  let escaped = false
+  for (let index = openIndex; index < text.length; index += 1) {
+    const char = text[index]
+    if (inString) {
+      if (escaped) {
+        escaped = false
+        continue
+      }
+      if (char === '\\') {
+        escaped = true
+        continue
+      }
+      if (char === '"') inString = false
+      continue
+    }
+    if (char === '"') {
+      inString = true
+      continue
+    }
+    if (char === '{') depth += 1
+    if (char === '}') {
+      depth -= 1
+      if (depth === 0) return text.slice(openIndex, index + 1)
+    }
+  }
+  return undefined
+}
+
+function parseCandidate(text: string): unknown {
+  const trimmed = text.trim()
+  const fences = [...trimmed.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/gi)]
+  for (const fence of fences) {
+    const envelope = asToolEnvelope(tryParseJson(fence[1] ?? ''))
+    if (envelope) return envelope
+  }
+
+  const direct = asToolEnvelope(tryParseJson(trimmed))
+  if (direct) return direct
+
+  const marker = /"toolCalls"\s*:/.exec(trimmed)
+  if (!marker) return undefined
+  const openIndex = trimmed.lastIndexOf('{', marker.index)
+  if (openIndex < 0) return undefined
+  return asToolEnvelope(tryParseJson(extractBalancedObject(trimmed, openIndex) ?? ''))
+}
+
+export type ToolApprovalLookup = Array<{ name: string; requiresApproval: boolean }>
+
+export function toolNameRequiresNativeApproval(name: string): boolean {
+  return name === 'mcp.stdio' || name.startsWith('mcp.stdio:')
+}
+
+export function applyCatalogApproval(
+  calls: AgentToolCall[],
+  catalog: ToolApprovalLookup = [],
+): AgentToolCall[] {
+  return calls.map((call) => {
+    const listed = catalog.find((tool) => tool.name === call.name)
+    return {
+      ...call,
+      requiresApproval: call.requiresApproval === true
+        || listed?.requiresApproval === true
+        || toolNameRequiresNativeApproval(call.name),
+      approvalToken: undefined,
+    }
+  })
+}
+
+export function extractToolCalls(text: string, catalog: ToolApprovalLookup = []): AgentToolCall[] {
+  const candidate = parseCandidate(text)
   if (!candidate || !Array.isArray(candidate.toolCalls)) return []
 
-  return candidate.toolCalls.slice(0, MAX_TOOL_CALLS).flatMap((raw, index) => {
+  const parsed = candidate.toolCalls.slice(0, MAX_TOOL_CALLS).flatMap((raw, index) => {
     if (!raw || typeof raw !== 'object') return []
     const value = raw as Record<string, unknown>
     const name = typeof value.name === 'string' ? value.name.trim() : ''
     if (!TOOL_NAME.test(name)) return []
-    const args = value.args && typeof value.args === 'object' && !Array.isArray(value.args) ? value.args as Record<string, unknown> : {}
+    const args = value.args && typeof value.args === 'object' && !Array.isArray(value.args)
+      ? value.args as Record<string, unknown>
+      : {}
     const id = typeof value.id === 'string' && value.id.trim() ? value.id : `tool_${index + 1}`
-    return [{ id, name, args, requiresApproval: value.requiresApproval === true, approvalToken: typeof value.approvalToken === 'string' ? value.approvalToken : undefined }]
+    return [{
+      id,
+      name,
+      args,
+      requiresApproval: value.requiresApproval === true,
+    }]
   })
+  return applyCatalogApproval(parsed, catalog)
 }

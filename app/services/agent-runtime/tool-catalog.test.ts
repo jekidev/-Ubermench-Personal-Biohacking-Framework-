@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatAgentToolCatalog,
+  getAgentToolCatalogEntry,
   isPluginAgentToolName,
+  isResearchAgentToolName,
   listAgentToolCatalog,
   toAgentToolCatalogEntry,
 } from './tool-catalog'
@@ -36,6 +38,9 @@ describe('agent tool catalog', () => {
     expect(catalog).toContain('plugins.garmin.status [low/auto]')
     expect(isPluginAgentToolName('plugins.pdf.inspect')).toBe(true)
     expect(isPluginAgentToolName('research.europepmc')).toBe(false)
+    expect(isResearchAgentToolName('research.europepmc')).toBe(true)
+    expect(isResearchAgentToolName('mcp.stdio:paper-search')).toBe(true)
+    expect(getAgentToolCatalogEntry('plugins.garmin.status')?.requiresApproval).toBe(false)
   })
 
   it('rejects blank tool names', () => {

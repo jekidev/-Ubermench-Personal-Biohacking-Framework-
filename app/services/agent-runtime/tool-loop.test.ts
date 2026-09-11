@@ -47,4 +47,12 @@ describe('agent tool loop', () => {
     expect(run.toolCalls).toHaveLength(1)
     expect(run.observations).toHaveLength(1)
   })
+
+  it('executes plugin Garmin schema and records the JSON observation', async () => {
+    const run = runFixture()
+    const result = await executeApprovedToolCalls(task, run, [{ id: 'g1', name: 'plugins.garmin.schema', args: {} }])
+    expect(result.executed).toBe(1)
+    expect(run.observations[0]?.kind).toBe('tool')
+    expect(run.observations[0]?.text).toContain('garmin')
+  })
 })

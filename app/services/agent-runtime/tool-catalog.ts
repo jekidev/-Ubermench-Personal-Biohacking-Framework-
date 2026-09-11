@@ -29,6 +29,20 @@ export function isPluginAgentToolName(name: string): boolean {
   return name.trim().startsWith('plugins.')
 }
 
+export function isResearchAgentToolName(name: string): boolean {
+  const trimmed = name.trim()
+  return trimmed.startsWith('research.') || trimmed === 'mcp.stdio:paper-search' || trimmed === 'mcp.stdio:local-deep-research' || trimmed === 'mcp.stdio:transcriptor'
+}
+
+export function getAgentToolCatalogEntry(
+  name: string,
+  tools: AgentToolCatalogEntry[] = listAgentToolCatalog(),
+): AgentToolCatalogEntry | undefined {
+  const trimmed = name.trim()
+  if (!trimmed) return undefined
+  return tools.find((tool) => tool.name === trimmed)
+}
+
 export function formatAgentToolCatalog(tools: AgentToolCatalogEntry[] = listAgentToolCatalog()): string {
   if (!tools.length) return 'Available tools: none'
   const lines = tools.map((tool) => {
