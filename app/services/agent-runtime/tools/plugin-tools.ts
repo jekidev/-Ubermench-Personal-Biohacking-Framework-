@@ -10,7 +10,7 @@ import {
 } from '../../../../plugins/plugin-registry'
 import { FEARPRIME_INTERVENTION_REGISTRY } from '../../../../plugins/fearprime/interventions/registry'
 import { REJECTED_BIOMETRIC_PROVIDERS } from '../../health-adapters/garmin-biometric-schema'
-import { loadGarminPluginStatus, withGarminStatusGuidance } from '../../garmin-plugin-status'
+import { loadGarminPluginStatus } from '../../garmin-plugin-status'
 import {
   decodePdfBase64,
   getLastPdfInspection,
@@ -57,7 +57,7 @@ export function createPluginTools(): AgentTool[] {
             rejectedBiometricProviders: REJECTED_BIOMETRIC_PROVIDERS,
           },
           connectors,
-          garmin: withGarminStatusGuidance(await loadGarminPluginStatus()),
+          garmin: await loadGarminPluginStatus(),
           lastPdfInspection: lastPdf
             ? {
                 filename: lastPdf.filename,
@@ -145,7 +145,7 @@ export function createPluginTools(): AgentTool[] {
       risk: 'low',
       requiresApproval: false,
       async execute() {
-        return withGarminStatusGuidance(await loadGarminPluginStatus())
+        return loadGarminPluginStatus()
       },
     },
     {
