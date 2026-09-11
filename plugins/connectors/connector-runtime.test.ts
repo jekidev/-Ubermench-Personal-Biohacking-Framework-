@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { listConnectorStatuses } from './connector-runtime'
+import { getConnectorStatus, listConnectorStatuses } from './connector-runtime'
+import { setConnectorEnabled } from './connector-store'
 
 class MemoryStorage implements Storage {
   private store = new Map<string, string>()
@@ -21,5 +22,24 @@ describe('connector runtime', () => {
     expect(statuses.length).toBeGreaterThan(10)
     expect(statuses.find((item) => item.id === 'gmail')?.implementationStatus).toBe('live')
     expect(statuses.find((item) => item.id === 'google-calendar')?.implementationStatus).toBe('live')
+  })
+
+  it('treats PaperQA as a local contract without an MCP spawn target', async () => {
+    setConnectorEnabled('paper-qa', true)
+    const status = await getConnectorStatus('paper-qa')
+    expect(status.status).toBe('connected')
+    expect(status.implementationStatus).toBe('scaffold')
+  })
+
+  it('marks MCP research sidecars as configured when enabled without env keys', async () => {
+    setConnectorEnabled('paper-search', true)
+    const paperSearch = await getConnectorStatus('paper-search')
+    expect(paperSearch.status).toBe('missing-credentials')
+    expect(paperSearch.missing).toContain('PAPER_SEARCH_MCP_UNPAYWALL_EMAIL')
+
+    setConnectorEnabled('local-deep-research', true)
+    const localDeepResearch = await getConnectorStatus('local-deep-research')
+    expect(localDeepResearch.status).toBe('missing-credentials')
+    expect(localDeepResearch.missing).toContain('LDR_LLM_PROVIDER')
   })
 })
