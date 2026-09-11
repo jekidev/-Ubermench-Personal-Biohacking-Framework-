@@ -19,7 +19,7 @@ const EVENTS_KEY = 'fearprime:events'
 const MEMORY_KEY = 'fearprime:memoryTargets'
 
 function browserGet<T>(key: string, fallback: T): T {
-  if (!import.meta.client) return fallback
+  if (typeof localStorage === 'undefined') return fallback
   try {
     const value = localStorage.getItem(key)
     return value ? JSON.parse(value) as T : fallback
@@ -29,7 +29,7 @@ function browserGet<T>(key: string, fallback: T): T {
 }
 
 function browserSet<T>(key: string, value: T) {
-  if (import.meta.client) localStorage.setItem(key, JSON.stringify(value))
+  if (typeof localStorage !== 'undefined') localStorage.setItem(key, JSON.stringify(value))
 }
 
 export function useFearprimeStore() {
