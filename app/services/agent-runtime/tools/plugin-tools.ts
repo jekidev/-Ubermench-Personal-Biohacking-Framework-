@@ -37,6 +37,7 @@ export function createPluginTools(): AgentTool[] {
           })),
         )
         const catalog = loadExerciseCatalog()
+        const lastPdf = getLastPdfInspection()
         return {
           domainPlugins: listDomainPlugins(),
           starredIntegrations: listStarredIntegrations().map((integration) => ({
@@ -56,6 +57,14 @@ export function createPluginTools(): AgentTool[] {
             rejectedBiometricProviders: REJECTED_BIOMETRIC_PROVIDERS,
           },
           connectors,
+          garmin: await loadGarminPluginStatus(),
+          lastPdfInspection: lastPdf
+            ? {
+                filename: lastPdf.filename,
+                inspectedAt: lastPdf.inspectedAt,
+                inspection: lastPdf.inspection,
+              }
+            : null,
         }
       },
     },

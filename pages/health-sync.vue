@@ -222,7 +222,7 @@ async function saveGarminToken() {
     await storeGarminAccessToken(garminToken.value)
     garminToken.value = ''
     tokenStatus.value = 'Garmin access token stored in the secret vault.'
-    await refreshGarminPlugins()
+    await garminOAuth.refreshStatus()
   } catch (error) {
     tokenStatus.value = error instanceof Error ? error.message : String(error)
   } finally {

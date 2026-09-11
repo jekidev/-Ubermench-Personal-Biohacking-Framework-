@@ -512,6 +512,14 @@
                 >
                   Connectors
                 </UButton>
+                <UButton
+                  v-else-if="integration.settingsTab === 'plugins'"
+                  size="xs"
+                  variant="ghost"
+                  to="/settings?tab=plugins#pdf-inspector"
+                >
+                  Open on this tab
+                </UButton>
               </div>
             </div>
             <label
@@ -595,24 +603,27 @@
           <UButton class="mt-3" size="sm" variant="outline" to="/health-sync">Open Health Sync</UButton>
         </UCard>
 
-        <UCard>
+        <UCard id="pdf-inspector">
           <template #header><div class="font-medium">PDF inspector</div></template>
-          <p class="text-xs text-zinc-500">Classify a lab PDF as text, scanned, or mixed. Lab import uses this when the connector is enabled (on by default).</p>
+          <p class="text-xs text-zinc-500">Classify a lab PDF as text, scanned, or mixed. Lab import uses this when the connector is enabled (on by default). Last inspection is shared with Bloods and <code>plugins.pdf.inspect</code>.</p>
           <div class="mt-3 flex flex-wrap gap-2">
             <UButton size="sm" variant="outline" @click="plugins.inspectSamplePdf()">Inspect sample PDF</UButton>
             <label class="inline-flex cursor-pointer items-center gap-2 text-sm">
               <input type="file" accept="application/pdf" class="text-xs" @change="onPdfFileSelected">
               Upload PDF
             </label>
+            <UButton size="sm" variant="ghost" to="/longevity/bloods">Open Bloods import</UButton>
           </div>
           <div v-if="plugins.pdfInspection" class="mt-4 rounded border border-zinc-800 p-3 text-sm">
             <div class="font-medium capitalize">{{ plugins.pdfInspection.kind }}</div>
             <div v-if="plugins.pdfInspectionFilename" class="text-xs text-zinc-400">{{ plugins.pdfInspectionFilename }}</div>
+            <div v-if="plugins.pdfInspectedAt" class="text-xs text-zinc-500">Inspected {{ formatDateTime(plugins.pdfInspectedAt) }}</div>
             <div class="text-xs text-zinc-500">
               text streams {{ plugins.pdfInspection.textStreamCount }} · images {{ plugins.pdfInspection.imageXObjectCount }}
               · OCR {{ plugins.pdfInspection.recommendOcr ? 'recommended' : 'not needed' }}
             </div>
           </div>
+          <p v-else class="mt-4 text-sm text-zinc-500">No cached inspection yet. Import a lab PDF on Bloods or inspect a file here.</p>
         </UCard>
       </div>
 
@@ -683,6 +694,10 @@ const githubStatusColor = computed(() => {
 watch(settings, (value) => {
   catalogStatus.value = getOpenRouterCatalogStatus(value)
 }, { deep: true })
+
+watch(activeTab, (tab) => {
+  if (tab === 'plugins') plugins.applyCachedPdfInspection()
+})
 
 onMounted(async () => {
   await github.loadCredentials()
@@ -763,6 +778,10 @@ async function onGitHubConnectorToggle(enabled: boolean) {
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString()
+}
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString()
 }
 
 function onPdfFileSelected(event: Event) {

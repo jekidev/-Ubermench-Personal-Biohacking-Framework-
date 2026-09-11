@@ -78,6 +78,30 @@
     </UCard>
 
     <UCard>
+      <template #header>
+        <div class="flex items-center justify-between gap-3">
+          <div class="font-medium">Available tools</div>
+          <span class="text-xs text-zinc-500">{{ agentTools.length }} registered</span>
+        </div>
+      </template>
+      <p class="text-sm text-zinc-500">The agent receives this catalog in its system prompt. Plugin tools include Garmin status and PDF inspect.</p>
+      <ul class="mt-3 space-y-1 font-mono text-xs text-zinc-400">
+        <li v-for="tool in pluginAgentTools" :key="tool.name">
+          <code>{{ tool.name }}</code> — {{ tool.description }}
+        </li>
+      </ul>
+      <details class="mt-3">
+        <summary class="cursor-pointer text-sm text-zinc-400">All tools</summary>
+        <ul class="mt-2 max-h-64 space-y-1 overflow-y-auto font-mono text-xs text-zinc-500">
+          <li v-for="tool in agentTools" :key="tool.name">
+            <code>{{ tool.name }}</code>
+            <span class="text-zinc-600"> [{{ tool.risk }}{{ tool.requiresApproval ? '/approval' : '' }}]</span>
+          </li>
+        </ul>
+      </details>
+    </UCard>
+
+    <UCard>
       <template #header><div class="font-medium">Audit trail</div></template>
       <div v-if="auditEvents.length" class="space-y-2">
         <div v-for="event in auditEvents.slice(0, 20)" :key="event.id" class="rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-700">
@@ -93,6 +117,7 @@
 <script setup lang="ts">
 import type { AgentTaskKind } from '~/services/agent-superstack/types'
 import type { AgentAuditEvent, AgentRun } from '~/services/agent-runtime/types'
+import { isPluginAgentToolName, listAgentToolCatalog } from '~/services/agent-runtime/tool-catalog'
 const runtime = useAgentRuntime()
 const native = useNativeMcpApproval()
 const prompt = ref('')
@@ -104,6 +129,8 @@ const auditLoading = ref(false)
 const runsLoading = ref(false)
 const nativeCommand = ref('node')
 const nativeArgs = ref('server.js')
+const agentTools = listAgentToolCatalog()
+const pluginAgentTools = agentTools.filter((tool) => isPluginAgentToolName(tool.name))
 
 async function refreshAudit() {
   auditLoading.value = true

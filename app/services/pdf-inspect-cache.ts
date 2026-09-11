@@ -13,6 +13,22 @@ export type CachedPdfInspection = {
 
 let memoryCache: CachedPdfInspection | null = null
 
+export type PdfInspectCacheListener = (entry: CachedPdfInspection | null) => void
+
+const listeners = new Set<PdfInspectCacheListener>()
+
+export function subscribePdfInspectCache(listener: PdfInspectCacheListener): () => void {
+  if (typeof listener !== 'function') throw new Error('PDF inspect cache listener is required')
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+function notifyPdfInspectCache(entry: CachedPdfInspection | null): void {
+  for (const listener of listeners) listener(entry)
+}
+
 function defaultStorage(): Pick<Storage, 'getItem' | 'setItem'> | undefined {
   return typeof localStorage === 'undefined' ? undefined : localStorage
 }
@@ -33,6 +49,7 @@ export function clearPdfInspectCache(
 ): void {
   memoryCache = null
   storage?.removeItem(PDF_INSPECT_CACHE_KEY)
+  notifyPdfInspectCache(null)
 }
 
 export function getLastPdfInspection(
@@ -76,6 +93,7 @@ export function cachePdfInspection(
   }
   memoryCache = cached
   storage?.setItem(PDF_INSPECT_CACHE_KEY, JSON.stringify(cached))
+  notifyPdfInspectCache(cached)
   return cached
 }
 

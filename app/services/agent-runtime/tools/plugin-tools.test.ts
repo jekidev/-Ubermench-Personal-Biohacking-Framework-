@@ -46,9 +46,13 @@ describe('plugin-tools', () => {
     const result = await statusTool!.execute({}) as {
       domainPlugins: Array<{ id: string }>
       stats: { exerciseCatalogCount: number }
+      garmin: { oauthConfigured: boolean; observationCount: number }
+      lastPdfInspection: { filename: string } | null
     }
     expect(result.domainPlugins.map((plugin) => plugin.id)).toContain('longevity')
     expect(result.stats.exerciseCatalogCount).toBeGreaterThan(0)
+    expect(result.garmin.oauthConfigured).toBe(true)
+    expect(result.lastPdfInspection).toBeNull()
   })
 
   it('searches exercise catalog', async () => {
@@ -93,6 +97,9 @@ describe('plugin-tools', () => {
     const last = await pdfTool!.execute({}) as { source: string; filename: string }
     expect(last.source).toBe('last')
     expect(last.filename).toBe('sample.pdf')
+
+    const statusAfter = await statusTool!.execute({}) as { lastPdfInspection: { filename: string } | null }
+    expect(statusAfter.lastPdfInspection?.filename).toBe('sample.pdf')
 
     const textPdf = '%PDF-1.4\nBT (Glucose 5.2 mmol/L) ET'
     const uploaded = await pdfTool!.execute({

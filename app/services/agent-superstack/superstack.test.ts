@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { AgentMemory } from './memory'
 import { ModelRouter } from './model-router'
 import { evaluateTask } from './governance'
-import { SkillRegistry } from './skills'
+import { createDefaultSkillRegistry, SkillRegistry } from './skills'
 import { AgentKernel } from './kernel'
 
 describe('agent superstack', () => {
@@ -33,6 +33,14 @@ describe('agent superstack', () => {
     skills.register({ id: 'coding', name: 'Coding', description: '', triggers: ['debug'], tools: [], enabled: true })
     expect(skills.match('please debug this')).toHaveLength(1)
     expect(evaluateTask({ id: '1', kind: 'coding', prompt: 'rm -rf /', allowTools: true })).toMatchObject({ requiresConfirmation: true })
+  })
+
+  it('matches longevity plugin tools for Garmin and lab PDFs', () => {
+    const skills = createDefaultSkillRegistry()
+    const matched = skills.match('inspect garmin status after a lab pdf import')
+    expect(matched.some((skill) => skill.id === 'longevity-plugins')).toBe(true)
+    expect(matched.find((skill) => skill.id === 'longevity-plugins')?.tools).toContain('plugins.pdf.inspect')
+    expect(matched.find((skill) => skill.id === 'longevity-plugins')?.tools).toContain('plugins.garmin.status')
   })
 
   it('builds an execution context', () => {

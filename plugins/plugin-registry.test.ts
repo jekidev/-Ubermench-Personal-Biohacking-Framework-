@@ -19,5 +19,6 @@ describe('plugin-registry', () => {
     expect(integrations.map((item) => item.id)).toContain('exercise-catalog')
     expect(integrations.map((item) => item.id)).toContain('pdf-inspector')
     expect(getStarredIntegration('paper-search')?.settingsTab).toBe('research')
+    expect(getStarredIntegration('pdf-inspector')?.settingsTab).toBe('plugins')
   })
 })

@@ -8,7 +8,7 @@ import { recordAudit } from './audit'
 import { withRecovery } from './recovery'
 import { SkillEvolutionEngine } from './skill-evolution'
 import { executeApprovedToolCalls } from './tool-loop'
-import { extractToolCalls } from './tool-plan'
+import { formatAgentToolCatalog } from './tool-catalog'
 import { auditTaskSecurity } from './security-audit'
 import { isMcpStdioToolName } from './mcp-server-tools'
 import { listAllChatRules, listEnabledChatRules } from '~/services/chat-session/rule-registry'
@@ -62,7 +62,10 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       throw new Error('Agent task requires explicit confirmation before execution.')
     }
     const memoryContext = context.memories.map((m) => `- ${m.text}`).join('\n')
-    const skillContext = context.skills.map((s) => `- ${s.name}: ${s.description}`).join('\n')
+    const skillContext = context.skills.map((skill) => {
+      const tools = skill.tools.length ? ` (tools: ${skill.tools.join(', ')})` : ''
+      return `- ${skill.name}: ${skill.description}${tools}`
+    }).join('\n')
     const enabledRuleIds = task.chatOptions?.enabledRuleIds
       ?? listAllChatRules().filter((rule) => rule.enabled).map((rule) => rule.id)
     const ruleContext = listEnabledChatRules(enabledRuleIds)
@@ -89,6 +92,7 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       `Selected model: ${context.selectedModel?.provider ?? 'unavailable'}/${context.selectedModel?.model ?? 'unavailable'}`,
       memoryContext ? `Relevant memory:\n${memoryContext}` : 'Relevant memory: none',
       skillContext ? `Active skills:\n${skillContext}` : 'Active skills: none',
+      formatAgentToolCatalog(),
       ruleContext ? `Active rules:\n${ruleContext}` : 'Active rules: none',
       task.chatOptions?.conversationHistory ? `Conversation history:\n${task.chatOptions.conversationHistory}` : '',
       task.chatOptions?.ragContext ? `Indexed document excerpts:\n${task.chatOptions.ragContext}` : '',

@@ -29,6 +29,11 @@
           LLM text assist (when few markers found)
         </label>
       </div>
+      <p v-if="lastPdfInspection && !preview" class="mt-4 text-xs text-zinc-500">
+        Last PDF inspect: {{ lastPdfInspection.filename }} · {{ lastPdfInspection.inspection.kind }}
+        · {{ new Date(lastPdfInspection.inspectedAt).toLocaleString() }}.
+        Same cache as Settings → Plugins.
+      </p>
     </UCard>
 
     <UAlert v-if="error" title="Import error" :description="error" color="error" variant="subtle" />
@@ -45,6 +50,17 @@
         <div><span class="text-zinc-500">Format</span><div>{{ preview.format }}</div></div>
         <div><span class="text-zinc-500">SHA-256</span><div class="break-all font-mono text-xs">{{ preview.document.sha256 }}</div></div>
         <div><span class="text-zinc-500">Candidates</span><div>{{ observations.length }}</div></div>
+      </div>
+      <div v-if="lastPdfInspection" class="mt-4 rounded border border-zinc-800 p-3 text-sm">
+        <div class="text-xs uppercase tracking-wide text-zinc-500">PDF inspector</div>
+        <div class="font-medium capitalize">{{ lastPdfInspection.inspection.kind }} · {{ lastPdfInspection.filename }}</div>
+        <div class="text-xs text-zinc-500">
+          Inspected {{ new Date(lastPdfInspection.inspectedAt).toLocaleString() }}
+          · text streams {{ lastPdfInspection.inspection.textStreamCount }}
+          · images {{ lastPdfInspection.inspection.imageXObjectCount }}
+          · OCR {{ lastPdfInspection.inspection.recommendOcr ? 'recommended' : 'not needed' }}
+        </div>
+        <p class="mt-1 text-xs text-zinc-500">Cached for Settings → Plugins and <code>plugins.pdf.inspect</code>.</p>
       </div>
       <UAlert v-if="preview.warnings.length" class="mt-4" title="Review required" :description="preview.warnings.join(' • ')" color="warning" variant="subtle" />
       <div v-if="observations.length" class="mt-4 overflow-x-auto">
@@ -125,6 +141,7 @@ const ragAnswer = ref('')
 const ragBusy = ref(false)
 const { askWithDocuments } = useBiohackingAI()
 const { preview, candidates, busy, error, prepare, confirm, cancel, removeCandidate } = useLongevityImport()
+const { last: lastPdfInspection } = usePdfInspectCache()
 const observations = computed(() => candidates.value.filter((item): item is { type: 'observation'; value: LocalObservation } => item.type === 'observation'))
 
 function refresh() {
