@@ -19,7 +19,7 @@
               :key="item.to"
               :to="item.to"
               class="block rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-900"
-              exact-active-class="nav-link-active"
+              :class="{ 'nav-link-active': isCurrent(item.to) }"
               :aria-current="isCurrent(item.to) ? 'page' : undefined"
             >
               {{ item.label }}
@@ -33,7 +33,7 @@
             :key="item.to"
             :to="item.to"
             class="shrink-0 rounded-lg px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-900"
-            exact-active-class="nav-link-active"
+            :class="{ 'nav-link-active': isCurrent(item.to) }"
             :aria-current="isCurrent(item.to) ? 'page' : undefined"
           >
             {{ item.label }}
@@ -55,19 +55,26 @@ const navigation = [
   { label: 'Overview', to: '/' },
   { label: 'Chat', to: '/chat' },
   { label: 'Agent', to: '/agent' },
+  { label: 'AI Models', to: '/ai-models' },
   { label: 'Biology', to: '/biology' },
   { label: 'Health Sync', to: '/health-sync' },
   { label: 'Experiments', to: '/experiments' },
   { label: 'Safety', to: '/safety' },
   { label: 'Data health', to: '/data-health' },
+  { label: 'Fearprime', to: '/fearprime' },
   { label: 'Longevity', to: '/longevity' },
   { label: 'Evidence', to: '/longevity/evidence' },
   { label: 'Timeline', to: '/longevity/timeline' },
   { label: 'Connectors', to: '/connectors' },
   { label: 'Settings', to: '/settings' },
+  { label: 'Plugins', to: '/settings?tab=plugins' },
 ]
 
 function isCurrent(to: string) {
-  return route.path === to
+  const [path, queryString] = to.split('?')
+  if (path !== route.path) return false
+  if (!queryString) return !route.query.tab || path !== '/settings'
+  const params = new URLSearchParams(queryString)
+  return params.get('tab') === String(route.query.tab ?? '')
 }
 </script>

@@ -50,11 +50,38 @@
       <template #header><div class="font-medium">Interpretation boundary</div></template>
       <p class="text-sm leading-6 text-zinc-500">This view reports recorded data and deterministic screening signals. It does not diagnose disease, infer missing measurements, or autonomously prescribe treatment.</p>
     </UCard>
+
+    <UCard v-if="section === 'fitness'">
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="font-medium">Exercise catalog</span>
+          <span class="text-xs text-zinc-500">{{ exerciseCatalog.count }} MIT-metadata exercises</span>
+        </div>
+      </template>
+      <p class="text-xs text-zinc-500">{{ exerciseCatalog.source }} · {{ exerciseCatalog.license }} · no Gym visual media</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UInput
+          v-model="exerciseQuery"
+          placeholder="Search exercises (e.g. squat, dumbbell)"
+          class="flex-1 min-w-[12rem]"
+          @keyup.enter="runExerciseSearch"
+        />
+        <UButton @click="runExerciseSearch">Search</UButton>
+      </div>
+      <ul v-if="exerciseResults.length" class="mt-4 space-y-2 text-sm">
+        <li v-for="exercise in exerciseResults" :key="exercise.id" class="rounded border border-zinc-800 p-3">
+          <div class="font-medium">{{ exercise.name }}</div>
+          <div class="text-xs text-zinc-500">{{ exercise.category }} · {{ exercise.equipment }} · {{ exercise.target }}</div>
+        </li>
+      </ul>
+      <p v-else class="mt-4 text-sm text-zinc-500">Search the local catalog. Settings → Plugins has the same search plus Garmin and PDF inspector.</p>
+    </UCard>
   </div>
 </template>
 
 <script setup lang="ts">
 import { assessLongevity } from '~/services/longevity-engine'
+import { loadExerciseCatalog, searchExercises, type ExerciseRecord } from '~~/plugins/longevity/fitness/exercises'
 
 const route = useRoute()
 const biology = usePersonalBiology()
@@ -66,6 +93,18 @@ await biology.initialize()
 const section = computed(() => String(route.params.section).toLowerCase())
 const title = computed(() => String(route.params.section).replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()))
 const assessment = computed(() => assessLongevity(profile.value))
+const exerciseCatalog = computed(() => loadExerciseCatalog())
+const exerciseQuery = ref('')
+const exerciseResults = ref<ExerciseRecord[]>([])
+
+function runExerciseSearch() {
+  const query = exerciseQuery.value.trim()
+  exerciseResults.value = query ? searchExercises(query) : exerciseCatalog.value.exercises.slice(0, 12)
+}
+
+watch(section, (value) => {
+  if (value === 'fitness' && !exerciseResults.value.length) runExerciseSearch()
+}, { immediate: true })
 
 const sectionKeywords: Record<string, string[]> = {
   cardiovascular: ['heart', 'blood pressure', 'ldl', 'apob', 'cholesterol', 'triglyceride', 'crp'],
@@ -111,7 +150,7 @@ const cards = computed(() => {
   ]
   if (section.value === 'fitness') return [
     { label: 'Training', value: String(profile.value.training.length), note: 'Recorded sessions' },
-    { label: 'Biomarkers', value: String(relevantBiomarkers.value.length), note: 'Fitness-related lab signals' },
+    { label: 'Catalog', value: String(exerciseCatalog.value.count), note: 'MIT-metadata exercises' },
     { label: 'Status', value: relevantBiomarkers.value.length ? 'Tracking' : 'Baseline needed', note: 'Data coverage' },
     { label: 'Screening', value: `${assessment.value.score}/100`, note: 'Reference-bound screening only' },
   ]

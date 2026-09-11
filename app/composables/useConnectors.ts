@@ -1,12 +1,14 @@
 import { syncConnectorMcpInstall } from '../../plugins/connectors/connector-mcp-sync'
 import { CONNECTOR_REGISTRY } from '../../plugins/connectors/registry'
-import { isConnectorEnabled, loadConnectorSettings, setConnectorEnabled } from '../../plugins/connectors/connector-store'
+import { loadConnectorSettings } from '../../plugins/connectors/connector-store'
 import { listConnectorStatuses } from '../../plugins/connectors/connector-runtime'
 import type { ConnectorId } from '../../plugins/connectors/types'
 import { setSecret } from '../services/secret-vault'
+import { useConnectorEnablement, useConnectorSettingsState } from './useConnectorEnablement'
 
 export function useConnectors() {
-  const settings = useState('ubermensch-connector-settings', () => loadConnectorSettings())
+  const settings = useConnectorSettingsState()
+  const { isEnabled, setEnabled } = useConnectorEnablement()
   const statuses = ref<Awaited<ReturnType<typeof listConnectorStatuses>>>([])
   const busy = ref(false)
   const error = ref('')
@@ -25,7 +27,7 @@ export function useConnectors() {
   }
 
   function toggle(id: ConnectorId, enabled: boolean) {
-    settings.value = setConnectorEnabled(id, enabled)
+    setEnabled(id, enabled)
     syncConnectorMcpInstall(id, enabled)
     return refresh()
   }
@@ -46,6 +48,6 @@ export function useConnectors() {
     refresh,
     toggle,
     saveCredential,
-    isEnabled: (id: ConnectorId) => isConnectorEnabled(id),
+    isEnabled,
   }
 }
