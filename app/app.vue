@@ -53,17 +53,14 @@ const route = useRoute()
 
 const navigation = [
   { label: 'Overview', to: '/' },
+  { label: 'Plugins', to: '/plugins' },
+  { label: 'Biology', to: '/biology' },
+  { label: 'Experiments', to: '/experiments' },
+  { label: 'Health Sync', to: '/health-sync' },
   { label: 'Chat', to: '/chat' },
   { label: 'Agent', to: '/agent' },
-  { label: 'Biology', to: '/biology' },
-  { label: 'Health Sync', to: '/health-sync' },
-  { label: 'Experiments', to: '/experiments' },
   { label: 'Safety', to: '/safety' },
   { label: 'Data health', to: '/data-health' },
-  { label: 'Longevity', to: '/longevity' },
-  { label: 'Evidence', to: '/longevity/evidence' },
-  { label: 'Timeline', to: '/longevity/timeline' },
-  { label: 'Connectors', to: '/connectors' },
   { label: 'Settings', to: '/settings' },
 ]
 

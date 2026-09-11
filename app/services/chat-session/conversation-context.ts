@@ -19,8 +19,12 @@ export function formatConversationHistory(messages: ChatMessage[], limit = 12): 
   return history.map((turn) => `${turn.role}: ${turn.content}`).join('\n\n')
 }
 
-export function buildRagContextForQuery(query: string, limit = 6): string {
-  const hits = searchDocuments(query, limit)
+export function buildRagContextForQuery(
+  query: string,
+  limit = 6,
+  storage?: Pick<Storage, 'getItem' | 'setItem'>,
+): string {
+  const hits = searchDocuments(query, limit, storage)
   if (!hits.length) return ''
   return hits
     .map((hit, index) => `RAG excerpt ${index + 1} (${hit.title}, score ${hit.score.toFixed(2)}):\n${hit.content}`)
@@ -31,9 +35,10 @@ export function buildChatPrompt(input: {
   userPrompt: string
   messages: ChatMessage[]
   includeRag?: boolean
+  storage?: Pick<Storage, 'getItem' | 'setItem'>
 }): { prompt: string; ragContext: string; conversationHistory: string } {
   const conversationHistory = formatConversationHistory(input.messages)
-  const ragContext = input.includeRag ? buildRagContextForQuery(input.userPrompt) : ''
+  const ragContext = input.includeRag ? buildRagContextForQuery(input.userPrompt, 6, input.storage) : ''
   const sections = [
     conversationHistory ? `Conversation so far:\n${conversationHistory}` : '',
     ragContext ? `Relevant indexed documents:\n${ragContext}` : '',

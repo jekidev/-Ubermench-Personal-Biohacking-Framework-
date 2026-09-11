@@ -76,6 +76,6 @@ export class DocumentRagIndex {
   }
 }
 
-export function searchDocuments(query: string, limit = 8) {
-  return new DocumentRagIndex().search(query, limit)
+export function searchDocuments(query: string, limit = 8, storage?: Pick<Storage, 'getItem' | 'setItem'>) {
+  return new DocumentRagIndex(storage).search(query, limit)
 }

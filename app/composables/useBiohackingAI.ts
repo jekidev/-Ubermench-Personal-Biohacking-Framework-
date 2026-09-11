@@ -101,10 +101,10 @@ export function useBiohackingAI() {
     return llm.run({ ...request, system })
   }
 
-  async function askWithDocuments(request: LLMRequest, documentQuery?: string) {
+  async function askWithDocuments(request: LLMRequest, documentQuery?: string, storage?: Pick<Storage, 'getItem' | 'setItem'>) {
     await biology.initialize()
     const query = documentQuery ?? request.prompt
-    const hits = searchDocuments(query, 6)
+    const hits = searchDocuments(query, 6, storage)
     const documentContext = hits.map((hit, index) => `Document excerpt ${index + 1} (${hit.title}, score ${hit.score.toFixed(2)}):\n${hit.content}`).join('\n\n')
     const system = [
       request.system,
@@ -115,8 +115,8 @@ export function useBiohackingAI() {
     return llm.run({ ...request, system })
   }
 
-  function searchLabDocuments(query: string, limit = 8) {
-    return searchDocuments(query, limit)
+  function searchLabDocuments(query: string, limit = 8, storage?: Pick<Storage, 'getItem' | 'setItem'>) {
+    return searchDocuments(query, limit, storage)
   }
 
   return { selectModel, infer, evidenceQuery, research, buildResearchQuery: buildResearchQueryForGoal, safetyCheck, compileGoal, runDecisionLoop, anomalies, dataQuality, dataGaps, timeline, simulate, estimateEffect, evaluatePolicy, dailyPlan, learn, valueOfInformation, remember, recall, ingestHealth, ask, askWithDocuments, searchLabDocuments, llm, biology }
