@@ -8,6 +8,8 @@
       <div class="flex gap-2">
         <UButton to="/longevity/bloods">Add blood test</UButton>
         <UButton to="/longevity/genetics" variant="outline">Upload DNA</UButton>
+        <UButton to="/longevity/workouts" variant="outline">Workouts</UButton>
+        <UButton to="/longevity/sleep" variant="outline">Sleep</UButton>
       </div>
     </div>
 
@@ -55,8 +57,9 @@
           <li>Genetic variants · {{ profile.variants.length }} records</li>
           <li>Medications · {{ profile.medications.length }} records</li>
           <li>Supplements · {{ profile.supplements.length }} records</li>
-          <li>Sleep · {{ profile.sleep.length }} records</li>
-          <li>Training · {{ profile.training.length }} records</li>
+          <li>Sleep · {{ profile.sleep.length }} records · <NuxtLink to="/longevity/sleep" class="underline">log</NuxtLink></li>
+          <li>Training · {{ profile.training.length }} records · <NuxtLink to="/longevity/workouts" class="underline">workouts</NuxtLink></li>
+          <li>Diet / meditation · <NuxtLink to="/longevity/diet" class="underline">diet</NuxtLink> · <NuxtLink to="/longevity/meditation" class="underline">meditation</NuxtLink></li>
         </ul>
       </UCard>
     </div>

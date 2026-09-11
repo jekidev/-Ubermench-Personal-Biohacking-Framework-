@@ -52,6 +52,8 @@ onMounted(async () => {
       <NuxtLink to="/fearprime/memory"><UButton>Memory targets</UButton></NuxtLink>
       <NuxtLink to="/fearprime/state"><UButton variant="outline">Daily state</UButton></NuxtLink>
       <NuxtLink to="/fearprime/followups"><UButton variant="outline">Follow-ups</UButton></NuxtLink>
+      <NuxtLink to="/longevity/meditation"><UButton variant="outline">Meditation log</UButton></NuxtLink>
+      <NuxtLink to="/longevity/sleep"><UButton variant="outline">Sleep log</UButton></NuxtLink>
     </div>
 
     <UCard>

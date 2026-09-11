@@ -95,6 +95,8 @@
         <div><span class="text-zinc-500">Biomarkers:</span> {{ profile.biomarkers.length }}</div>
         <div><span class="text-zinc-500">Genetic variants:</span> {{ profile.variants.length }}</div>
         <div><span class="text-zinc-500">Sleep / training:</span> {{ profile.sleep.length }} / {{ profile.training.length }}</div>
+        <div><span class="text-zinc-500">Lifestyle:</span> Sleep · Diet · Workouts · Meditation</div>
+        <div><span class="text-zinc-500">News:</span> Public-agency RSS</div>
       </div>
       <p class="mt-3 text-xs text-zinc-500">Profile state is loaded from the local-first biology store.</p>
     </UCard>

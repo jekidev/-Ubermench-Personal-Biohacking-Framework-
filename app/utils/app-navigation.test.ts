@@ -5,6 +5,11 @@ describe('app-navigation', () => {
   it('includes longevity modules and plugins', () => {
     const hrefs = flattenAppNav().map((item) => item.to)
     expect(hrefs).toContain('/longevity/fitness')
+    expect(hrefs).toContain('/longevity/workouts')
+    expect(hrefs).toContain('/longevity/sleep')
+    expect(hrefs).toContain('/longevity/diet')
+    expect(hrefs).toContain('/longevity/meditation')
+    expect(hrefs).toContain('/news')
     expect(hrefs).toContain('/longevity/bloods')
     expect(hrefs).toContain('/fearprime')
     expect(hrefs).toContain('/settings?tab=plugins')
