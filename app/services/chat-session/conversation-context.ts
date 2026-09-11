@@ -1,4 +1,4 @@
-import { searchDocuments } from '../../../plugins/longevity/rag/document-index'
+import { formatUnifiedRagHits, searchUnifiedRag } from '../../../plugins/longevity/rag/unified-search'
 import type { ChatMessage } from './types'
 
 export type ConversationTurn = {
@@ -20,11 +20,8 @@ export function formatConversationHistory(messages: ChatMessage[], limit = 12): 
 }
 
 export function buildRagContextForQuery(query: string, limit = 6): string {
-  const hits = searchDocuments(query, limit)
-  if (!hits.length) return ''
-  return hits
-    .map((hit, index) => `RAG excerpt ${index + 1} (${hit.title}, score ${hit.score.toFixed(2)}):\n${hit.content}`)
-    .join('\n\n')
+  const hits = searchUnifiedRag(query, { limit, includeDocuments: true, includeAgentMemory: true })
+  return formatUnifiedRagHits(hits)
 }
 
 export function buildChatPrompt(input: {

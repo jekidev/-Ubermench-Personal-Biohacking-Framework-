@@ -1,8 +1,9 @@
 import type { MemoryRecord } from '~/services/agent-superstack/types'
+import { AGENT_MEMORY_STORAGE_KEY, loadPersistedAgentMemories, savePersistedAgentMemories } from '~/services/agent-memory-persistence'
 import type { RuntimeStore, AgentRun, AgentAuditEvent } from './types'
 import { TauriRuntimeStore, isTauriRuntime } from './tauri-store'
 
-const MEMORY_KEY = 'ubermench-agent-memory-v2'
+const MEMORY_KEY = AGENT_MEMORY_STORAGE_KEY
 const RUN_KEY = 'ubermench-agent-runs-v2'
 const AUDIT_KEY = 'ubermench-agent-audit-v1'
 
@@ -20,8 +21,8 @@ function writeJson(key: string, value: unknown): void {
 }
 
 export class BrowserRuntimeStore implements RuntimeStore {
-  async loadMemory(): Promise<MemoryRecord[]> { return readJson<MemoryRecord[]>(MEMORY_KEY, []) }
-  async saveMemory(records: MemoryRecord[]): Promise<void> { writeJson(MEMORY_KEY, records) }
+  async loadMemory(): Promise<MemoryRecord[]> { return loadPersistedAgentMemories(typeof localStorage === 'undefined' ? undefined : localStorage) }
+  async saveMemory(records: MemoryRecord[]): Promise<void> { savePersistedAgentMemories(records, typeof localStorage === 'undefined' ? undefined : localStorage) }
   async appendRun(run: AgentRun): Promise<void> {
     const runs = readJson<AgentRun[]>(RUN_KEY, [])
     const next = [run, ...runs.filter((item) => item.id !== run.id)]

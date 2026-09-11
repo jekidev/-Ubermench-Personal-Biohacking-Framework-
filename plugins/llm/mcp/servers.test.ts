@@ -12,7 +12,9 @@ describe('mcp server registry', () => {
     expect(getMcpServer('github')?.connectorId).toBe('github')
     expect(getMcpServer('huggingface')?.connectorId).toBe('huggingface')
     expect(getMcpServer('filesystem')?.executable).toBe('npx')
-    expect(getMcpServer('memory')?.serverId).toBe('memory')
+    expect(getMcpServer('memory')?.connectorId).toBe('mcp-memory')
+    expect(getMcpServer('supermemory')?.connectorId).toBe('supermemory')
+    expect(getMcpServer('mem0')?.envKeys).toContain('MEM0_API_KEY')
   })
 
   it('wires the approved research sidecars', () => {

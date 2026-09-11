@@ -20,6 +20,10 @@ export type ConnectorId =
   | 'pdf-inspector'
   | 'youtube-rag'
   | 'transcriptor'
+  | 'agent-memory'
+  | 'supermemory'
+  | 'mem0'
+  | 'mcp-memory'
 
 export type ConnectorCategory = 'communication' | 'storage' | 'research' | 'ai' | 'devtools' | 'health' | 'payments'
 export type ConnectorTransport = 'mcp-stdio' | 'api' | 'oauth' | 'hybrid'
