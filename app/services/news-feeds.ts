@@ -1,17 +1,17 @@
 export const NEWS_FEED_CATALOG = [
   {
     id: 'nih',
-    name: 'NIH News Releases',
+    name: 'NIH News',
     agency: 'U.S. National Institutes of Health',
-    url: 'https://www.nih.gov/news-releases/news-release-rss.xml',
+    url: 'https://www.nih.gov/rss.xml',
     topic: 'public-agency',
   },
   {
-    id: 'nia',
-    name: 'NIA News',
-    agency: 'U.S. National Institute on Aging',
-    url: 'https://www.nia.nih.gov/news/rss.xml',
-    topic: 'longevity',
+    id: 'dhsc',
+    name: 'UK DHSC News',
+    agency: 'U.K. Department of Health and Social Care',
+    url: 'https://www.gov.uk/search/news-and-communications.atom?organisations%5B%5D=department-of-health-and-social-care',
+    topic: 'public-agency',
   },
   {
     id: 'cdc',
@@ -197,7 +197,10 @@ export async function fetchPublicNewsFeeds(options?: {
     try {
       const response = await fetchImpl(source.url, {
         signal: controller.signal,
-        headers: { Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml' },
+        headers: {
+          Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+          'User-Agent': 'UbermenchNews/1.0 (local-first personal biohacking; public RSS only)',
+        },
       })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const xml = await response.text()

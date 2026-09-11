@@ -38,19 +38,19 @@ const ATOM = `<?xml version="1.0"?>
 describe('news-feeds', () => {
   it('parses RSS and Atom with source + timestamp + excerpt', () => {
     const nih = newsFeedById('nih')!
-    const nia = newsFeedById('nia')!
+    const nia = newsFeedById('dhsc')!
     const rss = parseRssOrAtom(RSS, nih)
     const atom = parseRssOrAtom(ATOM, nia)
     expect(rss).toHaveLength(1)
     expect(rss[0]).toMatchObject({
-      sourceName: 'NIH News Releases',
+      sourceName: 'NIH News',
       title: 'Sleep study published',
       url: 'https://www.nih.gov/news-releases/sleep-study',
       publishedAt: '2026-09-11T08:00:00.000Z',
     })
     expect(rss[0]?.excerpt).toContain('public excerpt')
     expect(atom[0]).toMatchObject({
-      sourceName: 'NIA News',
+      sourceName: 'UK DHSC News',
       url: 'https://www.nia.nih.gov/news/aging-update',
       publishedAt: '2026-09-10T12:00:00.000Z',
     })
@@ -58,9 +58,9 @@ describe('news-feeds', () => {
 
   it('merges by published time only — no engagement ranking', () => {
     const merged = mergeNewsItems([
-      { id: 'b', sourceId: 'nia', sourceName: 'NIA News', title: 'Older', url: 'https://example.org/b', publishedAt: '2026-09-01T00:00:00.000Z', excerpt: '' },
-      { id: 'a', sourceId: 'nih', sourceName: 'NIH News Releases', title: 'Newer', url: 'https://example.org/a', publishedAt: '2026-09-11T00:00:00.000Z', excerpt: '' },
-      { id: 'dup', sourceId: 'nih', sourceName: 'NIH News Releases', title: 'Dup', url: 'https://example.org/a', publishedAt: '2026-09-12T00:00:00.000Z', excerpt: '' },
+      { id: 'b', sourceId: 'dhsc', sourceName: 'UK DHSC News', title: 'Older', url: 'https://example.org/b', publishedAt: '2026-09-01T00:00:00.000Z', excerpt: '' },
+      { id: 'a', sourceId: 'nih', sourceName: 'NIH News', title: 'Newer', url: 'https://example.org/a', publishedAt: '2026-09-11T00:00:00.000Z', excerpt: '' },
+      { id: 'dup', sourceId: 'nih', sourceName: 'NIH News', title: 'Dup', url: 'https://example.org/a', publishedAt: '2026-09-12T00:00:00.000Z', excerpt: '' },
     ])
     expect(merged.map((item) => item.title)).toEqual(['Newer', 'Older'])
   })
@@ -71,14 +71,14 @@ describe('news-feeds', () => {
       now: '2026-09-11T12:00:00.000Z',
       fetchImpl: async (input) => {
         const url = String(input)
-        if (url.includes('nih.gov/news-releases')) {
+        if (url.includes('nih.gov/rss.xml')) {
           return new Response(RSS, { status: 200 })
         }
         return new Response('nope', { status: 503 })
       },
     })
     expect(digest.ranking).toBe('published-time')
-    expect(digest.items[0]?.sourceName).toBe('NIH News Releases')
+    expect(digest.items[0]?.sourceName).toBe('NIH News')
     expect(digest.errors.some((item) => item.sourceId === 'cdc')).toBe(true)
     expect(digest.sources).toHaveLength(NEWS_FEED_CATALOG.length)
   })
