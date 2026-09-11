@@ -63,7 +63,6 @@ const navigation = [
   { label: 'Longevity', to: '/longevity' },
   { label: 'Evidence', to: '/longevity/evidence' },
   { label: 'Timeline', to: '/longevity/timeline' },
-  { label: 'STARCHIVE', to: '/starchive' },
   { label: 'Connectors', to: '/connectors' },
   { label: 'Settings', to: '/settings' },
 ]

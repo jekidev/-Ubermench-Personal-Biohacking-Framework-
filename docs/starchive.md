@@ -1,26 +1,22 @@
-# STARCHIVE
+# STARCHIVE (agent tooling only)
 
-Ubermench vendors [jwardsmith/STARCHIVE](https://github.com/jwardsmith/STARCHIVE) as a read-only GitHub starred-repository exporter.
+Ubermench vendors [jwardsmith/STARCHIVE](https://github.com/jwardsmith/STARCHIVE) as a read-only GitHub starred-repository exporter for Cursor agents. It is **not** exposed in the product UI.
 
 Pinned upstream commit: `620d8c7b95ae88128c8c692c2156a700228bddea`
 
-## What was installed
+## What is installed
 
 - Git submodule at `tools/starchive` (original PowerShell + Python scripts)
-- TypeScript client in `app/services/starchive.ts` (no hardcoded credentials)
-- Nuxt 4 page at `app/pages/starchive.vue` (route `/starchive`)
 - CLI at `scripts/starchive.mjs`
-
-Nuxt 4 uses the `app/` directory as the UI source. The STARCHIVE route lives there so it actually renders. The older root `pages/` tree is unchanged.
 
 STARCHIVE does not modify GitHub stars, lists, or repositories.
 
 Cursor agents should use the **GitHub starred repos** skill (`.cursor/skills/github-starred-repos/SKILL.md`) and read either:
 
 - the portable archive at https://github.com/jekidev/stararchive (`genres/` + `catalog/catalog.json`)
-- the local snapshot `app/data/starchive/catalog.json`
+- a refreshed local snapshot via `npm run starchive -- --snapshot` (writes to `.runtime/starchive/`)
 
-Refresh the local snapshot with `npm run starchive -- --snapshot`. The default GitHub user is `jekidev`. A token is only required for private or hidden stars.
+The default GitHub user is `jekidev`. A token is only required for private or hidden stars.
 
 ## Credentials
 
@@ -33,21 +29,15 @@ export GITHUB_TOKEN=your-token   # public_repo scope
 
 An authenticated GitHub CLI session (`gh auth login`) also works for the CLI.
 
-## Usage
-
-App:
-
-1. Open **STARCHIVE** in the sidebar
-2. Enter GitHub username and token
-3. Fetch starred repos
-4. Download `starred_repos.csv` or `starred_repo_lists.csv`
-
-CLI:
+## CLI
 
 ```bash
 npm run starchive
+npm run starchive -- --snapshot
 npm run starchive -- --upstream
 ```
+
+`--snapshot` writes a catalog snapshot under `.runtime/starchive/` for agent use.
 
 `--upstream` runs the vendored Python script from `tools/starchive` with credentials injected at runtime. It writes `.runtime/starchive/starred_repo_lists.csv`.
 
