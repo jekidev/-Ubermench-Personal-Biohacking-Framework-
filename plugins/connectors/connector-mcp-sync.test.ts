@@ -35,4 +35,10 @@ describe('connector MCP sync', () => {
     expect(() => syncConnectorMcpInstall('paper-qa', true, storage)).not.toThrow()
     expect(getInstalledMcpServer('paper-qa', storage)).toBeUndefined()
   })
+
+  it('does not install MCP for scaffold connectors', () => {
+    const storage = new MemoryStorage()
+    syncConnectorMcpInstall('slack', true, storage)
+    expect(getInstalledMcpServer('slack', storage)).toBeUndefined()
+  })
 })

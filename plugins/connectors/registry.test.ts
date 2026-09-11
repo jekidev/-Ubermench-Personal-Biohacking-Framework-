@@ -37,6 +37,25 @@ describe('connector registry', () => {
     expect(loadConnectorSettings(storage).enabled.discord).toBe(true)
   })
 
+  it('refuses to enable scaffold or planned connectors', () => {
+    const storage = new MemoryStorage()
+    expect(() => setConnectorEnabled('slack', true, storage)).toThrow(/not implemented/)
+    expect(() => setConnectorEnabled('notion', true, storage)).toThrow(/not implemented/)
+    expect(loadConnectorSettings(storage).enabled.slack).toBe(false)
+    expect(loadConnectorSettings(storage).enabled.notion).toBe(false)
+  })
+
+  it('ignores persisted enable flags for unimplemented connectors', () => {
+    const storage = new MemoryStorage()
+    storage.setItem('ubermensch:connector-settings:v1', JSON.stringify({
+      enabled: { slack: true, tavily: true, discord: true },
+    }))
+    const settings = loadConnectorSettings(storage)
+    expect(settings.enabled.slack).toBe(false)
+    expect(settings.enabled.tavily).toBe(false)
+    expect(settings.enabled.discord).toBe(true)
+  })
+
   it('resolves connector by id', () => {
     expect(getConnector('huggingface')?.transport).toBe('hybrid')
   })

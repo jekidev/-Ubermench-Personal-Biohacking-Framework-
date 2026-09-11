@@ -3,7 +3,7 @@ import { getConnectorStatus } from '../../../../plugins/connectors/connector-run
 import { isConnectorEnabled } from '../../../../plugins/connectors/connector-store'
 import type { ConnectorId } from '../../../../plugins/connectors/types'
 import { loadExerciseCatalog, searchExercises } from '../../../../plugins/longevity/fitness/exercises'
-import { LONGEVITY_WATCHLIST } from '../../../../plugins/longevity/evidence/watchlist'
+import { listWatchlistByTier, LONGEVITY_WATCHLIST, type WatchlistTier } from '../../../../plugins/longevity/evidence/watchlist'
 import {
   listDomainPlugins,
   listStarredIntegrations,
@@ -68,6 +68,34 @@ export function createPluginTools(): AgentTool[] {
           target: exercise.target,
           muscleGroup: exercise.muscleGroup,
         }))
+      },
+    },
+    {
+      name: 'plugins.watchlist.list',
+      description: 'List the local longevity geroscience watchlist (awesome-longevity). Optional tier filter: resource, clock, organization, reading.',
+      risk: 'low',
+      requiresApproval: false,
+      async execute(args) {
+        const tier = typeof args.tier === 'string' ? args.tier.trim() : ''
+        if (!tier) return LONGEVITY_WATCHLIST
+        const allowed: WatchlistTier[] = ['resource', 'clock', 'organization', 'reading']
+        if (!allowed.includes(tier as WatchlistTier)) {
+          throw new Error('plugins.watchlist.list tier must be resource, clock, organization, or reading.')
+        }
+        return listWatchlistByTier(tier as WatchlistTier)
+      },
+    },
+    {
+      name: 'plugins.garmin.schema',
+      description: 'Show Garmin-only biometric metrics and rejected health providers.',
+      risk: 'low',
+      requiresApproval: false,
+      async execute() {
+        return {
+          provider: 'garmin',
+          metrics: ['sleep_score', 'hrv_rmssd', 'resting_hr', 'steps', 'training_load', 'spo2', 'body_weight', 'workout_duration'],
+          rejectedProviders: REJECTED_BIOMETRIC_PROVIDERS,
+        }
       },
     },
   ]

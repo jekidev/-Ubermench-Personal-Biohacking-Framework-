@@ -27,7 +27,13 @@ export function useConnectors() {
   }
 
   function toggle(id: ConnectorId, enabled: boolean) {
-    setEnabled(id, enabled)
+    error.value = ''
+    try {
+      setEnabled(id, enabled)
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : 'This connector is not implemented yet'
+      return Promise.resolve()
+    }
     syncConnectorMcpInstall(id, enabled)
     return refresh()
   }

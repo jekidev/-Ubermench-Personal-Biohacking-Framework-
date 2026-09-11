@@ -8,6 +8,7 @@ import {
 import { extractPdfTextWithVision, type VisionDocumentRunner } from './vision-lab-extractor'
 import { parsePdfLabBlocks } from './pdf-lab-engine'
 import { inspectPdfBytes } from '../pdf/pdf-inspector'
+import { isConnectorEnabled } from '../../connectors/connector-store'
 
 export type PdfExtractionMethod = 'native-text' | 'ocr' | 'vision'
 
@@ -16,6 +17,7 @@ export type PdfExtractionPipelineOptions = {
   useVision?: boolean
   ocrAdapter?: OcrAdapter
   visionRunner?: VisionDocumentRunner
+  inspectPdf?: boolean
 }
 
 export type PdfExtractionPipelineResult = {
@@ -34,9 +36,14 @@ export async function runPdfExtractionPipeline(
   const warnings: string[] = []
   let blocks: PdfTextBlock[] = []
   let method: PdfExtractionMethod = 'native-text'
-  const inspection = inspectPdfBytes(bytes)
-  if (inspection.recommendOcr) {
-    warnings.push(`PDF inspector classified this file as ${inspection.kind}; prefer local OCR for scanned lab reports.`)
+  const inspectPdf = options?.inspectPdf ?? (
+    typeof localStorage === 'undefined' ? true : isConnectorEnabled('pdf-inspector')
+  )
+  if (inspectPdf) {
+    const inspection = inspectPdfBytes(bytes)
+    if (inspection.recommendOcr) {
+      warnings.push(`PDF inspector classified this file as ${inspection.kind}; prefer local OCR for scanned lab reports.`)
+    }
   }
 
   try {
