@@ -1,4 +1,4 @@
-import { loadConnectorSettings, setConnectorEnabled } from '../../plugins/connectors/connector-store'
+import { isConnectorActivatable, loadConnectorSettings, setConnectorEnabled } from '../../plugins/connectors/connector-store'
 import type { ConnectorId } from '../../plugins/connectors/types'
 import type { ConnectorSettings } from '../../plugins/connectors/connector-store'
 
@@ -12,6 +12,7 @@ export function useConnectorEnablement() {
   const settings = useConnectorSettingsState()
 
   function isEnabled(id: ConnectorId) {
+    if (!isConnectorActivatable(id)) return false
     return settings.value.enabled[id] ?? false
   }
 

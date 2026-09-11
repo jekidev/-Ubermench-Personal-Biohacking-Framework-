@@ -34,4 +34,16 @@ describe('plugin-tools', () => {
     expect(results.length).toBeGreaterThan(0)
     expect(results[0]?.name.toLowerCase()).toContain('squat')
   })
+
+  it('lists watchlist items and garmin schema', async () => {
+    const watchlistTool = tools.find((tool) => tool.name === 'plugins.watchlist.list')
+    const garminTool = tools.find((tool) => tool.name === 'plugins.garmin.schema')
+    const all = await watchlistTool!.execute({}) as Array<{ id: string; tier: string }>
+    const clocks = await watchlistTool!.execute({ tier: 'clock' }) as Array<{ tier: string }>
+    expect(all.length).toBeGreaterThan(0)
+    expect(clocks.every((item) => item.tier === 'clock')).toBe(true)
+    const schema = await garminTool!.execute({}) as { provider: string; rejectedProviders: string[] }
+    expect(schema.provider).toBe('garmin')
+    expect(schema.rejectedProviders).toContain('oura')
+  })
 })

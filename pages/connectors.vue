@@ -355,20 +355,21 @@
         </div>
 
         <div class="mt-4 space-y-2">
-          <label class="flex items-center gap-2 text-sm">
+          <label class="flex items-center gap-2 text-sm" :class="{ 'opacity-50': connector.status !== 'live' }">
             <input
               type="checkbox"
               :checked="isEnabled(connector.id)"
+              :disabled="connector.status !== 'live'"
               @change="toggle(connector.id, ($event.target as HTMLInputElement).checked)"
             />
-            Enabled
+            {{ connector.status === 'live' ? 'Enabled' : `Not implemented (${connector.status})` }}
           </label>
           <p class="text-xs text-zinc-500">
             Implementation: {{ connector.status }}
             · Cursor parity: {{ connector.cursorParity ? 'yes' : 'no' }}
             <span v-if="statusFor(connector.id)?.lastSyncAt"> · Last sync {{ statusFor(connector.id)?.lastSyncAt }}</span>
           </p>
-          <div v-if="connector.auth.envKeys?.length && !isGoogleConnector(connector.id)" class="space-y-2">
+          <div v-if="connector.status === 'live' && connector.auth.envKeys?.length && !isGoogleConnector(connector.id)" class="space-y-2">
             <div v-for="key in connector.auth.envKeys" :key="key" class="flex gap-2">
               <UInput v-model="credentialDrafts[key]" :placeholder="key" type="password" class="flex-1" />
               <UButton size="sm" @click="saveKey(key)">Save</UButton>

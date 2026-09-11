@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import EvidenceLookupPreview from '~~/plugins/longevity/evidence/EvidenceLookupPreview.vue'
-import { LONGEVITY_WATCHLIST } from '~~/plugins/longevity/evidence/watchlist'
+import { LONGEVITY_WATCHLIST, type WatchlistTier } from '~~/plugins/longevity/evidence/watchlist'
 import { extractEvidenceClaims } from '~/services/evidence-claims'
 import { rankEvidenceRecords, type EvidenceFreshnessBand } from '~/services/evidence-freshness'
 import { loadEvidenceStore } from '~/services/evidence-normalizer'
@@ -11,6 +11,11 @@ const records = ref(loadEvidenceStore())
 const snapshots = ref<ResearchSnapshot[]>(loadResearchSnapshots())
 const snapshotMessage = ref('')
 const snapshotBusy = ref(false)
+const watchlistTier = ref<'all' | WatchlistTier>('all')
+const watchlistItems = computed(() => {
+  if (watchlistTier.value === 'all') return LONGEVITY_WATCHLIST
+  return LONGEVITY_WATCHLIST.filter((item) => item.tier === watchlistTier.value)
+})
 const ranked = computed(() => rankEvidenceRecords(records.value).map((item) => ({
   ...item,
   claims: extractEvidenceClaims(item.record),
@@ -140,8 +145,19 @@ function retractionColor(status: RetractionStatus) {
     <UCard>
       <template #header><div class="font-medium">Geroscience watchlist</div></template>
       <p class="text-sm text-muted">Curated sources from awesome-longevity. News and clocks are not evidence grade.</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UButton
+          v-for="tier in ['all', 'resource', 'clock', 'organization', 'reading'] as const"
+          :key="tier"
+          size="xs"
+          :variant="watchlistTier === tier ? 'solid' : 'ghost'"
+          @click="watchlistTier = tier"
+        >
+          {{ tier }}
+        </UButton>
+      </div>
       <ul class="mt-3 space-y-2 text-sm">
-        <li v-for="item in LONGEVITY_WATCHLIST" :key="item.id">
+        <li v-for="item in watchlistItems" :key="item.id">
           <a :href="item.url" class="text-zinc-200 underline underline-offset-4" target="_blank" rel="noreferrer">{{ item.title }}</a>
           <span class="text-muted"> · {{ item.tier }} · {{ item.notes }}</span>
         </li>

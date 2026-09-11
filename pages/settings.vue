@@ -588,7 +588,7 @@
 
         <UCard>
           <template #header><div class="font-medium">PDF inspector</div></template>
-          <p class="text-xs text-zinc-500">Classify a lab PDF as text, scanned, or mixed. Lab import always runs this locally; the connector toggle is catalog status only.</p>
+          <p class="text-xs text-zinc-500">Classify a lab PDF as text, scanned, or mixed. Lab import uses this when the connector is enabled (on by default).</p>
           <div class="mt-3 flex flex-wrap gap-2">
             <UButton size="sm" variant="outline" @click="plugins.inspectSamplePdf()">Inspect sample PDF</UButton>
             <label class="inline-flex cursor-pointer items-center gap-2 text-sm">
@@ -611,6 +611,8 @@
         <ul class="space-y-1 font-mono text-xs text-zinc-400">
           <li><code>plugins.status</code> — domain plugins + starred integration summary</li>
           <li><code>plugins.exercises.search</code> — search MIT exercise catalog</li>
+          <li><code>plugins.watchlist.list</code> — geroscience watchlist</li>
+          <li><code>plugins.garmin.schema</code> — Garmin-only biometric map</li>
         </ul>
       </UCard>
     </template>

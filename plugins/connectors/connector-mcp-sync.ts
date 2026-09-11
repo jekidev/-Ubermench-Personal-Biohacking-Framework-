@@ -16,6 +16,7 @@ export function syncConnectorMcpInstall(
 ): void {
   const connector = getConnector(id)
   if (!connector?.mcpServerId) return
+  if (enabled && connector.status !== 'live') return
 
   if (enabled) {
     installMcpFromCatalog(connector.mcpServerId, storage)
