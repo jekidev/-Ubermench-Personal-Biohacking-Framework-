@@ -6,6 +6,7 @@ import {
   loadOAuthState,
   saveOAuthState,
   scopesCoverConnector,
+  scopesCoverOAuthConnector,
   scopesForConnectors,
 } from './google-oauth'
 
@@ -38,6 +39,13 @@ describe('google oauth', () => {
     expect(scopes).toContain('https://www.googleapis.com/auth/calendar')
     expect(scopesCoverConnector(scopes, 'gmail')).toBe(true)
     expect(scopesCoverConnector(scopes, 'google-drive')).toBe(false)
+  })
+
+  it('checks the dedicated YouTube read scope', () => {
+    expect(scopesCoverOAuthConnector([
+      'https://www.googleapis.com/auth/youtube.readonly',
+    ], 'youtube')).toBe(true)
+    expect(scopesCoverOAuthConnector([], 'youtube')).toBe(false)
   })
 
   it('persists oauth state helpers', () => {
