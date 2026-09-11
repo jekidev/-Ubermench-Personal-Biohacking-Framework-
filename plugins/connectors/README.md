@@ -7,7 +7,7 @@ Unified registry for external services, modeled after Cursor MCP plugins.
 ```text
 CONNECTOR_REGISTRY (plugins/connectors/registry.ts)
   ↓
-connector-store (enabled/disabled in localStorage)
+connector-store (enabled/disabled in localStorage; MCP catalog installs sync on toggle)
   ↓
 Google OAuth PKCE (one client, Drive + Gmail + Calendar)
   ↓

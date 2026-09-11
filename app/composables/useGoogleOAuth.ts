@@ -18,6 +18,7 @@ import {
   googleWorkspaceStatus,
   loadGoogleCredentials,
 } from '../../plugins/connectors/oauth/google-token-store'
+import { syncConnectorMcpInstall } from '../../plugins/connectors/connector-mcp-sync'
 import { setConnectorEnabled } from '../../plugins/connectors/connector-store'
 import { getSecret, setSecret } from '../services/secret-vault'
 
@@ -109,8 +110,13 @@ export function useGoogleOAuth() {
         connectorIds,
       })
       for (const id of connectorIds) {
-        if (isGoogleConnectorId(id)) setConnectorEnabled(id, true)
-        else if (id === 'youtube') setConnectorEnabled('youtube-rag', true)
+        if (isGoogleConnectorId(id)) {
+          setConnectorEnabled(id, true)
+          syncConnectorMcpInstall(id, true)
+        } else if (id === 'youtube') {
+          setConnectorEnabled('youtube-rag', true)
+          syncConnectorMcpInstall('youtube-rag', true)
+        }
       }
       clearOAuthState()
       await refreshStatus()
