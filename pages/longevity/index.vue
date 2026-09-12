@@ -10,6 +10,8 @@
         <UButton to="/longevity/genetics" variant="outline">Upload DNA</UButton>
         <UButton to="/longevity/workouts" variant="outline">Workouts</UButton>
         <UButton to="/longevity/sleep" variant="outline">Sleep</UButton>
+        <UButton to="/longevity/diet" variant="outline">Diet</UButton>
+        <UButton to="/longevity/meditation" variant="outline">Meditation</UButton>
       </div>
     </div>
 

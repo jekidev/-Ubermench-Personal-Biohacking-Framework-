@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SleepLog, WorkoutLog } from '~/types/lifestyle'
 import {
+  asFiniteNumber,
   emptyLifestyleLogStore,
   indexLifestyleLogs,
   lifestyleLogById,
@@ -63,6 +64,35 @@ describe('lifestyle-log-store', () => {
     expect(parseLifestyleLog({ id: 'x', kind: 'meal', recordedAt: 'nope', name: 'Oats' })).toBeUndefined()
     expect(parseLifestyleLog({ id: 'x', kind: 'meditation', recordedAt: '2026-09-11T00:00:00.000Z' })).toBeUndefined()
     expect(parseLifestyleLog({ id: 'x', kind: 'workout', recordedAt: '2026-09-11T00:00:00.000Z' })).toBeUndefined()
+  })
+
+  it('coerces Android number-input strings so meal/meditation logs persist', () => {
+    expect(asFiniteNumber('30')).toBe(30)
+    expect(asFiniteNumber('')).toBeUndefined()
+    expect(asFiniteNumber(7)).toBe(7)
+    const meal = parseLifestyleLog({
+      id: 'm1',
+      kind: 'meal',
+      recordedAt: '2026-09-11T12:00:00.000Z',
+      name: 'Oats',
+      mealType: 'breakfast',
+      calories: '420',
+    })
+    const meditation = parseLifestyleLog({
+      id: 'med1',
+      kind: 'meditation',
+      recordedAt: '2026-09-11T12:05:00.000Z',
+      durationMinutes: '12',
+    })
+    expect(meal).toMatchObject({ name: 'Oats', calories: 420 })
+    expect(meditation).toMatchObject({ durationMinutes: 12 })
+    let store = upsertLifestyleLog(emptyLifestyleLogStore(), meal!)
+    store = upsertLifestyleLog(store, meditation!)
+    const storage = memoryStorage()
+    saveLifestyleLogStore(storage, store)
+    const loaded = loadLifestyleLogStore(storage)
+    expect(selectLifestyleLogs(loaded, 'meal')).toHaveLength(1)
+    expect(selectLifestyleLogs(loaded, 'meditation')).toHaveLength(1)
   })
 
   it('removes logs and maps sleep/workout into biology records', () => {

@@ -54,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import { asFiniteNumber } from '~/services/lifestyle-log-store'
 import type { MealLog, MealType } from '~/types/lifestyle'
 import { MEAL_TYPES } from '~/types/lifestyle'
 
@@ -77,7 +78,7 @@ async function saveMeal() {
     recordedAt: new Date().toISOString(),
     name: mealName,
     mealType: mealType.value,
-    calories: typeof calories.value === 'number' && Number.isFinite(calories.value) ? calories.value : undefined,
+    calories: asFiniteNumber(calories.value),
     notes: notes.value.trim() || undefined,
   })
   name.value = ''

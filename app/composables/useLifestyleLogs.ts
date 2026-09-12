@@ -25,12 +25,17 @@ export function useLifestyleLogs() {
     if (import.meta.client) saveLifestyleLogStore(localStorage, next)
   }
 
-  function initialize() {
-    if (initialized.value || !import.meta.client) return
+  function initialize(options?: { reload?: boolean }) {
+    if (!import.meta.client) return
+    if (initialized.value && !options?.reload) return
     store.value = loadLifestyleLogStore(localStorage)
     observations.value = loadPersonalStateStore(localStorage).observations
     initialized.value = true
   }
+
+  onMounted(() => {
+    initialize({ reload: true })
+  })
 
   function refreshObservations() {
     if (!import.meta.client) {

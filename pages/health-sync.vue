@@ -154,6 +154,8 @@
       <div class="mt-3 flex flex-wrap gap-2">
         <UButton size="sm" variant="outline" @click="refreshGarminPlugins">Refresh status</UButton>
         <UButton size="sm" variant="ghost" to="/settings?tab=plugins">Open Plugins</UButton>
+        <UButton size="sm" variant="ghost" to="/longevity/sleep">Sleep log</UButton>
+        <UButton size="sm" variant="ghost" to="/longevity/workouts">Workouts</UButton>
       </div>
     </UCard>
 

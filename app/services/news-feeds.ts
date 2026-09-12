@@ -1,9 +1,15 @@
+export const NEWS_FEEDS_API_PATH = '/api/news/feeds'
+
 export const NEWS_FEED_CATALOG = [
   {
-    id: 'nih',
-    name: 'NIH News',
-    agency: 'U.S. National Institutes of Health',
-    url: 'https://www.nih.gov/rss.xml',
+    id: 'nia',
+    name: 'NIA News',
+    agency: 'U.S. National Institute on Aging',
+    url: 'https://www.nia.nih.gov/news/rss.xml',
+    urls: [
+      'https://www.nia.nih.gov/news/rss.xml',
+      'https://www.nih.gov/rss.xml',
+    ],
     topic: 'public-agency',
   },
   {
@@ -11,6 +17,9 @@ export const NEWS_FEED_CATALOG = [
     name: 'UK DHSC News',
     agency: 'U.K. Department of Health and Social Care',
     url: 'https://www.gov.uk/search/news-and-communications.atom?organisations%5B%5D=department-of-health-and-social-care',
+    urls: [
+      'https://www.gov.uk/search/news-and-communications.atom?organisations%5B%5D=department-of-health-and-social-care',
+    ],
     topic: 'public-agency',
   },
   {
@@ -18,6 +27,9 @@ export const NEWS_FEED_CATALOG = [
     name: 'CDC Newsroom',
     agency: 'U.S. Centers for Disease Control and Prevention',
     url: 'https://tools.cdc.gov/api/v2/resources/media/132608.rss',
+    urls: [
+      'https://tools.cdc.gov/api/v2/resources/media/132608.rss',
+    ],
     topic: 'public-agency',
   },
   {
@@ -25,13 +37,20 @@ export const NEWS_FEED_CATALOG = [
     name: 'WHO News',
     agency: 'World Health Organization',
     url: 'https://www.who.int/rss-feeds/news-english.xml',
+    urls: [
+      'https://www.who.int/rss-feeds/news-english.xml',
+    ],
     topic: 'public-agency',
   },
   {
-    id: 'fda',
-    name: 'FDA Press Releases',
-    agency: 'U.S. Food and Drug Administration',
-    url: 'https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-releases/rss.xml',
+    id: 'ema',
+    name: 'EMA News',
+    agency: 'European Medicines Agency',
+    url: 'https://www.ema.europa.eu/en/news.xml',
+    urls: [
+      'https://www.ema.europa.eu/en/news.xml',
+      'https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-releases/rss.xml',
+    ],
     topic: 'public-agency',
   },
   {
@@ -39,7 +58,21 @@ export const NEWS_FEED_CATALOG = [
     name: 'MedlinePlus Health News',
     agency: 'U.S. National Library of Medicine',
     url: 'https://medlineplus.gov/feeds/whatsnew.xml',
+    urls: [
+      'https://medlineplus.gov/feeds/whatsnew.xml',
+      'https://www.medlineplus.gov/feeds/whatsnew.xml',
+    ],
     topic: 'science',
+  },
+  {
+    id: 'ssi',
+    name: 'SSI Nyheder',
+    agency: 'Statens Serum Institut',
+    url: 'https://www.ssi.dk/aktuelt/nyheder/rss',
+    urls: [
+      'https://www.ssi.dk/aktuelt/nyheder/rss',
+    ],
+    topic: 'public-agency',
   },
 ] as const
 
@@ -50,6 +83,7 @@ export interface NewsFeedSource {
   name: string
   agency: string
   url: string
+  urls?: readonly string[]
   topic: string
 }
 
@@ -85,6 +119,13 @@ const ENTITIES: Record<string, string> = {
   apos: "'",
   nbsp: ' ',
 }
+
+const NEWS_FETCH_HEADERS = {
+  Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+  'User-Agent': 'Mozilla/5.0 (Linux; Android 14; UbermenchNews/1.1) AppleWebKit/537.36 Chrome/128.0.0.0 Mobile Safari/537.36',
+} as const
+
+const MAX_FEED_CHARS = 400_000
 
 function decodeXml(value: string): string {
   return value
@@ -137,6 +178,58 @@ export function newsFeedById(id: string): NewsFeedSource | undefined {
   return NEWS_FEED_CATALOG.find((item) => item.id === id)
 }
 
+export function catalogNewsSources(): NewsFeedSource[] {
+  return NEWS_FEED_CATALOG.map((item) => ({
+    id: item.id,
+    name: item.name,
+    agency: item.agency,
+    url: item.url,
+    urls: [...item.urls],
+    topic: item.topic,
+  }))
+}
+
+export function feedUrlsFor(source: NewsFeedSource): string[] {
+  const extras = source.urls ?? []
+  return [...new Set([source.url, ...extras].filter(Boolean))]
+}
+
+export function looksLikeFeedXml(text: string): boolean {
+  if (typeof text !== 'string') return false
+  const trimmed = text.trimStart()
+  if (!trimmed) return false
+  if (/^<!DOCTYPE html/i.test(trimmed) || /^<html[\s>]/i.test(trimmed)) return false
+  if (/abuse-detection|just a moment|access denied|apology_objects/i.test(trimmed.slice(0, 2000))) {
+    return false
+  }
+  return /<(rss|feed|rdf:RDF)\b/i.test(trimmed.slice(0, 4000))
+}
+
+export function isNewsDigest(value: unknown): value is NewsDigest {
+  if (!value || typeof value !== 'object') return false
+  const record = value as Record<string, unknown>
+  return Array.isArray(record.items)
+    && Array.isArray(record.errors)
+    && Array.isArray(record.sources)
+    && record.ranking === 'published-time'
+}
+
+export function parseNewsDigestPayload(value: unknown): NewsDigest | undefined {
+  if (!isNewsDigest(value)) return undefined
+  return {
+    items: value.items,
+    sources: value.sources.length ? value.sources : catalogNewsSources(),
+    errors: value.errors,
+    fetchedAt: typeof value.fetchedAt === 'string' ? value.fetchedAt : new Date().toISOString(),
+    ranking: 'published-time',
+  }
+}
+
+export function newsApiUnavailableMessage(status?: number): string {
+  const statusBit = status && status !== 200 ? `HTTP ${status}. ` : ''
+  return `${statusBit}Android Chrome needs the Nuxt ${NEWS_FEEDS_API_PATH} route (this preview). Direct RSS is blocked by CORS. Reload the Nitro preview — a static host without that API cannot load headlines.`
+}
+
 export function parseRssOrAtom(xml: string, source: NewsFeedSource): NewsItem[] {
   if (typeof xml !== 'string' || !xml.trim()) return []
   const entries = [...blocks(xml, 'item'), ...blocks(xml, 'entry')]
@@ -178,6 +271,46 @@ export function mergeNewsItems(items: NewsItem[]): NewsItem[] {
   })
 }
 
+async function readFeedBody(response: Response): Promise<string> {
+  const text = await response.text()
+  return text.length > MAX_FEED_CHARS ? text.slice(0, MAX_FEED_CHARS) : text
+}
+
+async function fetchFeedXml(
+  source: NewsFeedSource,
+  fetchImpl: typeof fetch,
+  timeoutMs: number,
+): Promise<string> {
+  const attempts: string[] = []
+  for (const url of feedUrlsFor(source)) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      const response = await fetchImpl(url, {
+        signal: controller.signal,
+        redirect: 'follow',
+        headers: NEWS_FETCH_HEADERS,
+      })
+      if (!response.ok) {
+        attempts.push(`${url} → HTTP ${response.status}`)
+        continue
+      }
+      const xml = await readFeedBody(response)
+      if (!looksLikeFeedXml(xml)) {
+        attempts.push(`${url} → not RSS/Atom (WAF or HTML)`)
+        continue
+      }
+      return xml
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Feed fetch failed'
+      attempts.push(`${url} → ${message.includes('abort') ? 'Timed out' : message}`)
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+  throw new Error(attempts.join(' · ') || 'Feed fetch failed')
+}
+
 export async function fetchPublicNewsFeeds(options?: {
   fetchImpl?: typeof fetch
   now?: string
@@ -192,34 +325,22 @@ export async function fetchPublicNewsFeeds(options?: {
   const errors: NewsSourceError[] = []
 
   await Promise.all(NEWS_FEED_CATALOG.map(async (source) => {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
     try {
-      const response = await fetchImpl(source.url, {
-        signal: controller.signal,
-        headers: {
-          Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
-          'User-Agent': 'UbermenchNews/1.0 (local-first personal biohacking; public RSS only)',
-        },
-      })
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const xml = await response.text()
+      const xml = await fetchFeedXml(source, fetchImpl, timeoutMs)
       items.push(...parseRssOrAtom(xml, source).slice(0, perFeedLimit))
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Feed fetch failed'
       errors.push({
         sourceId: source.id,
         sourceName: source.name,
-        message: message.includes('abort') ? 'Timed out' : message,
+        message,
       })
-    } finally {
-      clearTimeout(timer)
     }
   }))
 
   return {
     items: mergeNewsItems(items),
-    sources: NEWS_FEED_CATALOG.map((item) => ({ ...item })),
+    sources: catalogNewsSources(),
     errors,
     fetchedAt,
     ranking: 'published-time',

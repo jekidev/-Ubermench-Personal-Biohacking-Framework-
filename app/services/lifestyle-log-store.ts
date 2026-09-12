@@ -31,8 +31,17 @@ function validDate(value: string): boolean {
   return !Number.isNaN(new Date(value).getTime())
 }
 
+export function asFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : undefined
+  }
+  return undefined
+}
+
 function optionalFinite(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+  return asFiniteNumber(value)
 }
 
 function optionalString(value: unknown): string | undefined {

@@ -55,7 +55,7 @@
         </div>
       </template>
       <p v-if="!news.digest.value.items.length && !news.loading.value" class="text-sm text-zinc-500">
-        No headlines yet. Refresh uses the Nuxt <code>/api/news/feeds</code> route so Android Chrome is not blocked by RSS CORS.
+        No headlines yet. Refresh uses the Nuxt <code>/api/news/feeds</code> route so Android Chrome is not blocked by RSS CORS. Per-source errors stay listed above — a dead WAF feed does not hide the working ones.
       </p>
       <ul v-else class="divide-y divide-zinc-800">
         <li v-for="item in news.digest.value.items" :key="item.id" class="py-3">

@@ -30,7 +30,8 @@ describe('android fallbacks', () => {
     expect(nativeMcpHandoffHref('browser')).toBe('/agent')
     expect(mcpSidecarUnavailableMessage('android-browser')).toMatch(/do not run on Android/)
     expect(HEALTH_CONNECT_BROWSER_MESSAGE).toMatch(/cannot run in Chrome/)
-    expect(HEALTH_CONNECT_BROWSER_MESSAGE).toMatch(/tauri:android/)
+    expect(HEALTH_CONNECT_BROWSER_MESSAGE).toMatch(/Garmin JSON/)
+    expect(HEALTH_CONNECT_BROWSER_MESSAGE).not.toMatch(/npm run|tauri:android/)
   })
 
   it('lists Android-working next steps', () => {

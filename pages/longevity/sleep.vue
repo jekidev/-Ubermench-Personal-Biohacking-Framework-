@@ -76,6 +76,8 @@
 </template>
 
 <script setup lang="ts">
+import { asFiniteNumber } from '~/services/lifestyle-log-store'
+
 const lifestyle = useLifestyleLogs()
 const biology = usePersonalBiology()
 lifestyle.initialize()
@@ -95,8 +97,8 @@ async function saveSleep() {
     id: crypto.randomUUID(),
     kind: 'sleep',
     recordedAt: new Date().toISOString(),
-    durationMinutes: Number.isFinite(durationMinutes.value) ? durationMinutes.value : undefined,
-    quality: Number.isFinite(quality.value) ? quality.value : undefined,
+    durationMinutes: asFiniteNumber(durationMinutes.value),
+    quality: asFiniteNumber(quality.value),
     notes: notes.value.trim() || undefined,
   })
   saved.value = true

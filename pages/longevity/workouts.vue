@@ -91,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+import { asFiniteNumber } from '~/services/lifestyle-log-store'
 import { loadExerciseCatalog, searchExercises, type ExerciseRecord } from '~~/plugins/longevity/fitness/exercises'
 
 const lifestyle = useLifestyleLogs()
@@ -128,8 +129,8 @@ async function saveWorkout() {
     recordedAt: new Date().toISOString(),
     activity,
     exerciseId: draft.exerciseId || undefined,
-    durationMinutes: Number.isFinite(draft.durationMinutes) ? draft.durationMinutes : undefined,
-    intensity: Number.isFinite(draft.intensity) ? draft.intensity : undefined,
+    durationMinutes: asFiniteNumber(draft.durationMinutes),
+    intensity: asFiniteNumber(draft.intensity),
     notes: draft.notes.trim() || undefined,
   })
   saved.value = true

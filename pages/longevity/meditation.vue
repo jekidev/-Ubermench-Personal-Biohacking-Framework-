@@ -23,7 +23,7 @@
         </UFormField>
       </div>
       <div class="mt-3 flex flex-wrap items-center gap-3">
-        <UButton :disabled="!Number.isFinite(durationMinutes) || durationMinutes < 1" @click="saveSession">Save session</UButton>
+        <UButton :disabled="!canSave" @click="saveSession">Save session</UButton>
         <span v-if="saved" class="text-sm text-zinc-400">Saved on this phone.</span>
       </div>
     </UCard>
@@ -50,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import { asFiniteNumber } from '~/services/lifestyle-log-store'
 import type { MeditationLog } from '~/types/lifestyle'
 
 const lifestyle = useLifestyleLogs()
@@ -59,14 +60,19 @@ const durationMinutes = ref(10)
 const notes = ref('')
 const saved = ref(false)
 const sessions = computed(() => lifestyle.meditationLogs.value as MeditationLog[])
+const canSave = computed(() => {
+  const minutes = asFiniteNumber(durationMinutes.value)
+  return minutes !== undefined && minutes >= 1
+})
 
 async function saveSession() {
-  if (!Number.isFinite(durationMinutes.value) || durationMinutes.value < 1) return
+  const minutes = asFiniteNumber(durationMinutes.value)
+  if (minutes === undefined || minutes < 1) return
   await lifestyle.addLog({
     id: crypto.randomUUID(),
     kind: 'meditation',
     recordedAt: new Date().toISOString(),
-    durationMinutes: durationMinutes.value,
+    durationMinutes: minutes,
     notes: notes.value.trim() || undefined,
   })
   saved.value = true

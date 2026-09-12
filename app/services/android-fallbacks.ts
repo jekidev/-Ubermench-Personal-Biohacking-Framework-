@@ -9,7 +9,7 @@ export const ANDROID_PLUGINS_HREF = '/settings?tab=plugins'
 export const ANDROID_BLOODS_HREF = '/longevity/bloods'
 export const ANDROID_DRIVE_HREF = '/connectors'
 export const ANDROID_HEALTH_SYNC_HREF = '/health-sync'
-export const ANDROID_TAURI_APP_HINT = 'npm run tauri:android'
+export const ANDROID_TAURI_APP_HINT = 'native Android app (not Chrome/PWA)'
 
 export const NATIVE_MCP_ANDROID_MESSAGE =
   'Native MCP (paper-search, LDR, Transcriptor, SuperMemory, Mem0) cannot run on this Android phone — uvx and Docker sidecars are not available in Chrome/PWA. Use research.europepmc, research.paperqa.ask (after indexing a lab PDF), plugins.garmin.status, or plugins.pdf.inspect instead. Do not mint a preflight token here.'
@@ -24,7 +24,7 @@ export const MCP_SIDECAR_BROWSER_DESKTOP_MESSAGE =
   'Sidecars are not started from the browser. On a desktop Tauri install, use Check sidecar. On Android, use research.europepmc, PaperQA, Bloods, or Drive instead. uvx and Docker are never auto-started.'
 
 export const HEALTH_CONNECT_BROWSER_MESSAGE =
-  `Health Connect cannot run in Chrome or a PWA. If you later install the native Android app (${ANDROID_TAURI_APP_HINT}), Health Connect may work there — not in this browser.`
+  'Health Connect cannot run in Chrome or a PWA. Import Garmin JSON on Health Sync instead. Health Connect only exists in the native Android app later — not in this browser, and not via an npm/laptop command.'
 
 export type AndroidFallbackLink = {
   label: string
