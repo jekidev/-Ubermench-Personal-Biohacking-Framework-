@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createMcpServerTools, isMcpStdioToolName, resolveMcpServer } from './mcp-server-tools'
+import { createMcpServerTools, formatNextNativePreflightLabel, isMcpStdioToolName, nativeCallsMatchingPreflight, nextNativePreflightTarget, resolveMcpServer, resolveNativeMcpPreflightRequest, selectNativeApprovalCallIds } from './mcp-server-tools'
 
 describe('mcp server tools', () => {
   it('registers discord stdio tool', () => {
@@ -19,6 +19,39 @@ describe('mcp server tools', () => {
     const server = resolveMcpServer('discord')
     expect(server?.executable).toBe('npx')
     expect(server?.envKeys).toContain('DISCORD_BOT_TOKEN')
+  })
+
+  it('resolves preflight command from pending mcp.stdio server tools', () => {
+    expect(resolveNativeMcpPreflightRequest({
+      name: 'mcp.stdio:paper-search',
+      args: { method: 'search_pubmed' },
+    })).toEqual({ command: 'uvx', args: ['paper-search-mcp'] })
+    expect(resolveNativeMcpPreflightRequest({
+      name: 'mcp.stdio',
+      args: { command: 'node', args: ['server.js'] },
+    })).toEqual({ command: 'node', args: ['server.js'] })
+    expect(resolveNativeMcpPreflightRequest({ name: 'research.paperqa.ask', args: {} })).toBeNull()
+  })
+
+  it('matches native calls to one preflight command at a time', () => {
+    const calls = [
+      { id: 'ps', name: 'mcp.stdio:paper-search', args: { method: 'search_pubmed' } },
+      { id: 'ldr', name: 'mcp.stdio:local-deep-research', args: { method: 'quick_search' } },
+    ]
+    expect(nativeCallsMatchingPreflight(calls, 'uvx', ['paper-search-mcp']).map((call) => call.id)).toEqual(['ps'])
+    expect(nativeCallsMatchingPreflight(calls, 'uvx', ['--from', 'local-deep-research[mcp]', 'ldr-mcp']).map((call) => call.id)).toEqual(['ldr'])
+    expect(nextNativePreflightTarget(calls)).toEqual({
+      callId: 'ps',
+      name: 'mcp.stdio:paper-search',
+      command: 'uvx',
+      args: ['paper-search-mcp'],
+    })
+    expect(formatNextNativePreflightLabel(calls)).toContain('mcp.stdio:paper-search')
+    expect(formatNextNativePreflightLabel(calls)).toContain('uvx paper-search-mcp')
+    expect(formatNextNativePreflightLabel(calls)).toContain('mcp.stdio:local-deep-research')
+    expect(selectNativeApprovalCallIds(calls, { nativeCommand: 'uvx', nativeArgs: ['paper-search-mcp'] })).toEqual(['ps'])
+    expect(selectNativeApprovalCallIds(calls, { nativeCommand: 'uvx', nativeArgs: ['--from', 'local-deep-research[mcp]', 'ldr-mcp'] })).toEqual(['ldr'])
+    expect(selectNativeApprovalCallIds(calls)).toEqual(['ps'])
   })
 
   it('blocks raw JSON-RPC bypasses for policy-restricted servers', async () => {

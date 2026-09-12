@@ -37,6 +37,7 @@ export function createPluginTools(): AgentTool[] {
           })),
         )
         const catalog = loadExerciseCatalog()
+        const lastPdf = getLastPdfInspection()
         return {
           domainPlugins: listDomainPlugins(),
           starredIntegrations: listStarredIntegrations().map((integration) => ({
@@ -56,6 +57,14 @@ export function createPluginTools(): AgentTool[] {
             rejectedBiometricProviders: REJECTED_BIOMETRIC_PROVIDERS,
           },
           connectors,
+          garmin: await loadGarminPluginStatus(),
+          lastPdfInspection: lastPdf
+            ? {
+                filename: lastPdf.filename,
+                inspectedAt: lastPdf.inspectedAt,
+                inspection: lastPdf.inspection,
+              }
+            : null,
         }
       },
     },
@@ -68,7 +77,7 @@ export function createPluginTools(): AgentTool[] {
         const query = typeof args.query === 'string' ? args.query.trim() : ''
         if (!query) throw new Error('plugins.exercises.search requires a query string.')
         const limit = typeof args.limit === 'number' ? Math.min(Math.max(1, args.limit), 50) : 12
-        return searchExercises(query).slice(0, limit).map((exercise) => ({
+        const results = searchExercises(query).slice(0, limit).map((exercise) => ({
           id: exercise.id,
           name: exercise.name,
           category: exercise.category,
@@ -76,6 +85,17 @@ export function createPluginTools(): AgentTool[] {
           target: exercise.target,
           muscleGroup: exercise.muscleGroup,
         }))
+        if (!results.length) {
+          return {
+            query,
+            results: [],
+            empty: true,
+            message: 'No exercises matched. Search a different term in Settings → Plugins or Longevity → Fitness. The catalog is local MIT metadata — empty is not a crash.',
+            settingsHref: '/settings?tab=plugins',
+            fitnessHref: '/longevity/fitness',
+          }
+        }
+        return { query, results, empty: false }
       },
     },
     {
@@ -85,12 +105,25 @@ export function createPluginTools(): AgentTool[] {
       requiresApproval: false,
       async execute(args) {
         const tier = typeof args.tier === 'string' ? args.tier.trim() : ''
-        if (!tier) return LONGEVITY_WATCHLIST
-        const allowed: WatchlistTier[] = ['resource', 'clock', 'organization', 'reading']
-        if (!allowed.includes(tier as WatchlistTier)) {
-          throw new Error('plugins.watchlist.list tier must be resource, clock, organization, or reading.')
+        const items = !tier
+          ? LONGEVITY_WATCHLIST
+          : (() => {
+              const allowed: WatchlistTier[] = ['resource', 'clock', 'organization', 'reading']
+              if (!allowed.includes(tier as WatchlistTier)) {
+                throw new Error('plugins.watchlist.list tier must be resource, clock, organization, or reading.')
+              }
+              return listWatchlistByTier(tier as WatchlistTier)
+            })()
+        if (!items.length) {
+          return {
+            tier: tier || null,
+            items: [],
+            empty: true,
+            message: 'No watchlist items for this filter. Open Settings → Plugins to browse the geroscience watchlist.',
+            settingsHref: '/settings?tab=plugins',
+          }
         }
-        return listWatchlistByTier(tier as WatchlistTier)
+        return { tier: tier || null, items, empty: false }
       },
     },
     {
@@ -122,7 +155,13 @@ export function createPluginTools(): AgentTool[] {
       requiresApproval: false,
       async execute(args) {
         if (!isConnectorEnabled('pdf-inspector')) {
-          throw new Error('PDF inspector is disabled. Enable it in Settings → Plugins.')
+          return {
+            ok: false,
+            error: 'PDF inspector is disabled. Enable it in Settings → Plugins, then retry plugins.pdf.inspect.',
+            settingsHref: '/settings?tab=plugins',
+            connectorId: 'pdf-inspector',
+            enabled: false,
+          }
         }
 
         const sample = args.sample === true || args.sample === 'true'
@@ -152,7 +191,9 @@ export function createPluginTools(): AgentTool[] {
           return {
             source: 'last',
             inspection: null,
-            message: 'No PDF inspection cached. Pass sample:true or base64.',
+            message: 'No PDF inspection cached. Index or inspect a lab PDF via Bloods or Settings → Plugins, or pass sample:true / base64.',
+            bloodsHref: '/longevity/bloods',
+            settingsHref: '/settings?tab=plugins',
           }
         }
         return { source: 'last', ...last }

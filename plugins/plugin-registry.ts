@@ -20,7 +20,7 @@ export type StarredIntegration = {
   source: string
   modulePath: string
   kind: StarredIntegrationKind
-  settingsTab?: 'github' | 'memory' | 'research' | 'connectors'
+  settingsTab?: 'github' | 'memory' | 'research' | 'connectors' | 'plugins'
   connectorId?: string
 }
 
@@ -109,7 +109,7 @@ export const STARRED_INTEGRATIONS: StarredIntegration[] = [
     modulePath: 'plugins/longevity/pdf/pdf-inspector.ts',
     kind: 'connector',
     connectorId: 'pdf-inspector',
-    settingsTab: 'connectors',
+    settingsTab: 'plugins',
   },
 ]
 

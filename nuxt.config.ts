@@ -27,6 +27,7 @@ export default defineNuxtConfig({
   vite: {
     server: {
       strictPort: false,
+      allowedHosts: ['.trycloudflare.com'],
       hmr: {
         protocol: 'wss',
         clientPort: 443,

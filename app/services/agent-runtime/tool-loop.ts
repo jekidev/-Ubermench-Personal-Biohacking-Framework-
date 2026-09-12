@@ -1,6 +1,7 @@
 import { createDefaultToolGateway } from './tool-gateway'
 import type { AgentRun, AgentObservation, AgentToolCall } from './types'
 import type { AgentTask } from '~/services/agent-superstack/types'
+import { assignUniqueToolCallIds } from './tool-plan'
 import { validateToolResult } from './tool-result-validation'
 import { redactSecrets } from './secret-redaction'
 
@@ -21,12 +22,28 @@ export function executeApprovedToolCalls(
   const previous = runQueues.get(run) ?? Promise.resolve()
   const current = previous.catch(() => undefined).then(async () => {
     const gateway = createDefaultToolGateway()
-    const bounded = calls.slice(0, Math.max(0, Math.min(maxToolCalls, DEFAULT_MAX_TOOL_CALLS)))
+    const bounded = assignUniqueToolCallIds(
+      calls.slice(0, Math.max(0, Math.min(maxToolCalls, DEFAULT_MAX_TOOL_CALLS))),
+    )
     let executed = 0
 
-    for (const call of bounded) {
-      if (run.toolCalls.some((existing) => existing.id === call.id)) continue
-      run.toolCalls.push(call)
+    for (const incoming of bounded) {
+      const knownIds = [
+        ...run.toolCalls.map((existing) => existing.id),
+        ...run.observations.flatMap((item) => item.toolCallId ? [item.toolCallId] : []),
+      ]
+      const recorded = run.toolCalls.find((existing) => existing.id === incoming.id)
+      const observed = run.observations.some((item) => item.kind === 'tool' && item.toolCallId === incoming.id)
+      const sameTool = recorded?.name === incoming.name
+      let call = incoming
+      if (observed && sameTool) continue
+      if ((observed || recorded) && !sameTool) {
+        call = assignUniqueToolCallIds([incoming], knownIds)[0] ?? incoming
+      }
+
+      const existingIndex = run.toolCalls.findIndex((existing) => existing.id === call.id && existing.name === call.name)
+      if (existingIndex >= 0) run.toolCalls[existingIndex] = { ...run.toolCalls[existingIndex], ...call }
+      else run.toolCalls.push(call)
       run.status = call.requiresApproval || gateway.get(call.name)?.requiresApproval ? 'waiting-approval' : 'executing'
       try {
         const result = await (call.requiresApproval || gateway.get(call.name)?.requiresApproval

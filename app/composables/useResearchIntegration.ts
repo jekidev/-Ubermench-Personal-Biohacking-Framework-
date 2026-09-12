@@ -4,8 +4,10 @@ import { useConnectorEnablement } from './useConnectorEnablement'
 import type { ConnectorId } from '../../plugins/connectors/types'
 import { getInstalledMcpServer } from '../../plugins/llm/mcp/install-store'
 import { installMcpFromCatalog } from '../../plugins/llm/mcp/install'
-import { answerPaperQaFromLocalRag, type PaperQaAnswer } from '../services/paper-qa'
+import { answerPaperQaFromLocalRag, PAPER_QA_CONNECTOR_OFF_MESSAGE, type PaperQaAnswer, type PaperQaEmptyIndexResult } from '../services/paper-qa'
+import { checkMcpSidecar, type McpSidecarCheck } from '../services/mcp-sidecar'
 import { listResearchProviders } from '../services/external-research-providers'
+import { runResearchWorkflow } from '../services/research-workflow'
 import { setSecret } from '../services/secret-vault'
 
 const MCP_BY_CONNECTOR: Partial<Record<ConnectorId, string>> = {
@@ -21,14 +23,22 @@ export function useResearchIntegration() {
   const unpaywallEmailDraft = ref('')
   const ldrProviderDraft = ref('')
   const paperQaQuestion = ref('')
-  const paperQaAnswer = ref<PaperQaAnswer | null>(null)
+  const paperQaAnswer = ref<PaperQaAnswer | PaperQaEmptyIndexResult | null>(null)
+  const europePmcQuery = ref('')
+  const europePmcBusy = ref(false)
+  const europePmcHits = ref<Array<{ id: string; title: string; journal?: string; doi?: string; url?: string }>>([])
+  const sidecarBusy = ref(false)
+  const sidecarCheck = ref<McpSidecarCheck | null>(null)
 
   const providers = computed(() => {
     void settings.value.enabled
     return listResearchProviders()
   })
 
+  const mcpEpoch = ref(0)
+
   function mcpStatus(serverId: string) {
+    void mcpEpoch.value
     const installed = getInstalledMcpServer(serverId)
     if (!installed) return 'not installed'
     return installed.enabled ? 'installed + enabled' : 'installed, disabled'
@@ -65,6 +75,7 @@ export function useResearchIntegration() {
     const serverId = MCP_BY_CONNECTOR[id]
     if (serverId) syncConnectorMcpInstall(id, enabled)
     if (enabled && serverId) installMcpFromCatalog(serverId)
+    mcpEpoch.value += 1
   }
 
   async function refreshConnectorStatus(id: ConnectorId) {
@@ -75,12 +86,47 @@ export function useResearchIntegration() {
     error.value = ''
     try {
       if (!isEnabled('paper-qa')) {
-        throw new Error('Enable the PaperQA connector first.')
+        throw new Error(PAPER_QA_CONNECTOR_OFF_MESSAGE)
       }
       paperQaAnswer.value = answerPaperQaFromLocalRag(paperQaQuestion.value)
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : 'PaperQA preview failed'
       paperQaAnswer.value = null
+    }
+  }
+
+  async function runEuropePmcPreview() {
+    const goal = europePmcQuery.value.trim()
+    if (!goal) {
+      error.value = 'Enter a literature question for Europe PMC.'
+      return
+    }
+    europePmcBusy.value = true
+    error.value = ''
+    try {
+      const result = await runResearchWorkflow({ goal, pageSize: 5 })
+      europePmcHits.value = result.hits.slice(0, 5).map((hit) => ({
+        id: hit.id,
+        title: hit.title,
+        journal: hit.journal,
+        doi: hit.doi,
+        url: hit.url,
+      }))
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : 'Europe PMC search failed'
+      europePmcHits.value = []
+    } finally {
+      europePmcBusy.value = false
+    }
+  }
+
+  async function checkSidecar(serverId: string) {
+    sidecarBusy.value = true
+    try {
+      sidecarCheck.value = await checkMcpSidecar(serverId)
+      return sidecarCheck.value
+    } finally {
+      sidecarBusy.value = false
     }
   }
 
@@ -91,6 +137,11 @@ export function useResearchIntegration() {
     ldrProviderDraft,
     paperQaQuestion,
     paperQaAnswer,
+    europePmcQuery,
+    europePmcBusy,
+    europePmcHits,
+    sidecarBusy,
+    sidecarCheck,
     providers,
     mcpStatus,
     saveUnpaywallEmail,
@@ -98,6 +149,8 @@ export function useResearchIntegration() {
     setConnector,
     refreshConnectorStatus,
     runPaperQaPreview,
+    runEuropePmcPreview,
+    checkSidecar,
     isConnectorEnabled: isEnabled,
   }
 }

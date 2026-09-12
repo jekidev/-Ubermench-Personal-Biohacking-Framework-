@@ -1,12 +1,79 @@
 import { searchDocuments } from '../../plugins/longevity/rag/document-index'
 
 export const PAPER_QA_SCI_HUB_ENABLED = false as const
+export const PAPER_QA_SETTINGS_HREF = '/settings?tab=research'
+export const PAPER_QA_BLOODS_HREF = '/longevity/bloods'
+export const PAPER_QA_DRIVE_HREF = '/health-sync'
+export const PAPER_QA_CONNECTOR_OFF_MESSAGE =
+  'PaperQA connector is off. Enable it in Settings → Research, then retry research.paperqa.ask.'
+export const PAPER_QA_EMPTY_INDEX_MESSAGE =
+  'No indexed lab PDFs matched this question. On this phone, index a lab PDF via Bloods or Drive first, then retry research.paperqa.ask.'
+
+export type PaperQaConnectorOffResult = {
+  ok: false
+  error: string
+  settingsHref: typeof PAPER_QA_SETTINGS_HREF
+  connectorId: 'paper-qa'
+  enabled: false
+}
+
+export function paperQaFailedResult(error: string): Omit<PaperQaConnectorOffResult, 'enabled'> & { enabled?: false } {
+  const message = error.trim() || PAPER_QA_CONNECTOR_OFF_MESSAGE
+  return {
+    ok: false,
+    error: message,
+    settingsHref: PAPER_QA_SETTINGS_HREF,
+    connectorId: 'paper-qa',
+  }
+}
 
 export type PaperQaCitation = {
   key: string
   title: string
   doi?: string
   pages?: string
+}
+
+export function paperQaConnectorOffResult(): PaperQaConnectorOffResult {
+  return {
+    ...paperQaFailedResult(PAPER_QA_CONNECTOR_OFF_MESSAGE),
+    enabled: false,
+  }
+}
+
+export type PaperQaEmptyIndexResult = {
+  ok: false
+  emptyIndex: true
+  error: string
+  settingsHref: typeof PAPER_QA_SETTINGS_HREF
+  bloodsHref: typeof PAPER_QA_BLOODS_HREF
+  driveHref: typeof PAPER_QA_DRIVE_HREF
+  connectorId: 'paper-qa'
+  question: string
+  answer: string
+  citations: PaperQaCitation[]
+  confidence: number
+  backend: 'local-rag'
+  evidenceNotes: string[]
+}
+
+export function paperQaEmptyIndexResult(question: string): PaperQaEmptyIndexResult {
+  const normalized = question.trim()
+  return {
+    ok: false,
+    emptyIndex: true,
+    error: PAPER_QA_EMPTY_INDEX_MESSAGE,
+    settingsHref: PAPER_QA_SETTINGS_HREF,
+    bloodsHref: PAPER_QA_BLOODS_HREF,
+    driveHref: PAPER_QA_DRIVE_HREF,
+    connectorId: 'paper-qa',
+    question: normalized,
+    answer: PAPER_QA_EMPTY_INDEX_MESSAGE,
+    citations: [],
+    confidence: 0.1,
+    backend: 'local-rag',
+    evidenceNotes: ['PaperQA returned no citations — index a lab PDF via Bloods / Drive first.'],
+  }
 }
 
 export type PaperQaPlan = {
@@ -88,17 +155,11 @@ export function paperQaCitationsToEvidenceNotes(answer: PaperQaAnswer): string[]
 export function answerPaperQaFromLocalRag(
   question: string,
   storage?: Pick<Storage, 'getItem' | 'setItem'>,
-): PaperQaAnswer {
+): PaperQaAnswer | PaperQaEmptyIndexResult {
   const normalizedQuestion = requireQuestion(question)
   const hits = searchDocuments(normalizedQuestion, 6, storage)
   if (!hits.length) {
-    return validatePaperQaAnswer({
-      question: normalizedQuestion,
-      answer: 'No indexed local PDF excerpts matched this question. Sync lab PDFs from Google Drive or import documents before using PaperQA local-RAG.',
-      citations: [],
-      backend: 'local-rag',
-      confidence: 0.1,
-    })
+    return paperQaEmptyIndexResult(normalizedQuestion)
   }
 
   const citations = hits.map((hit, index) => ({

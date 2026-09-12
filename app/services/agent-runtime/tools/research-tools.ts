@@ -3,7 +3,7 @@ import { getConnectorStatus } from '../../../../plugins/connectors/connector-run
 import { isConnectorEnabled } from '../../../../plugins/connectors/connector-store'
 import type { ConnectorId } from '../../../../plugins/connectors/types'
 import { getInstalledMcpServer } from '../../../../plugins/llm/mcp/install-store'
-import { buildPaperQaPlan, answerPaperQaFromLocalRag, paperQaCitationsToEvidenceNotes } from '../../paper-qa'
+import { buildPaperQaPlan, answerPaperQaFromLocalRag, paperQaCitationsToEvidenceNotes, paperQaConnectorOffResult, paperQaFailedResult } from '../../paper-qa'
 import { listResearchProviders } from '../../external-research-providers'
 import { runResearchWorkflow } from '../../research-workflow'
 
@@ -80,8 +80,12 @@ export function createResearchTools(): AgentTool[] {
       risk: 'low',
       requiresApproval: false,
       async execute(args) {
-        const question = typeof args.question === 'string' ? args.question : ''
-        return buildPaperQaPlan(question)
+        try {
+          const question = typeof args.question === 'string' ? args.question : ''
+          return buildPaperQaPlan(question)
+        } catch (error) {
+          return paperQaFailedResult(error instanceof Error ? error.message : 'PaperQA plan failed')
+        }
       },
     },
     {
@@ -91,13 +95,18 @@ export function createResearchTools(): AgentTool[] {
       requiresApproval: true,
       async execute(args) {
         if (!isConnectorEnabled('paper-qa')) {
-          throw new Error('paper-qa connector is disabled. Enable it in Settings → Research.')
+          return paperQaConnectorOffResult()
         }
-        const question = typeof args.question === 'string' ? args.question : ''
-        const answer = answerPaperQaFromLocalRag(question)
-        return {
-          ...answer,
-          evidenceNotes: paperQaCitationsToEvidenceNotes(answer),
+        try {
+          const question = typeof args.question === 'string' ? args.question : ''
+          const answer = answerPaperQaFromLocalRag(question)
+          if ('emptyIndex' in answer && answer.emptyIndex) return answer
+          return {
+            ...answer,
+            evidenceNotes: paperQaCitationsToEvidenceNotes(answer),
+          }
+        } catch (error) {
+          return paperQaFailedResult(error instanceof Error ? error.message : 'PaperQA ask failed')
         }
       },
     },

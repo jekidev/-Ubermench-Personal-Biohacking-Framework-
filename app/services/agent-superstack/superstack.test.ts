@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { AgentMemory } from './memory'
 import { ModelRouter } from './model-router'
 import { evaluateTask } from './governance'
-import { SkillRegistry } from './skills'
+import { createDefaultSkillRegistry, SkillRegistry } from './skills'
 import { AgentKernel } from './kernel'
 
 describe('agent superstack', () => {
@@ -33,6 +33,32 @@ describe('agent superstack', () => {
     skills.register({ id: 'coding', name: 'Coding', description: '', triggers: ['debug'], tools: [], enabled: true })
     expect(skills.match('please debug this')).toHaveLength(1)
     expect(evaluateTask({ id: '1', kind: 'coding', prompt: 'rm -rf /', allowTools: true })).toMatchObject({ requiresConfirmation: true })
+  })
+
+  it('matches longevity plugin tools for HRV and exercise catalog prompts', () => {
+    const skills = createDefaultSkillRegistry()
+    expect(skills.match('what is my hrv after garmin sync').some((skill) => skill.id === 'longevity-plugins')).toBe(true)
+    expect(skills.match('search the MIT exercises catalog').some((skill) => skill.id === 'longevity-plugins')).toBe(true)
+  })
+
+  it('matches longevity plugin tools for Garmin and lab PDFs', () => {
+    const skills = createDefaultSkillRegistry()
+    const matched = skills.match('inspect garmin status after a lab pdf import')
+    expect(matched.some((skill) => skill.id === 'longevity-plugins')).toBe(true)
+    expect(matched.find((skill) => skill.id === 'longevity-plugins')?.tools).toContain('plugins.pdf.inspect')
+    expect(matched.find((skill) => skill.id === 'longevity-plugins')?.tools).toContain('plugins.garmin.status')
+  })
+
+  it('uses registered catalog tool names for paper-search and LDR skills', () => {
+    const skills = createDefaultSkillRegistry()
+    const literature = skills.match('search pubmed and europe pmc literature')
+    const ldr = skills.match('run local deep research for a cited report')
+    expect(literature.find((skill) => skill.id === 'scientific-literature-search')?.tools).toEqual(expect.arrayContaining([
+      'research.europepmc',
+      'mcp.stdio:paper-search',
+    ]))
+    expect(literature.find((skill) => skill.id === 'scientific-literature-search')?.tools).not.toContain('paper-search')
+    expect(ldr.find((skill) => skill.id === 'local-deep-research')?.tools).toContain('mcp.stdio:local-deep-research')
   })
 
   it('builds an execution context', () => {

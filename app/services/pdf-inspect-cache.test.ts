@@ -8,6 +8,7 @@ import {
   inspectAndCachePdfBytes,
   inspectSamplePdfAndCache,
   PDF_INSPECT_CACHE_KEY,
+  subscribePdfInspectCache,
 } from './pdf-inspect-cache'
 
 function memoryStorage(): Storage {
@@ -36,6 +37,17 @@ describe('pdf inspect cache', () => {
     expect(cached.byteLength).toBe(bytes.byteLength)
     expect(storage.getItem(PDF_INSPECT_CACHE_KEY)?.includes('%PDF')).toBe(false)
     expect(getLastPdfInspection(storage)?.filename).toBe('labs.pdf')
+  })
+
+  it('notifies subscribers when the last inspection changes', () => {
+    const seen: Array<string | null> = []
+    const unsubscribe = subscribePdfInspectCache((entry) => {
+      seen.push(entry?.filename ?? null)
+    })
+    inspectSamplePdfAndCache()
+    clearPdfInspectCache()
+    unsubscribe()
+    expect(seen).toEqual(['sample.pdf', null])
   })
 
   it('round-trips last inspection through storage', () => {

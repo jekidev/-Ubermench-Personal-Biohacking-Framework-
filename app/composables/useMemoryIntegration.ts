@@ -7,6 +7,7 @@ import { getInstalledMcpServer } from '../../plugins/llm/mcp/install-store'
 import { installMcpFromCatalog } from '../../plugins/llm/mcp/install'
 import type { ConnectorId } from '../../plugins/connectors/types'
 import { setSecret } from '../services/secret-vault'
+import { checkMcpSidecar, type McpSidecarCheck } from '../services/mcp-sidecar'
 import { useConnectorEnablement } from './useConnectorEnablement'
 
 const MEMORY_MCP_CONNECTORS: ConnectorId[] = ['supermemory', 'mem0', 'mcp-memory']
@@ -18,6 +19,8 @@ export function useMemoryIntegration() {
   const searchQuery = ref('')
   const searchResults = ref<UnifiedRagHit[]>([])
   const mem0KeyDraft = ref('')
+  const sidecarBusy = ref(false)
+  const sidecarCheck = ref<McpSidecarCheck | null>(null)
 
   const agentMemoryCount = computed(() => new AgentMemoryRagIndex().count())
   const connectorEnabled = computed(() => isEnabled('agent-memory'))
@@ -71,12 +74,24 @@ export function useMemoryIntegration() {
     })
   }
 
+  async function checkSidecar(serverId: string) {
+    sidecarBusy.value = true
+    try {
+      sidecarCheck.value = await checkMcpSidecar(serverId)
+      return sidecarCheck.value
+    } finally {
+      sidecarBusy.value = false
+    }
+  }
+
   return {
     busy,
     error,
     searchQuery,
     searchResults,
     mem0KeyDraft,
+    sidecarBusy,
+    sidecarCheck,
     agentMemoryCount,
     connectorEnabled,
     mcpStatus,
@@ -87,6 +102,7 @@ export function useMemoryIntegration() {
     setMemoryMcpConnector,
     refreshStatus,
     runSearch,
+    checkSidecar,
     isConnectorEnabled: isEnabled,
   }
 }

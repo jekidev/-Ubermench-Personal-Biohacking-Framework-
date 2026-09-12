@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { executeApprovedToolCalls } from './tool-loop'
+import { pendingAgentToolCalls } from './run-reply'
+import { upsertToolCalls } from './tool-plan'
 import type { AgentRun, AgentToolCall } from './types'
 import type { AgentTask } from '~/services/agent-superstack/types'
 
@@ -46,5 +48,48 @@ describe('agent tool loop', () => {
     expect(first.executed + second.executed).toBe(1)
     expect(run.toolCalls).toHaveLength(1)
     expect(run.observations).toHaveLength(1)
+  })
+
+  it('executes plugin Garmin schema and records the JSON observation', async () => {
+    const run = runFixture()
+    const result = await executeApprovedToolCalls(task, run, [{ id: 'g1', name: 'plugins.garmin.schema', args: {} }])
+    expect(result.executed).toBe(1)
+    expect(run.observations[0]?.kind).toBe('tool')
+    expect(run.observations[0]?.text).toContain('garmin')
+  })
+
+  it('executes a previously recorded pending call once an approval token is supplied', async () => {
+    const run = runFixture()
+    run.toolCalls = [{ id: 'c1', name: 'plugins.garmin.schema', args: {}, requiresApproval: false }]
+    const result = await executeApprovedToolCalls(task, run, [{
+      id: 'c1',
+      name: 'plugins.garmin.schema',
+      args: {},
+      approvalToken: 'user-approved',
+    }])
+    expect(result.executed).toBe(1)
+    expect(run.observations[0]?.kind).toBe('tool')
+    expect(run.toolCalls).toHaveLength(1)
+  })
+
+  it('executes mixed Garmin + approval-gated schema when the model reused one id', async () => {
+    const run = runFixture()
+    const unique = [
+      { id: 'dup', name: 'plugins.garmin.status', args: {}, requiresApproval: false },
+      { id: 'dup', name: 'plugins.garmin.schema', args: {}, requiresApproval: true },
+    ]
+    const first = await executeApprovedToolCalls(task, run, [unique[0]!])
+    expect(first.executed).toBe(1)
+    run.toolCalls = upsertToolCalls(run.toolCalls, [unique[1]!])
+    expect(pendingAgentToolCalls(run).map((call) => call.name)).toEqual(['plugins.garmin.schema'])
+
+    const approved = pendingAgentToolCalls(run).map((call) => ({ ...call, approvalToken: 'user-approved' }))
+    const second = await executeApprovedToolCalls(task, run, approved)
+    expect(second.executed).toBe(1)
+    expect(run.observations.filter((item) => item.kind === 'tool')).toHaveLength(2)
+    expect(run.toolCalls.map((call) => call.name)).toEqual(expect.arrayContaining([
+      'plugins.garmin.status',
+      'plugins.garmin.schema',
+    ]))
   })
 })

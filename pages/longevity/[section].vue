@@ -9,6 +9,9 @@
       <div class="flex gap-2">
         <UButton v-if="section === 'bloods'" to="/longevity/bloods">Open blood importer</UButton>
         <UButton v-else-if="section === 'genetics'" to="/longevity/genetics">Open genetics</UButton>
+        <UButton v-else-if="section === 'fitness'" to="/longevity/workouts">Open workouts</UButton>
+        <UButton v-else-if="section === 'recovery'" to="/longevity/sleep">Open sleep</UButton>
+        <UButton v-else-if="section === 'metabolic'" to="/longevity/diet">Open diet log</UButton>
         <UButton v-else to="/longevity" variant="outline">Back to overview</UButton>
       </div>
     </div>
@@ -75,6 +78,25 @@
         </li>
       </ul>
       <p v-else class="mt-4 text-sm text-zinc-500">Search the local catalog. Settings → Plugins has the same search plus Garmin and PDF inspector.</p>
+      <NuxtLink to="/longevity/workouts" class="mt-4 inline-block text-sm underline">Log sessions on Workouts</NuxtLink>
+    </UCard>
+
+    <UCard v-if="section === 'recovery'">
+      <template #header><div class="font-medium">Sleep log</div></template>
+      <p class="text-sm text-zinc-500">Recovery reads biology sleep records. The dedicated Sleep page adds Garmin sleep_score (after JSON import) and a local night log.</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UButton to="/longevity/sleep" size="sm">Open Sleep</UButton>
+        <UButton to="/health-sync" size="sm" variant="outline">Garmin JSON</UButton>
+      </div>
+    </UCard>
+
+    <UCard v-if="section === 'metabolic'">
+      <template #header><div class="font-medium">Diet log</div></template>
+      <p class="text-sm text-zinc-500">Metabolic reads glucose/lipids from the biology profile. The dedicated Diet page is the local meal log on this phone — not a USDA dump.</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UButton to="/longevity/diet" size="sm">Open Diet</UButton>
+        <UButton to="/biology" size="sm" variant="outline">Biology profile</UButton>
+      </div>
     </UCard>
   </div>
 </template>

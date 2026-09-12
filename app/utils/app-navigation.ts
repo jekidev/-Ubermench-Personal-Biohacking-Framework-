@@ -13,6 +13,10 @@ export const LONGEVITY_NAV: AppNavItem[] = [
   { label: 'Bloods', to: '/longevity/bloods' },
   { label: 'Genetics', to: '/longevity/genetics' },
   { label: 'Fitness', to: '/longevity/fitness' },
+  { label: 'Workouts', to: '/longevity/workouts' },
+  { label: 'Sleep', to: '/longevity/sleep' },
+  { label: 'Diet', to: '/longevity/diet' },
+  { label: 'Meditation', to: '/longevity/meditation' },
   { label: 'Evidence', to: '/longevity/evidence' },
   { label: 'Timeline', to: '/longevity/timeline' },
   { label: 'Mito', to: '/longevity/mito' },
@@ -32,6 +36,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
       { label: 'Chat', to: '/chat' },
       { label: 'Agent', to: '/agent' },
       { label: 'AI Models', to: '/ai-models' },
+      { label: 'News', to: '/news' },
     ],
   },
   {
@@ -55,6 +60,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
       { label: 'Connectors', to: '/connectors' },
       { label: 'Settings', to: '/settings' },
       { label: 'Plugins', to: '/settings?tab=plugins' },
+      { label: 'Research', to: '/settings?tab=research' },
     ],
   },
 ]

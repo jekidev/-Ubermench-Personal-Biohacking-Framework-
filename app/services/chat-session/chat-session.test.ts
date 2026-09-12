@@ -24,6 +24,15 @@ describe('chat-session slash commands', () => {
     expect(result.workflowId).toBe('youtube-schedule')
   })
 
+  it('parses /research with catalog tool names and no Sci-Hub', () => {
+    const result = parseSlashCommand('/research NAD+ sleep', enabled)
+    expect(result.workflowId).toBe('research')
+    expect(result.prompt).toContain('research.europepmc')
+    expect(result.prompt).toContain('mcp.stdio:paper-search')
+    expect(result.prompt.toLowerCase()).not.toContain('sci-hub is required')
+    expect(result.prompt).toContain('Do not use Sci-Hub')
+  })
+
   it('lists enabled slash commands', () => {
     expect(listSlashCommands(enabled).some((line) => line.startsWith('/help'))).toBe(true)
   })
@@ -44,5 +53,21 @@ describe('chat-session stack synergy', () => {
     expect(snapshot.synergies.length).toBeGreaterThan(0)
     expect(snapshot.gaps.some((gap) => gap.includes('Transcriptor'))).toBe(true)
     expect(formatStackSynergyContext(snapshot)).toContain('Active stack snapshot')
+  })
+
+  it('uses catalog MCP tool names on the literature skill, not the bare connector id', () => {
+    const storage = {
+      getItem: () => null,
+      setItem: () => {},
+    } as Pick<Storage, 'getItem' | 'setItem'>
+    const snapshot = buildStackSynergySnapshot({
+      enabledSkillIds: ['scientific-literature-search'],
+      enabledRuleIds: [],
+      enabledWorkflowIds: [],
+      showStackSynergy: true,
+    }, storage)
+    const literature = snapshot.skills.find((skill) => skill.id === 'scientific-literature-search')
+    expect(literature?.tools).toContain('mcp.stdio:paper-search')
+    expect(literature?.tools).not.toContain('paper-search')
   })
 })

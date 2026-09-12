@@ -3,8 +3,8 @@
     <div>
       <h1 class="text-2xl font-semibold">Settings</h1>
       <p class="text-zinc-500">
-        Provider configuration is persistent metadata; API keys use the Tauri Stronghold vault on desktop and a browser secret store in preview.
-        Google OAuth and MCP installs live on <NuxtLink to="/connectors" class="underline underline-offset-4">Connectors</NuxtLink>.
+        Provider configuration is persistent metadata; API keys use the Tauri Stronghold vault on desktop and this browser's local vault on Android Chrome.
+        Google OAuth and Drive live on <NuxtLink to="/connectors" class="underline underline-offset-4">Connectors</NuxtLink>.
       </p>
     </div>
 
@@ -55,12 +55,20 @@
           <UButton v-else color="neutral" variant="outline" :loading="vaultBusy" @click="lockVault">Lock vault</UButton>
         </div>
         <p v-if="vaultError" class="mt-2 text-sm text-red-500">{{ vaultError }}</p>
-        <p class="mt-2 text-xs text-zinc-500">On Tauri desktop, provider API keys are stored in Stronghold and are not written to localStorage. The vault password is never persisted.</p>
+        <p class="mt-2 text-xs text-zinc-500">On Tauri desktop, provider API keys are stored in Stronghold. On Android Chrome they persist in this browser's local vault. The vault password is never persisted.</p>
         <UAlert
-          v-if="browserDevPath"
+          v-if="androidPhone"
+          class="mt-3"
+          title="Android Chrome vault"
+          description="Secrets stay in this browser's local vault (localStorage). Unlock is a no-op here — save Garmin/Google tokens on this phone. This is the Android path, not a leftover desktop preview."
+          color="primary"
+          variant="subtle"
+        />
+        <UAlert
+          v-else-if="browserDevPath"
           class="mt-3"
           title="Browser development credential path"
-          description="You are not in the Tauri runtime. Secrets use an in-memory browser store for local preview only — do not use this path for production credentials."
+          description="You are not in the Tauri runtime. Secrets persist in this browser's local vault. Prefer the Android Chrome or desktop Tauri path for real credentials."
           color="warning"
           variant="subtle"
         />
@@ -74,7 +82,12 @@
           <label class="flex items-center gap-2 text-sm"><input v-model="settings.showModel" type="checkbox" @change="save" /> Show active model</label>
           <label class="flex items-center gap-2 text-sm"><input v-model="settings.allowFrameworkWrite" type="checkbox" @change="save" /> Allow framework file writes (Tauri only)</label>
         </div>
-        <p class="mt-2 text-xs text-zinc-500">Framework write and command tools stay disabled unless explicitly enabled. MCP stdio always requires Tauri plus human approval.</p>
+        <p class="mt-2 text-xs text-zinc-500">
+          Framework write and command tools stay disabled unless explicitly enabled.
+          {{ androidPhone
+            ? 'mcp.stdio (uvx/Docker) cannot run on Android Chrome — use Europe PMC, PaperQA, Garmin JSON, and Bloods PDF instead.'
+            : 'MCP stdio always requires desktop Tauri plus human approval.' }}
+        </p>
       </UCard>
 
       <UCard v-if="openRouterProvider">
@@ -246,9 +259,21 @@
         <template #header><div class="font-medium">Unified RAG memory</div></template>
         <p class="text-sm text-zinc-400">
           Persisted agent memories are merged into local RAG search alongside lab PDFs and transcripts.
-          Optional MCP sidecars add external memory graphs (<code>supermemory-mcp</code>, Mem0 cloud, or official server-memory).
+          {{ androidPhone
+            ? 'SuperMemory / Mem0 / server-memory stdio sidecars cannot run on Android — search local RAG here, and index lab PDFs via Bloods or Drive.'
+            : 'Optional MCP sidecars add external memory graphs (supermemory-mcp, Mem0 cloud, or official server-memory) on a desktop Tauri install.' }}
         </p>
         <UAlert v-if="memory.error" class="mt-3" title="Memory error" :description="memory.error" color="error" variant="subtle" />
+        <UAlert
+          v-if="memory.sidecarCheck"
+          class="mt-3"
+          :title="memory.sidecarCheck.ok ? 'Sidecar ready' : 'Sidecar not started'"
+          :description="memory.sidecarCheck.ok
+            ? `${memory.sidecarCheck.serverId}: ${[memory.sidecarCheck.command, ...(memory.sidecarCheck.args ?? [])].join(' ')}`
+            : memory.sidecarCheck.error"
+          :color="memory.sidecarCheck.ok ? 'success' : 'warning'"
+          variant="subtle"
+        />
         <div class="mt-4 grid gap-2 text-sm sm:grid-cols-2">
           <div><span class="text-zinc-500">Persisted agent memories:</span> {{ memory.agentMemoryCount }}</div>
           <div>
@@ -261,6 +286,10 @@
               Agent Memory RAG enabled
             </label>
           </div>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <UButton size="xs" variant="outline" to="/longevity/bloods">Index via Bloods</UButton>
+          <UButton size="xs" variant="outline" to="/connectors">Index via Drive</UButton>
         </div>
       </UCard>
 
@@ -283,6 +312,16 @@
               </label>
             </div>
             <p class="mt-2 text-xs text-zinc-500">MCP: {{ memory.mcpStatus('supermemory') }}</p>
+            <UButton
+              v-if="!androidPhone"
+              size="xs"
+              variant="outline"
+              class="mt-2"
+              :loading="memory.sidecarBusy"
+              @click="memory.checkSidecar('supermemory')"
+            >
+              Check sidecar
+            </UButton>
           </div>
 
           <div class="rounded border border-zinc-800 p-3">
@@ -301,6 +340,16 @@
               </label>
             </div>
             <p class="mt-2 text-xs text-zinc-500">MCP: {{ memory.mcpStatus('memory') }}</p>
+            <UButton
+              v-if="!androidPhone"
+              size="xs"
+              variant="outline"
+              class="mt-2"
+              :loading="memory.sidecarBusy"
+              @click="memory.checkSidecar('memory')"
+            >
+              Check sidecar
+            </UButton>
           </div>
 
           <div class="rounded border border-zinc-800 p-3">
@@ -319,6 +368,16 @@
               Enable Mem0 MCP
             </label>
             <p class="mt-2 text-xs text-zinc-500">MCP: {{ memory.mcpStatus('mem0') }}</p>
+            <UButton
+              v-if="!androidPhone"
+              size="xs"
+              variant="outline"
+              class="mt-2"
+              :loading="memory.sidecarBusy"
+              @click="memory.checkSidecar('mem0')"
+            >
+              Check sidecar
+            </UButton>
           </div>
         </div>
       </UCard>
@@ -355,15 +414,62 @@
         <template #header><div class="font-medium">Literature & deep research</div></template>
         <p class="text-sm text-zinc-400">
           Starred research adapters: Paper Search MCP, PaperQA local-RAG, Local Deep Research, and Transcriptor.
-          Sci-Hub stays disabled. Europe PMC is always available via <code>research.europepmc</code>.
+          Sci-Hub stays disabled.
+          <span v-if="androidPhone">Europe PMC and PaperQA work on this phone via <code>research.europepmc</code> and <code>research.paperqa.ask</code>.</span>
+          <span v-else>Europe PMC is always available via <code>research.europepmc</code>.</span>
         </p>
         <UAlert v-if="research.error" class="mt-3" title="Research error" :description="research.error" color="error" variant="subtle" />
+        <UAlert
+          v-if="androidPhone"
+          class="mt-3"
+          title="Android — skip uvx sidecars"
+          description="paper-search, LDR, and Transcriptor need a desktop sidecar. On this phone use Europe PMC below, PaperQA after indexing a lab PDF, or Connect Drive / Bloods. Check sidecar is hidden here because it cannot start uvx."
+          color="primary"
+          variant="subtle"
+        />
+        <p v-else class="mt-3 text-xs text-zinc-400">Check sidecar is explicit and Tauri-only. The browser preview fails clearly and never auto-starts uvx or Docker.</p>
+        <UAlert
+          v-if="research.sidecarCheck"
+          class="mt-3"
+          :title="research.sidecarCheck.ok ? 'Sidecar ready' : 'Sidecar not started'"
+          :description="research.sidecarCheck.ok
+            ? `${research.sidecarCheck.serverId}: ${[research.sidecarCheck.command, ...(research.sidecarCheck.args ?? [])].join(' ')}`
+            : research.sidecarCheck.error"
+          :color="research.sidecarCheck.ok ? 'success' : 'warning'"
+          variant="subtle"
+        />
         <ul class="mt-4 space-y-1 text-sm text-zinc-400">
           <li v-for="provider in research.providers" :key="provider.id">
             {{ provider.name }} — {{ provider.enabled ? 'enabled' : 'disabled' }}
             <span v-if="provider.requiresLocalRuntime" class="text-xs text-zinc-500">· local runtime</span>
           </li>
         </ul>
+      </UCard>
+
+      <UCard>
+        <template #header><div class="font-medium">Europe PMC (works on this phone)</div></template>
+        <p class="text-xs text-zinc-500">Built-in bibliographic search — no uvx, Docker, or desktop sidecar. Same as <code>research.europepmc</code>.</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <UInput
+            v-model="research.europePmcQuery"
+            placeholder="e.g. NAD+ sleep longevity"
+            class="flex-1 min-w-[12rem]"
+            @keyup.enter="research.runEuropePmcPreview()"
+          />
+          <UButton :loading="research.europePmcBusy" @click="research.runEuropePmcPreview()">Search Europe PMC</UButton>
+        </div>
+        <ul v-if="research.europePmcHits.length" class="mt-4 space-y-2 text-sm">
+          <li v-for="hit in research.europePmcHits" :key="hit.id" class="rounded border border-zinc-800 p-3">
+            <a v-if="hit.url" :href="hit.url" target="_blank" rel="noopener noreferrer" class="font-medium underline underline-offset-4">{{ hit.title }}</a>
+            <div v-else class="font-medium">{{ hit.title }}</div>
+            <div class="text-xs text-zinc-500">{{ hit.journal || 'Europe PMC' }}<span v-if="hit.doi"> · {{ hit.doi }}</span></div>
+          </li>
+        </ul>
+        <p v-else class="mt-4 text-sm text-zinc-500">Search here on Android Chrome. Paper-search MCP is desktop-only.</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <UButton size="xs" variant="outline" to="/longevity/bloods">Index lab PDF on Bloods</UButton>
+          <UButton size="xs" variant="outline" to="/connectors">Connect Drive</UButton>
+        </div>
       </UCard>
 
       <UCard>
@@ -377,7 +483,8 @@
           <input type="checkbox" :checked="research.isConnectorEnabled('paper-search')" @change="research.setConnector('paper-search', ($event.target as HTMLInputElement).checked)" />
           Enable Paper Search
         </label>
-        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('paper-search') }}</p>
+        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('paper-search') }}. Enabling installs the catalog entry. Sci-Hub download stays blocked.</p>
+        <UButton v-if="!androidPhone" size="xs" variant="outline" class="mt-2" :loading="research.sidecarBusy" @click="research.checkSidecar('paper-search')">Check sidecar</UButton>
       </UCard>
 
       <UCard>
@@ -391,7 +498,8 @@
           <input type="checkbox" :checked="research.isConnectorEnabled('local-deep-research')" @change="research.setConnector('local-deep-research', ($event.target as HTMLInputElement).checked)" />
           Enable Local Deep Research
         </label>
-        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('local-deep-research') }}</p>
+        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('local-deep-research') }}. Enabling installs ldr-mcp. Cited sidecar only — not a clinical conclusion.</p>
+        <UButton v-if="!androidPhone" size="xs" variant="outline" class="mt-2" :loading="research.sidecarBusy" @click="research.checkSidecar('local-deep-research')">Check sidecar</UButton>
       </UCard>
 
       <UCard>
@@ -401,6 +509,14 @@
           <input type="checkbox" :checked="research.isConnectorEnabled('paper-qa')" @change="research.setConnector('paper-qa', ($event.target as HTMLInputElement).checked)" />
           Enable PaperQA connector
         </label>
+        <UAlert
+          v-if="!research.isConnectorEnabled('paper-qa')"
+          class="mt-3"
+          title="PaperQA is off"
+          description="research.paperqa.ask needs this connector. Enable it here (Settings → Research), then approve the tool on Chat, Overview, or Agent."
+          color="warning"
+          variant="subtle"
+        />
         <div class="mt-4 flex flex-wrap gap-2">
           <UInput v-model="research.paperQaQuestion" placeholder="Scientific question" class="flex-1 min-w-[12rem]" @keyup.enter="research.runPaperQaPreview()" />
           <UButton @click="research.runPaperQaPreview()">Preview local answer</UButton>
@@ -408,6 +524,11 @@
         <div v-if="research.paperQaAnswer" class="mt-4 rounded border border-zinc-800 p-3 text-sm">
           <div class="text-xs text-zinc-500">{{ research.paperQaAnswer.backend }} · confidence {{ research.paperQaAnswer.confidence.toFixed(2) }}</div>
           <p class="mt-2 text-zinc-300 whitespace-pre-wrap">{{ research.paperQaAnswer.answer.slice(0, 800) }}</p>
+          <div v-if="'emptyIndex' in research.paperQaAnswer && research.paperQaAnswer.emptyIndex" class="mt-3 flex flex-wrap gap-2">
+            <UButton size="xs" variant="outline" to="/longevity/bloods">Index via Bloods</UButton>
+            <UButton size="xs" variant="outline" to="/connectors">Connect Drive</UButton>
+            <UButton size="xs" variant="outline" to="/health-sync">Health Sync</UButton>
+          </div>
         </div>
       </UCard>
 
@@ -418,7 +539,8 @@
           <input type="checkbox" :checked="research.isConnectorEnabled('transcriptor')" @change="research.setConnector('transcriptor', ($event.target as HTMLInputElement).checked)" />
           Enable Transcriptor MCP
         </label>
-        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('transcriptor') }}</p>
+        <p class="mt-2 text-xs text-zinc-500">MCP: {{ research.mcpStatus('transcriptor') }}. Enabling installs the Transcriptor catalog entry.</p>
+        <UButton v-if="!androidPhone" size="xs" variant="outline" class="mt-2" :loading="research.sidecarBusy" @click="research.checkSidecar('transcriptor')">Check sidecar</UButton>
       </UCard>
 
       <UCard>
@@ -429,6 +551,10 @@
           <li><code>research.paperqa.plan</code> / <code>research.paperqa.ask</code></li>
           <li><code>mcp.stdio:paper-search</code> / <code>mcp.stdio:local-deep-research</code> / <code>mcp.stdio:transcriptor</code></li>
         </ul>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <UButton size="sm" variant="outline" to="/agent">Try from Agent Control Center</UButton>
+          <UButton size="sm" variant="ghost" to="/chat">Approve from Chat</UButton>
+        </div>
       </UCard>
     </template>
 
@@ -512,6 +638,14 @@
                 >
                   Connectors
                 </UButton>
+                <UButton
+                  v-else-if="integration.settingsTab === 'plugins'"
+                  size="xs"
+                  variant="ghost"
+                  to="/settings?tab=plugins#pdf-inspector"
+                >
+                  Open on this tab
+                </UButton>
               </div>
             </div>
             <label
@@ -586,6 +720,15 @@
           <p v-if="plugins.garminStatus.metrics.length" class="mt-3 text-xs text-zinc-500">
             Synced metrics: {{ plugins.garminStatus.metrics.join(', ') }}
           </p>
+          <UAlert
+            v-if="!plugins.garminStatus.oauthConfigured && !plugins.garminStatus.oauthConnected && !plugins.garminStatus.observationCount"
+            class="mt-3"
+            title="Garmin unconfigured"
+            :description="plugins.garminStatus.nextStep"
+            color="warning"
+            variant="subtle"
+          />
+          <p v-else class="mt-3 text-xs text-zinc-400">{{ plugins.garminStatus.nextStep }}</p>
           <p class="mt-4 text-xs text-zinc-500">Supported schema metrics:</p>
           <ul class="mt-2 space-y-1 font-mono text-xs text-zinc-400">
             <li v-for="metric in plugins.garminMetrics" :key="metric">{{ metric }}</li>
@@ -595,24 +738,27 @@
           <UButton class="mt-3" size="sm" variant="outline" to="/health-sync">Open Health Sync</UButton>
         </UCard>
 
-        <UCard>
+        <UCard id="pdf-inspector">
           <template #header><div class="font-medium">PDF inspector</div></template>
-          <p class="text-xs text-zinc-500">Classify a lab PDF as text, scanned, or mixed. Lab import uses this when the connector is enabled (on by default).</p>
+          <p class="text-xs text-zinc-500">Classify a lab PDF as text, scanned, or mixed. Lab import uses this when the connector is enabled (on by default). Last inspection is shared with Bloods and <code>plugins.pdf.inspect</code>.</p>
           <div class="mt-3 flex flex-wrap gap-2">
             <UButton size="sm" variant="outline" @click="plugins.inspectSamplePdf()">Inspect sample PDF</UButton>
             <label class="inline-flex cursor-pointer items-center gap-2 text-sm">
               <input type="file" accept="application/pdf" class="text-xs" @change="onPdfFileSelected">
               Upload PDF
             </label>
+            <UButton size="sm" variant="ghost" to="/longevity/bloods">Open Bloods import</UButton>
           </div>
           <div v-if="plugins.pdfInspection" class="mt-4 rounded border border-zinc-800 p-3 text-sm">
             <div class="font-medium capitalize">{{ plugins.pdfInspection.kind }}</div>
             <div v-if="plugins.pdfInspectionFilename" class="text-xs text-zinc-400">{{ plugins.pdfInspectionFilename }}</div>
+            <div v-if="plugins.pdfInspectedAt" class="text-xs text-zinc-500">Inspected {{ formatDateTime(plugins.pdfInspectedAt) }}</div>
             <div class="text-xs text-zinc-500">
               text streams {{ plugins.pdfInspection.textStreamCount }} · images {{ plugins.pdfInspection.imageXObjectCount }}
               · OCR {{ plugins.pdfInspection.recommendOcr ? 'recommended' : 'not needed' }}
             </div>
           </div>
+          <p v-else class="mt-4 text-sm text-zinc-500">No cached inspection yet. Import a lab PDF on Bloods or inspect a file here.</p>
         </UCard>
       </div>
 
@@ -626,6 +772,7 @@
           <li><code>plugins.garmin.status</code> — OAuth + persisted Garmin samples</li>
           <li><code>plugins.pdf.inspect</code> — last/sample/base64 PDF classification (no file bytes)</li>
         </ul>
+        <UButton class="mt-3" size="sm" variant="outline" to="/agent">Try from Agent Control Center</UButton>
       </UCard>
     </template>
   </div>
@@ -637,7 +784,7 @@ import {
   refreshOpenRouterCatalog,
   type OpenRouterCatalogStatus,
 } from '~/services/llm-provider-bridge'
-import { isTauriRuntime } from '~/utils/runtime-platform'
+import { isAndroidUserAgent, isTauriRuntime } from '~/utils/runtime-platform'
 import { parseSettingsTab, settingsTabQuery, type SettingsTab } from '~/utils/settings-tabs'
 
 const route = useRoute()
@@ -654,6 +801,7 @@ const memory = useMemoryIntegration()
 const research = useResearchIntegration()
 const plugins = usePluginsIntegration()
 const browserDevPath = computed(() => !isTauriRuntime())
+const androidPhone = computed(() => isAndroidUserAgent())
 const vaultPassword = ref('')
 const vaultBusy = ref(false)
 const vaultError = ref('')
@@ -683,6 +831,10 @@ const githubStatusColor = computed(() => {
 watch(settings, (value) => {
   catalogStatus.value = getOpenRouterCatalogStatus(value)
 }, { deep: true })
+
+watch(activeTab, (tab) => {
+  if (tab === 'plugins') plugins.applyCachedPdfInspection()
+})
 
 onMounted(async () => {
   await github.loadCredentials()
@@ -763,6 +915,10 @@ async function onGitHubConnectorToggle(enabled: boolean) {
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString()
+}
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString()
 }
 
 function onPdfFileSelected(event: Event) {

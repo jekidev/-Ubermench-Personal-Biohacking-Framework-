@@ -12,7 +12,7 @@
     <UAlert
       v-if="hcMode === 'browser-blocked'"
       title="Android browser detected"
-      description="Health Connect cannot be accessed from Chrome or a PWA. Build and install the Android app with: npm run tauri:android:init then npm run tauri:android:dev"
+      :description="healthConnectBrowserMessage"
       color="warning"
       variant="subtle"
     />
@@ -22,7 +22,7 @@
         <template #header><div class="font-medium">Garmin Wellness import</div></template>
         <p class="text-sm text-zinc-400">
           Paste or upload Garmin Wellness API JSON (`dailies`, `sleeps`, `hrv`, `bodyComps`, `pulseOx`, `activities`).
-          Oura, WHOOP and Apple Health payloads are rejected.
+          This is the Android path when you do not have a Garmin developer client. Oura, WHOOP and Apple Health payloads are rejected.
         </p>
         <textarea
           v-model="garminJson"
@@ -41,7 +41,8 @@
       <UCard>
         <template #header><div class="font-medium">Garmin OAuth (Wellness API)</div></template>
         <p class="text-sm text-zinc-400">
-          Connect with PKCE using your Garmin Connect Developer client ID and secret. Tokens stay in the secret vault and never enter biology backups or sample caches.
+          Optional. Connect with PKCE using your Garmin Connect Developer client ID and secret.
+          If mobile Chrome blocks the redirect, keep using JSON import above — OAuth is not required and is not simulated.
         </p>
         <div class="mt-3 grid gap-3">
           <UInput v-model="garminClientId" placeholder="Garmin client ID" />
@@ -56,13 +57,17 @@
           · Configured {{ garminOAuth.configured.value ? 'yes' : 'no' }}
           · Token {{ garminOAuth.connected.value ? 'present' : 'missing' }}
         </p>
+        <div class="mt-3 grid gap-1 text-xs text-zinc-500">
+          <div>Plugins Garmin samples: {{ garminPlugin.status.value.observationCount }}</div>
+          <div>Last Garmin sample: {{ garminPlugin.status.value.lastObservedAt ? new Date(garminPlugin.status.value.lastObservedAt).toLocaleString() : 'none' }}</div>
+        </div>
         <UAlert v-if="garminOAuth.error.value" class="mt-3" title="Garmin OAuth" :description="garminOAuth.error.value" color="warning" variant="subtle" />
       </UCard>
 
       <UCard>
         <template #header><div class="font-medium">Garmin access token (manual)</div></template>
         <p class="text-sm text-zinc-400">
-          Development fallback when OAuth is unavailable. Stored in the secret vault (Stronghold on desktop, browser secret store in preview).
+          Development fallback when OAuth is unavailable. Stored in this browser's local vault on Android Chrome (Stronghold on desktop Tauri).
         </p>
         <UInput v-model="garminToken" type="password" placeholder="Garmin access token" autocomplete="off" class="mt-3" />
         <UButton class="mt-3" :loading="garminBusy" :disabled="!garminToken.trim()" @click="saveGarminToken">Save token to vault</UButton>
@@ -103,7 +108,7 @@
       <UCard>
         <template #header><div class="font-medium">Android Health Connect</div></template>
         <p class="text-sm text-zinc-400">
-          Native Android/Tauri only. Browser preview cannot read Health Connect and will not invent step counts.
+          Native Android app only. Chrome/PWA cannot read Health Connect and will not invent step counts.
         </p>
         <UButton
           class="mt-3"
@@ -126,14 +131,44 @@
     </div>
 
     <UCard>
+      <template #header><div class="font-medium">Live Garmin plugin status</div></template>
+      <p class="text-sm text-zinc-400">Same cache as Settings → Plugins and <code>plugins.garmin.status</code>.</p>
+      <div class="mt-3 grid gap-2 text-sm">
+        <div><span class="text-zinc-500">OAuth client:</span> {{ garminPlugin.status.value.oauthConfigured ? 'configured' : 'missing' }}</div>
+        <div><span class="text-zinc-500">Access token:</span> {{ garminPlugin.status.value.oauthConnected ? 'present' : 'missing' }}</div>
+        <div><span class="text-zinc-500">Persisted samples:</span> {{ garminPlugin.status.value.observationCount }}</div>
+        <div><span class="text-zinc-500">Last sample:</span> {{ garminPlugin.status.value.lastObservedAt ? new Date(garminPlugin.status.value.lastObservedAt).toLocaleString() : 'None' }}</div>
+      </div>
+      <p v-if="garminPlugin.status.value.metrics.length" class="mt-3 text-xs text-zinc-500">
+        Synced metrics: {{ garminPlugin.status.value.metrics.join(', ') }}
+      </p>
+      <UAlert
+        v-if="!garminPlugin.status.value.oauthConfigured && !garminPlugin.status.value.oauthConnected && !garminPlugin.status.value.observationCount"
+        class="mt-3"
+        title="Garmin unconfigured"
+        :description="garminPlugin.status.value.nextStep"
+        color="warning"
+        variant="subtle"
+      />
+      <p v-else class="mt-3 text-xs text-zinc-400">{{ garminPlugin.status.value.nextStep }}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UButton size="sm" variant="outline" @click="refreshGarminPlugins">Refresh status</UButton>
+        <UButton size="sm" variant="ghost" to="/settings?tab=plugins">Open Plugins</UButton>
+        <UButton size="sm" variant="ghost" to="/longevity/sleep">Sleep log</UButton>
+        <UButton size="sm" variant="ghost" to="/longevity/workouts">Workouts</UButton>
+      </div>
+    </UCard>
+
+    <UCard>
       <template #header><div class="font-medium">Google Drive (lab PDFs)</div></template>
       <p class="text-sm text-zinc-400">
-        Drive sync works in Android Chrome. Use the same redirect URI in Google Cloud Console:
+        Drive lab PDFs work in Android Chrome. Register this redirect URI in Google Cloud Console, then connect on Connectors:
         <code class="break-all">{{ redirectUri }}</code>
       </p>
-      <NuxtLink to="/connectors" class="mt-3 inline-block">
-        <UButton variant="outline">Open Connectors</UButton>
-      </NuxtLink>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UButton variant="outline" to="/connectors">Connect Drive</UButton>
+        <UButton variant="ghost" to="/longevity/bloods">Upload PDF on Bloods</UButton>
+      </div>
     </UCard>
   </div>
 </template>
@@ -148,6 +183,7 @@ import {
   syncAndPersistAllHealth,
 } from '~/services/health-sync-runtime'
 import { defaultGoogleRedirectUri } from '~~/plugins/connectors/oauth/google-oauth'
+import { HEALTH_CONNECT_BROWSER_MESSAGE } from '~/services/android-fallbacks'
 
 const garminOAuth = useGarminOAuth()
 const garminPlugin = useGarminPluginStatus()
@@ -166,10 +202,12 @@ const healthConnectBusy = ref(false)
 const persistBusy = ref(false)
 const hcMode = ref<Awaited<ReturnType<typeof detectHealthConnectRuntimeMode>>>('unavailable')
 const redirectUri = defaultGoogleRedirectUri()
+const healthConnectBrowserMessage = HEALTH_CONNECT_BROWSER_MESSAGE
 
 onMounted(async () => {
   hcMode.value = await detectHealthConnectRuntimeMode()
   await garminOAuth.refreshStatus()
+  await refreshGarminPlugins()
 })
 
 async function refreshGarminPlugins() {
@@ -222,6 +260,7 @@ async function saveGarminToken() {
     await storeGarminAccessToken(garminToken.value)
     garminToken.value = ''
     tokenStatus.value = 'Garmin access token stored in the secret vault.'
+    await garminOAuth.refreshStatus()
     await refreshGarminPlugins()
   } catch (error) {
     tokenStatus.value = error instanceof Error ? error.message : String(error)

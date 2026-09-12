@@ -67,7 +67,7 @@ export function buildDataHealthDiagnostics(input: {
   const warnings: string[] = []
 
   if (!input.isTauriRuntime) {
-    warnings.push('Provider credentials use the browser development path. Use the Tauri desktop app for OS-backed secret storage.')
+    warnings.push('Provider credentials use this browser local vault (Android Chrome path). Desktop Tauri Stronghold is optional — Garmin JSON, Drive, and Bloods PDFs work on this phone.')
   }
   if (!biologyBackup?.lastExportedAt) {
     warnings.push('No biology backup export recorded on this device.')

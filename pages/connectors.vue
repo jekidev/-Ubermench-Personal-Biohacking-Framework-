@@ -17,8 +17,8 @@
     <UAlert v-if="mcp.error.value" title="MCP install" :description="mcp.error.value" color="warning" variant="subtle" />
     <UAlert
       v-if="isAndroidBrowserRef"
-      title="Android browser"
-      description="Google tokens persist in localStorage on mobile. Use Chrome (not an in-app WebView) for OAuth if Google blocks sign-in."
+      title="Android Chrome"
+      description="Google Drive OAuth works in Chrome when this preview URL is the redirect URI. MCP stdio (uvx/Docker) cannot run here — use Europe PMC, PaperQA, Bloods PDF, or Garmin JSON instead of Discover tools."
       color="primary"
       variant="subtle"
     />
@@ -26,7 +26,8 @@
     <UCard>
       <template #header><div class="font-medium">Google Workspace (one OAuth client)</div></template>
       <p class="text-sm text-zinc-400">
-        Drive, Gmail, and Calendar share one Google client and token. Paste a client ID or import the client JSON later — no Cloud Console steps are required in this app.
+        Drive, Gmail, and Calendar share one Google client and token. Paste a client ID or import the client JSON.
+        On Android Chrome, use the redirect URI shown below in Google Cloud Console.
       </p>
       <div class="mt-4 grid gap-3 md:grid-cols-2">
         <UInput v-model="googleClientId" placeholder="NUXT_PUBLIC_GOOGLE_CLIENT_ID" />
@@ -226,14 +227,22 @@
       <p class="text-sm text-zinc-400">
         Long-lived stdio sessions reuse the same child process for <code>tools/list</code> and <code>tools/call</code>. Idle timeout 5 min, max lifetime 30 min.
       </p>
-      <UAlert
-        v-if="!mcpSessions.tauriAvailable.value"
-        class="mt-3"
-        title="Desktop runtime required"
-        description="MCP stdio sessions and tool discovery are available in the Tauri desktop app, not in the browser preview."
-        color="warning"
-        variant="subtle"
-      />
+        <UAlert
+          v-if="isAndroidBrowserRef"
+          class="mt-3"
+          title="Android — stdio MCP unavailable"
+          description="Discover tools / uvx / Docker cannot run in Android Chrome. Use Settings → Research (Europe PMC / PaperQA) or Bloods / Drive instead."
+          color="warning"
+          variant="subtle"
+        />
+        <UAlert
+          v-else-if="!mcpSessions.tauriAvailable.value"
+          class="mt-3"
+          title="Desktop runtime required"
+          description="MCP stdio sessions and tool discovery need the Tauri desktop app. On Android Chrome use Europe PMC, PaperQA, Bloods, and Drive instead."
+          color="warning"
+          variant="subtle"
+        />
       <UAlert v-if="mcpSessions.error.value" class="mt-3" title="MCP session error" :description="mcpSessions.error.value" color="error" variant="subtle" />
       <div v-if="mcpSessions.sessions.value.length" class="mt-4 space-y-2">
         <div

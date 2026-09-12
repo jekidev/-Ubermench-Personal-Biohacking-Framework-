@@ -8,6 +8,7 @@
       <div class="flex gap-2">
         <UButton variant="outline" @click="chat.startNewConversation()">New chat</UButton>
         <UButton variant="outline" @click="chat.clearMessages()">Clear</UButton>
+        <NuxtLink to="/agent"><UButton variant="outline">Agent</UButton></NuxtLink>
         <NuxtLink to="/connectors"><UButton variant="outline">Connectors</UButton></NuxtLink>
       </div>
     </div>
@@ -33,7 +34,12 @@
             </div>
             <div class="whitespace-pre-wrap">{{ message.content }}</div>
           </div>
-          <p v-if="!chat.messages.length" class="text-sm text-zinc-500">Start with a question or try /help.</p>
+          <p v-if="!chat.messages.length" class="text-sm text-zinc-500">
+            Start with a question or try /help. Catalog tools (PaperQA, Garmin, PDF, Europe PMC) approve here.
+            {{ androidPhone
+              ? 'Native MCP (paper-search, LDR, Transcriptor, SuperMemory, Mem0) cannot run on this Android phone — use research.europepmc, PaperQA, Garmin JSON, or Bloods PDF instead.'
+              : 'Native MCP (paper-search, LDR, Transcriptor, SuperMemory, Mem0) needs a desktop Tauri sidecar. This page cannot run uvx or Docker, and cannot mint that token.' }}
+          </p>
         </div>
 
         <form class="mt-4 space-y-3" @submit.prevent="submit">
@@ -48,6 +54,32 @@
             <span class="text-xs text-zinc-500">{{ commandHint }}</span>
           </div>
           <div v-if="runtime.error.value" class="rounded-md border border-red-900/50 p-3 text-sm text-red-300">{{ runtime.error.value }}</div>
+          <div v-if="pendingTools.length" class="rounded-md border border-amber-800/70 bg-amber-950/30 p-3 text-sm">
+            <div class="font-medium text-amber-200">Waiting for approval</div>
+            <p v-if="displayedRun?.prompt" class="mt-1 text-xs text-zinc-500">{{ displayedRun.prompt }}</p>
+            <p v-if="approvalNotice" class="mt-1 text-xs text-amber-300">{{ approvalNotice }}</p>
+            <p v-if="queuedApprovalCount" class="mt-1 text-xs text-amber-300">{{ queuedApprovalCount }} more run(s) waiting after this one.</p>
+            <p v-if="pendingCatalogTools.length" class="mt-1 text-zinc-400">
+              Catalog tools can be approved here: {{ pendingCatalogTools.map((call) => call.name).join(', ') }}.
+            </p>
+            <p v-if="pendingNativeTools.length" class="mt-1 text-zinc-400">
+              {{ nativeHandoff }}
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <UButton
+                v-if="pendingCatalogTools.length"
+                size="sm"
+                :loading="runtime.status.value === 'running'"
+                @click="approvePending"
+              >
+                {{ pendingNativeTools.length ? 'Approve catalog tools' : 'Approve pending tools' }}
+              </UButton>
+              <NuxtLink v-if="pendingNativeTools.length" :to="nativeAgentHref">
+                <UButton size="sm" variant="outline">{{ nativeContinueCta }}</UButton>
+              </NuxtLink>
+              <NuxtLink v-else to="/agent"><UButton size="sm" variant="outline">Open Agent</UButton></NuxtLink>
+            </div>
+          </div>
         </form>
       </UCard>
 
@@ -136,15 +168,22 @@
 import { indexYouTubeUrlsToRag } from '../plugins/connectors/youtube-rag-sync'
 import { syncDrivePdfsToRag } from '../plugins/connectors/drive-rag-sync'
 import { runYouTubeScheduler } from '../plugins/connectors/youtube-scheduler'
+import { formatAgentRunReply, formatNativeMcpAgentHandoff } from '~/services/agent-runtime/run-reply'
+import { nativeMcpAgentHref, nativeMcpContinueCta } from '~/services/agent-runtime/native-mcp-handoff'
+import { isAndroidUserAgent } from '~/utils/runtime-platform'
 
 const chat = useChatSession()
-const runtime = useAgentRuntime()
+const { runtime, pendingTools, pendingCatalogTools, pendingNativeTools, displayedRun, approvalNotice, queuedApprovalCount } = usePendingAgentApprovals()
 const llm = useLLM()
 const scheduler = useYouTubeScheduler()
 const draft = ref('')
 const newRuleName = ref('')
 const newRuleDescription = ref('')
 const newRulePrompt = ref('')
+const androidPhone = computed(() => isAndroidUserAgent())
+const nativeHandoff = computed(() => formatNativeMcpAgentHandoff(pendingNativeTools.value))
+const nativeAgentHref = computed(() => nativeMcpAgentHref(pendingNativeTools.value))
+const nativeContinueCta = computed(() => nativeMcpContinueCta())
 const commandHint = computed(() => chat.slashHelp().slice(0, 4).join(' · '))
 const builtInRules = computed(() => chat.allRules().filter((rule) => !rule.custom))
 
@@ -195,11 +234,39 @@ async function submit() {
     requiredCapabilities: task.kind === 'research' ? ['research'] : ['reasoning'],
     chatOptions: task.chatOptions,
   })
-  const latest = run.observations.at(-1)?.text ?? 'No response.'
+  if (runtime.approvalNotice.value) {
+    chat.pushMessage({ role: 'system', content: runtime.approvalNotice.value })
+  }
+  const latest = formatAgentRunReply(run)
   const modelLabel = llm.settings.value.showModel && run.activeProvider && run.activeModel
     ? `${run.activeProvider}/${run.activeModel}${run.fallbackUsed ? ' (fallback)' : ''}`
     : undefined
   chat.pushMessage({ role: 'assistant', content: latest, workflowId: task.parsed.workflowId, modelLabel })
+}
+
+async function approvePending() {
+  const run = runtime.activeRun.value
+  if (!run) return
+  if (!pendingCatalogTools.value.length) {
+    chat.pushMessage({
+      role: 'system',
+      content: formatNativeMcpAgentHandoff(pendingNativeTools.value),
+    })
+    return
+  }
+  try {
+    const updated = await runtime.approvePending(`user-approved-${Date.now()}`, { includeNative: false })
+    chat.pushMessage({
+      role: 'assistant',
+      content: formatAgentRunReply(updated),
+      workflowId: run.task.chatOptions?.workflowId,
+    })
+  } catch (cause) {
+    chat.pushMessage({
+      role: 'system',
+      content: cause instanceof Error ? cause.message : String(cause),
+    })
+  }
 }
 
 function onKeydown(event: KeyboardEvent) {

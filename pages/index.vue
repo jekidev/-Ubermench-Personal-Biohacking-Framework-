@@ -95,6 +95,14 @@
         <div><span class="text-zinc-500">Biomarkers:</span> {{ profile.biomarkers.length }}</div>
         <div><span class="text-zinc-500">Genetic variants:</span> {{ profile.variants.length }}</div>
         <div><span class="text-zinc-500">Sleep / training:</span> {{ profile.sleep.length }} / {{ profile.training.length }}</div>
+        <div>
+          <span class="text-zinc-500">Lifestyle:</span>
+          <NuxtLink to="/longevity/sleep" class="underline">Sleep</NuxtLink> ·
+          <NuxtLink to="/longevity/diet" class="underline">Diet</NuxtLink> ·
+          <NuxtLink to="/longevity/workouts" class="underline">Workouts</NuxtLink> ·
+          <NuxtLink to="/longevity/meditation" class="underline">Meditation</NuxtLink>
+        </div>
+        <div><span class="text-zinc-500">News:</span> <NuxtLink to="/news" class="underline">Public-agency RSS</NuxtLink></div>
       </div>
       <p class="mt-3 text-xs text-zinc-500">Profile state is loaded from the local-first biology store.</p>
     </UCard>
@@ -119,11 +127,44 @@
       <form class="space-y-3" @submit.prevent="runAI">
         <textarea v-model="prompt" class="min-h-28 w-full rounded-md border border-zinc-200 bg-transparent p-3 text-sm dark:border-zinc-700" placeholder="Ask Ubermench to research, analyse or reason about a health optimisation question..." />
         <div class="flex flex-wrap items-center gap-3">
-          <UButton type="submit" :loading="loading" :disabled="!prompt.trim()">Run</UButton>
-          <span v-if="lastRun" class="text-xs text-zinc-500">{{ lastRun.provider }} / {{ lastRun.model }} · {{ lastRun.latencyMs }} ms · {{ lastRun.attempts }} attempt{{ lastRun.attempts === 1 ? '' : 's' }}</span>
+          <UButton type="submit" :loading="loading" :disabled="!prompt.trim()">Run agent</UButton>
+          <span class="text-xs text-zinc-500">{{ androidPhone
+            ? 'Uses the agent kernel, including Garmin/PDF/Europe PMC/PaperQA on this phone. Native MCP (uvx/Docker) cannot run in Android Chrome.'
+            : 'Uses the agent kernel, including Garmin/PDF/research tools when they help. Waiting-approval is shared with Chat and Agent. Native MCP still needs a desktop Tauri sidecar.' }}</span>
+          <span v-if="displayedRun" class="text-xs text-zinc-500">{{ displayedRun.provider }} / {{ displayedRun.model }} · {{ displayedRun.status }}</span>
         </div>
         <div v-if="error" class="rounded-md border border-red-300 p-3 text-sm text-red-700">{{ error }}</div>
-        <div v-if="lastRun" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">{{ lastRun.text }}</div>
+        <div v-if="displayedRun && waitingApproval" class="rounded-md border border-amber-800/70 bg-amber-950/30 p-3 text-sm">
+          <div class="font-medium text-amber-200">Active run waiting for approval</div>
+          <p v-if="displayedRun.prompt" class="mt-1 text-xs text-zinc-500">{{ displayedRun.prompt }}</p>
+          <p v-if="approvalNotice" class="mt-1 text-xs text-amber-300">{{ approvalNotice }}</p>
+          <p v-if="queuedApprovalCount" class="mt-1 text-xs text-amber-300">{{ queuedApprovalCount }} more run(s) waiting after this one.</p>
+        </div>
+        <div v-if="displayedRun" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">{{ displayedRun.text }}</div>
+        <div v-if="laterRunText" class="whitespace-pre-wrap rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+          <div class="mb-1 text-xs uppercase tracking-wide text-zinc-500">Later run (not the Approve target)</div>
+          {{ laterRunText }}
+        </div>
+        <div v-if="waitingApproval" class="flex flex-wrap gap-2">
+          <UButton
+            v-if="pendingCatalogTools.length"
+            size="sm"
+            :loading="loading"
+            @click="approvePending"
+          >
+            {{ pendingNativeTools.length ? 'Approve catalog tools' : 'Approve pending tools' }}
+          </UButton>
+          <p v-if="pendingCatalogTools.length" class="w-full text-xs text-zinc-500">
+            Catalog: {{ pendingCatalogTools.map((call) => call.name).join(', ') }}
+          </p>
+          <p v-if="pendingNativeTools.length" class="w-full text-xs text-zinc-500">
+            {{ nativeHandoff }}
+          </p>
+          <NuxtLink to="/chat"><UButton size="sm" variant="outline">Open Chat</UButton></NuxtLink>
+          <NuxtLink :to="pendingNativeTools.length ? nativeAgentHref : '/agent'">
+            <UButton size="sm" variant="outline">{{ pendingNativeTools.length ? nativeContinueCta : 'Open Agent' }}</UButton>
+          </NuxtLink>
+        </div>
       </form>
     </UCard>
 
@@ -143,16 +184,27 @@ import { loadBackupStatus } from '~/services/backup-status'
 import { assessLongevity } from '~/services/longevity-engine'
 import { buildOverviewSummary } from '~/services/overview-dashboard'
 import { screenProfileSafety } from '~/services/profile-safety'
-
+import { formatAgentRunReply, formatNativeMcpAgentHandoff } from '~/services/agent-runtime/run-reply'
+import { nativeMcpAgentHref, nativeMcpContinueCta } from '~/services/agent-runtime/native-mcp-handoff'
+import { isAndroidUserAgent } from '~/utils/runtime-platform'
 const llm = useLLM()
-const ai = useBiohackingAI()
+const { runtime, pendingCatalogTools, pendingNativeTools, displayedRun, waitingApproval, approvalNotice, queuedApprovalCount } = usePendingAgentApprovals()
 const biology = usePersonalBiology()
 const experiments = useExperiments()
 const profile = biology.profile
 const prompt = ref('')
 const loading = ref(false)
 const error = ref('')
-const lastRun = ref<Awaited<ReturnType<typeof ai.ask>> | null>(null)
+const androidPhone = computed(() => isAndroidUserAgent())
+const nativeHandoff = computed(() => formatNativeMcpAgentHandoff(pendingNativeTools.value))
+const nativeAgentHref = computed(() => nativeMcpAgentHref(pendingNativeTools.value))
+const nativeContinueCta = computed(() => nativeMcpContinueCta())
+const laterRunText = computed(() => {
+  const latest = runtime.latestRun.value
+  const focused = runtime.activeRun.value
+  if (!latest || !focused || latest.id === focused.id) return ''
+  return formatAgentRunReply(latest)
+})
 
 await biology.initialize()
 await experiments.initialize()
@@ -192,14 +244,34 @@ function percent(value: number) {
 
 async function runAI() {
   error.value = ''
-  lastRun.value = null
   loading.value = true
   try {
-    lastRun.value = await ai.ask({
+    const looksLikeResearch = /pubmed|arxiv|paper|literature|europe pmc|paperqa|research/i.test(prompt.value)
+    await runtime.run({
+      id: `overview_${Date.now()}`,
+      kind: looksLikeResearch ? 'research' : 'chat',
       prompt: prompt.value,
-      mode: 'biohacker',
-      system: 'You are the Uberm3nch research assistant. Separate evidence from speculation. Do not invent sources. Flag uncertainty and safety concerns. Do not autonomously prescribe, start, stop or titrate medical treatment.',
+      requiredCapabilities: looksLikeResearch ? ['research'] : ['reasoning'],
     })
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : String(cause)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function approvePending() {
+  if (!runtime.activeRun.value) return
+  if (!pendingCatalogTools.value.length) {
+    error.value = pendingNativeTools.value.length
+      ? formatNativeMcpAgentHandoff(pendingNativeTools.value)
+      : 'No catalog tools are waiting for approval.'
+    return
+  }
+  error.value = ''
+  loading.value = true
+  try {
+    await runtime.approvePending(`user-approved-${Date.now()}`, { includeNative: false })
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
   } finally {
