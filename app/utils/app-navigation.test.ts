@@ -8,6 +8,7 @@ describe('app-navigation', () => {
     expect(hrefs).toContain('/longevity/workouts')
     expect(hrefs).toContain('/longevity/sleep')
     expect(hrefs).toContain('/longevity/diet')
+    expect(hrefs).toContain('/longevity/stack')
     expect(hrefs).toContain('/longevity/meditation')
     expect(hrefs).toContain('/news')
     expect(hrefs).toContain('/longevity/bloods')

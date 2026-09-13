@@ -10,6 +10,7 @@ export const emptyBiologyProfile = (): PersonalBiologyProfile => ({
   variants: [],
   medications: [],
   supplements: [],
+  diet: undefined,
   symptoms: [],
   sleep: [],
   training: [],

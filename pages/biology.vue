@@ -221,6 +221,22 @@ async function handleEncryptedBackupFile(event: Event) {
 
     <UCard>
       <div class="flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Stack and diet</h2>
+        <div class="flex flex-wrap gap-2">
+          <NuxtLink to="/longevity/stack"><UButton size="sm" variant="outline">Edit stack</UButton></NuxtLink>
+          <NuxtLink to="/longevity/diet"><UButton size="sm" variant="outline">Edit diet</UButton></NuxtLink>
+        </div>
+      </div>
+      <p class="mt-1 text-sm text-muted">Standing regimen lives on this local profile. Chat and safety read it. Backup import is optional.</p>
+      <div class="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+        <div><span class="text-muted">Supplements:</span> {{ profile.supplements.filter((item) => item.active).length }} active / {{ profile.supplements.length }}</div>
+        <div><span class="text-muted">Medications:</span> {{ profile.medications.filter((item) => item.active).length }} active / {{ profile.medications.length }}</div>
+        <div><span class="text-muted">Diet:</span> {{ profile.diet?.pattern || 'not set' }}</div>
+      </div>
+    </UCard>
+
+    <UCard>
+      <div class="flex items-center justify-between gap-3">
         <h2 class="font-semibold">Safety screening</h2>
         <NuxtLink to="/safety"><UButton size="sm" variant="outline">Open safety</UButton></NuxtLink>
       </div>

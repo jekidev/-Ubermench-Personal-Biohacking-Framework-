@@ -11,6 +11,7 @@
         <UButton to="/longevity/workouts" variant="outline">Workouts</UButton>
         <UButton to="/longevity/sleep" variant="outline">Sleep</UButton>
         <UButton to="/longevity/diet" variant="outline">Diet</UButton>
+        <UButton to="/longevity/stack" variant="outline">Stack</UButton>
         <UButton to="/longevity/meditation" variant="outline">Meditation</UButton>
       </div>
     </div>
@@ -57,8 +58,8 @@
         <ul class="space-y-2 text-sm text-zinc-400">
           <li>Blood biomarkers · {{ profile.biomarkers.length }} records</li>
           <li>Genetic variants · {{ profile.variants.length }} records</li>
-          <li>Medications · {{ profile.medications.length }} records</li>
-          <li>Supplements · {{ profile.supplements.length }} records</li>
+          <li>Medications · {{ profile.medications.length }} records · <NuxtLink to="/longevity/stack" class="underline">stack</NuxtLink></li>
+          <li>Supplements · {{ profile.supplements.length }} records · <NuxtLink to="/longevity/stack" class="underline">edit</NuxtLink></li>
           <li>Sleep · {{ profile.sleep.length }} records · <NuxtLink to="/longevity/sleep" class="underline">log</NuxtLink></li>
           <li>Training · {{ profile.training.length }} records · <NuxtLink to="/longevity/workouts" class="underline">workouts</NuxtLink></li>
           <li>Diet / meditation · <NuxtLink to="/longevity/diet" class="underline">diet</NuxtLink> · <NuxtLink to="/longevity/meditation" class="underline">meditation</NuxtLink></li>

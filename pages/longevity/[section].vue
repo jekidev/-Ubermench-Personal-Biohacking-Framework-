@@ -12,6 +12,7 @@
         <UButton v-else-if="section === 'fitness'" to="/longevity/workouts">Open workouts</UButton>
         <UButton v-else-if="section === 'recovery'" to="/longevity/sleep">Open sleep</UButton>
         <UButton v-else-if="section === 'metabolic'" to="/longevity/diet">Open diet log</UButton>
+        <UButton v-else-if="section === 'interventions'" to="/longevity/stack">Edit stack</UButton>
         <UButton v-else to="/longevity" variant="outline">Back to overview</UButton>
       </div>
     </div>
@@ -92,10 +93,21 @@
 
     <UCard v-if="section === 'metabolic'">
       <template #header><div class="font-medium">Diet log</div></template>
-      <p class="text-sm text-zinc-500">Metabolic reads glucose/lipids from the biology profile. The dedicated Diet page is the local meal log on this phone — not a USDA dump.</p>
+      <p class="text-sm text-zinc-500">Metabolic reads glucose/lipids from the biology profile. Diet holds the standing protocol plus a local meal log — not a USDA dump.</p>
       <div class="mt-3 flex flex-wrap gap-2">
         <UButton to="/longevity/diet" size="sm">Open Diet</UButton>
+        <UButton to="/longevity/stack" size="sm" variant="outline">Edit stack</UButton>
         <UButton to="/biology" size="sm" variant="outline">Biology profile</UButton>
+      </div>
+    </UCard>
+
+    <UCard v-if="section === 'interventions'">
+      <template #header><div class="font-medium">Personal stack</div></template>
+      <p class="text-sm text-zinc-500">Interventions read medications and supplements from the local biology profile. Enter the stack you actually take here — backup import is not required.</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <UButton to="/longevity/stack" size="sm">Edit stack</UButton>
+        <UButton to="/longevity/diet" size="sm" variant="outline">Diet protocol</UButton>
+        <UButton to="/safety" size="sm" variant="outline">Safety</UButton>
       </div>
     </UCard>
   </div>

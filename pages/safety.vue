@@ -86,6 +86,8 @@ function acknowledge() {
     </UCard>
 
     <div class="flex flex-wrap gap-3">
+      <NuxtLink to="/longevity/stack"><UButton variant="outline">Edit stack</UButton></NuxtLink>
+      <NuxtLink to="/longevity/diet"><UButton variant="outline">Diet protocol</UButton></NuxtLink>
       <NuxtLink to="/biology"><UButton variant="outline">Biology profile</UButton></NuxtLink>
       <NuxtLink to="/experiments"><UButton variant="outline">Experiments</UButton></NuxtLink>
     </div>

@@ -10,6 +10,8 @@ const links = [
   ['Organ Health', '/longevity/organ-health'],
   ['Prevention', '/longevity/prevention'],
   ['Interventions', '/longevity/interventions'],
+  ['Stack', '/longevity/stack'],
+  ['Diet', '/longevity/diet'],
   ['Evidence', '/longevity/evidence'],
 ] as const
 </script>

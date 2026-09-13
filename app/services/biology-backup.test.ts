@@ -24,6 +24,19 @@ describe('biology backup', () => {
     expect(parsed.metadata?.biomarkerCount).toBe(1)
   })
 
+  it('round-trips a user-entered stack and diet protocol', async () => {
+    const profile = emptyBiologyProfile()
+    profile.supplements.push({ id: 's1', name: 'Magnesium', dose: '200 mg', frequency: 'nightly', timing: 'bedtime', active: true })
+    profile.medications.push({ id: 'm1', name: 'Levothyroxine', dose: '50 mcg', active: true })
+    profile.diet = { pattern: 'High-protein Mediterranean', eatingWindow: '16:8', proteinTargetGrams: 140, restrictions: ['seed oils'] }
+
+    const parsed = await parseBiologyBackup(serializeBiologyBackup(await createBiologyBackup(profile)))
+    expect(parsed.profile.supplements[0]?.name).toBe('Magnesium')
+    expect(parsed.profile.medications[0]?.name).toBe('Levothyroxine')
+    expect(parsed.profile.diet?.pattern).toBe('High-protein Mediterranean')
+    expect(parsed.metadata?.supplementCount).toBe(1)
+  })
+
   it('rejects an unknown backup format or version', async () => {
     await expect(parseBiologyBackup(JSON.stringify({ format: 'other', version: 1 }))).rejects.toThrow()
     await expect(parseBiologyBackup(JSON.stringify({ format: 'ubermench-biology-backup', version: 99 }))).rejects.toThrow()

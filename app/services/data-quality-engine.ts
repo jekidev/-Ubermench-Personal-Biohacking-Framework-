@@ -1,5 +1,6 @@
 import type { PersonalBiologyProfile } from '~/types/biology'
 import type { DataGap, DataQualityReport } from '~/types/data-quality'
+import { hasDietProtocol } from './regimen-editor'
 
 export function assessDataQuality(profile: PersonalBiologyProfile): DataQualityReport {
   const totalCollections = 7
@@ -11,6 +12,8 @@ export function assessDataQuality(profile: PersonalBiologyProfile): DataQualityR
   const sourceCoverage = profile.biomarkers.length + profile.sleep.length + profile.training.length ? sourcedCollections / (profile.biomarkers.length + profile.sleep.length + profile.training.length) : 0
   const issues: string[] = []
   if (!profile.goals.length) issues.push('No explicit goals are configured.')
+  if (!profile.supplements.length && !profile.medications.length) issues.push('No supplement stack or medication list has been entered.')
+  if (!hasDietProtocol(profile.diet)) issues.push('No diet protocol has been entered.')
   if (completeness < 0.5) issues.push('Less than half of the core biological domains contain data.')
   if (timestampCoverage < 1 && profile.biomarkers.length) issues.push('Some biomarker records have missing or invalid timestamps.')
   if (unitCoverage < 1 && profile.biomarkers.length) issues.push('Some biomarker records have missing units.')
@@ -25,5 +28,7 @@ export function identifyDataGaps(profile: PersonalBiologyProfile): DataGap[] {
   if (!profile.training.length) gaps.push({ metric: 'training load', reason: 'No training exposure is available for confounder control.', expectedDecisionImpact: 0.65 })
   if (!profile.variants.length) gaps.push({ metric: 'genetic context', reason: 'No genomic context is available for genotype-sensitive decisions.', expectedDecisionImpact: 0.35 })
   if (!profile.goals.length) gaps.push({ metric: 'objective weights', reason: 'No explicit optimization target is configured.', expectedDecisionImpact: 0.9 })
+  if (!profile.supplements.length && !profile.medications.length) gaps.push({ metric: 'supplement stack', reason: 'No stack or medication list is available for safety screening.', expectedDecisionImpact: 0.55 })
+  if (!hasDietProtocol(profile.diet)) gaps.push({ metric: 'diet protocol', reason: 'No standing diet pattern is recorded. Meal logs stay separate.', expectedDecisionImpact: 0.45 })
   return gaps.sort((a, b) => b.expectedDecisionImpact - a.expectedDecisionImpact)
 }

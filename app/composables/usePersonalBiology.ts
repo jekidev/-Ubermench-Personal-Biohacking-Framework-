@@ -1,4 +1,5 @@
-import type { BiomarkerRecord, PersonalBiologyProfile } from '~/types/biology'
+import type { BiomarkerRecord, DietProtocol, MedicationRecord, PersonalBiologyProfile, SupplementRecord } from '~/types/biology'
+import { applyDietProtocol, applyMedication, applySupplement, removeRecord } from '~/services/regimen-editor'
 import { emptyBiologyProfile, loadBiologyProfile, saveBiologyProfile, clearBiologyProfile } from '~/services/biology-store'
 import { calculateBiomarkerTrend, getBiomarkerNames } from '~/services/biomarker-engine'
 import { screenInteractions } from '~/services/interaction-engine'
@@ -33,6 +34,26 @@ export function usePersonalBiology() {
 
   async function addBiomarker(record: BiomarkerRecord) {
     await persist({ ...profile.value, biomarkers: [...profile.value.biomarkers, record] })
+  }
+
+  async function saveSupplement(record: SupplementRecord) {
+    await persist(applySupplement(profile.value, record))
+  }
+
+  async function removeSupplement(id: string) {
+    await persist({ ...profile.value, supplements: removeRecord(profile.value.supplements, id) })
+  }
+
+  async function saveMedication(record: MedicationRecord) {
+    await persist(applyMedication(profile.value, record))
+  }
+
+  async function removeMedication(id: string) {
+    await persist({ ...profile.value, medications: removeRecord(profile.value.medications, id) })
+  }
+
+  async function saveDiet(diet: DietProtocol | undefined) {
+    await persist(applyDietProtocol(profile.value, diet))
   }
 
   function rememberBackup(exportedAt: string, checksum?: string, biomarkerCount?: number) {
@@ -131,6 +152,11 @@ export function usePersonalBiology() {
     initialize,
     persist,
     addBiomarker,
+    saveSupplement,
+    removeSupplement,
+    saveMedication,
+    removeMedication,
+    saveDiet,
     exportBackup,
     exportBackupToFile,
     importBackup,

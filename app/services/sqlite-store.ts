@@ -1,4 +1,5 @@
 import type { PersonalBiologyProfile } from '~/types/biology'
+import { migrateBiologyProfile } from './biology-profile-migration'
 
 const DB_PATH = 'sqlite:ubermench.db'
 const PROFILE_KEY = 'personal-biology:v1'
@@ -38,7 +39,7 @@ export async function loadSqliteBiologyProfile(): Promise<PersonalBiologyProfile
   const row = rows[0]
   if (!row || row.schema_version !== 1) return null
   try {
-    return JSON.parse(row.payload) as PersonalBiologyProfile
+    return migrateBiologyProfile(JSON.parse(row.payload))
   } catch {
     return null
   }
