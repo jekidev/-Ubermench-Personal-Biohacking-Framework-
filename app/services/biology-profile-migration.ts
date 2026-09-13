@@ -1,5 +1,6 @@
 import type { PersonalBiologyProfile } from '~/types/biology'
 import { emptyBiologyProfile } from './biology-store'
+import { normalizeDietProtocol } from './regimen-editor'
 
 export const SUPPORTED_BIOLOGY_PROFILE_VERSIONS = [1] as const
 export type BiologyProfileVersion = (typeof SUPPORTED_BIOLOGY_PROFILE_VERSIONS)[number]
@@ -21,6 +22,7 @@ function normalizeV1Profile(raw: Record<string, unknown>): PersonalBiologyProfil
     variants: Array.isArray(raw.variants) ? raw.variants as PersonalBiologyProfile['variants'] : [],
     medications: Array.isArray(raw.medications) ? raw.medications as PersonalBiologyProfile['medications'] : [],
     supplements: Array.isArray(raw.supplements) ? raw.supplements as PersonalBiologyProfile['supplements'] : [],
+    diet: normalizeDietProtocol(raw.diet),
     symptoms: Array.isArray(raw.symptoms) ? raw.symptoms as PersonalBiologyProfile['symptoms'] : [],
     sleep: Array.isArray(raw.sleep) ? raw.sleep as PersonalBiologyProfile['sleep'] : [],
     training: Array.isArray(raw.training) ? raw.training as PersonalBiologyProfile['training'] : [],

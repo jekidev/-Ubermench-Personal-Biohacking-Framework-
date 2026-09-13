@@ -3,13 +3,46 @@
     <div>
       <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Longevity</p>
       <h1 class="mt-1 text-2xl font-semibold">Diet</h1>
-      <p class="text-zinc-500">Simple local meal log on this phone. Not a USDA scrape. Works in Android Chrome.</p>
+      <p class="text-zinc-500">Standing diet protocol plus a simple local meal log. Not a USDA scrape. Works in Android Chrome.</p>
     </div>
 
     <div class="flex flex-wrap gap-2">
+      <UButton to="/longevity/stack" variant="outline" size="sm">Stack</UButton>
       <UButton to="/longevity/metabolic" variant="outline" size="sm">Metabolic module</UButton>
       <UButton to="/biology" variant="outline" size="sm">Biology profile</UButton>
     </div>
+
+    <UCard>
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="font-medium">Diet protocol</span>
+          <span class="text-xs text-zinc-500">{{ dietSummary || 'Not set' }}</span>
+        </div>
+      </template>
+      <p class="text-sm text-zinc-500">Describe the diet you follow, not a food database. Chat and safety can use this as personal context.</p>
+      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+        <UFormField label="Pattern">
+          <UInput v-model="dietDraft.pattern" placeholder="e.g. High-protein Mediterranean" />
+        </UFormField>
+        <UFormField label="Eating window">
+          <UInput v-model="dietDraft.eatingWindow" placeholder="e.g. 16:8 or 8–16" />
+        </UFormField>
+        <UFormField label="Protein target (g)">
+          <UInput v-model.number="dietDraft.proteinTargetGrams" type="number" min="0" placeholder="Optional" />
+        </UFormField>
+        <UFormField label="Restrictions">
+          <UInput v-model="dietDraft.restrictions" placeholder="Comma-separated, e.g. seed oils, alcohol" />
+        </UFormField>
+        <UFormField label="Notes" class="sm:col-span-2">
+          <UInput v-model="dietDraft.notes" placeholder="Typical meals, timing, what you avoid" />
+        </UFormField>
+      </div>
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+        <UButton :disabled="!canSaveDiet" @click="saveDiet">Save diet</UButton>
+        <UButton v-if="hasSavedDiet" variant="outline" color="neutral" @click="clearDiet">Clear</UButton>
+        <span v-if="dietSaved" class="text-sm text-zinc-400">Saved on this phone.</span>
+      </div>
+    </UCard>
 
     <UCard>
       <template #header><div class="font-medium">Log a meal</div></template>
@@ -57,6 +90,12 @@
 import { asFiniteNumber } from '~/services/lifestyle-log-store'
 import type { MealLog, MealType } from '~/types/lifestyle'
 import { MEAL_TYPES } from '~/types/lifestyle'
+import { formatRestrictionList, hasDietProtocol, parseRestrictionList } from '~/services/regimen-editor'
+import { summarizeDietProtocol } from '~/services/personal-regimen-context'
+
+const biology = usePersonalBiology()
+const profile = biology.profile
+await biology.initialize()
 
 const lifestyle = useLifestyleLogs()
 lifestyle.initialize()
@@ -67,7 +106,55 @@ const mealType = ref<MealType>('breakfast')
 const calories = ref<number | undefined>(undefined)
 const notes = ref('')
 const saved = ref(false)
+const dietSaved = ref(false)
 const meals = computed(() => lifestyle.mealLogs.value as MealLog[])
+const dietDraft = reactive({
+  pattern: '',
+  eatingWindow: '',
+  proteinTargetGrams: undefined as number | undefined,
+  restrictions: '',
+  notes: '',
+})
+
+function hydrateDietDraft() {
+  const diet = profile.value.diet
+  dietDraft.pattern = diet?.pattern ?? ''
+  dietDraft.eatingWindow = diet?.eatingWindow ?? ''
+  dietDraft.proteinTargetGrams = diet?.proteinTargetGrams
+  dietDraft.restrictions = formatRestrictionList(diet?.restrictions)
+  dietDraft.notes = diet?.notes ?? ''
+}
+
+hydrateDietDraft()
+watch(() => profile.value.diet, hydrateDietDraft)
+
+const hasSavedDiet = computed(() => hasDietProtocol(profile.value.diet))
+const dietSummary = computed(() => summarizeDietProtocol(profile.value.diet))
+const canSaveDiet = computed(() => Boolean(
+  dietDraft.pattern.trim()
+  || dietDraft.eatingWindow.trim()
+  || dietDraft.notes.trim()
+  || dietDraft.restrictions.trim()
+  || (typeof dietDraft.proteinTargetGrams === 'number' && dietDraft.proteinTargetGrams > 0),
+))
+
+async function saveDiet() {
+  if (!canSaveDiet.value) return
+  await biology.saveDiet({
+    pattern: dietDraft.pattern,
+    eatingWindow: dietDraft.eatingWindow,
+    proteinTargetGrams: dietDraft.proteinTargetGrams,
+    restrictions: parseRestrictionList(dietDraft.restrictions),
+    notes: dietDraft.notes,
+  })
+  dietSaved.value = true
+  window.setTimeout(() => { dietSaved.value = false }, 1800)
+}
+
+async function clearDiet() {
+  await biology.saveDiet(undefined)
+  hydrateDietDraft()
+}
 
 async function saveMeal() {
   const mealName = name.value.trim()

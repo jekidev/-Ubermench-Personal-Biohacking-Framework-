@@ -13,5 +13,7 @@ describe('data quality engine', () => {
     const gaps = identifyDataGaps(emptyBiologyProfile())
     expect(gaps[0]?.metric).toBe('core biomarkers')
     expect(gaps.some((gap) => gap.metric === 'objective weights')).toBe(true)
+    expect(gaps.some((gap) => gap.metric === 'supplement stack')).toBe(true)
+    expect(gaps.some((gap) => gap.metric === 'diet protocol')).toBe(true)
   })
 })

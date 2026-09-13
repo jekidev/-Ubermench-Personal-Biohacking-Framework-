@@ -99,6 +99,7 @@
           <span class="text-zinc-500">Lifestyle:</span>
           <NuxtLink to="/longevity/sleep" class="underline">Sleep</NuxtLink> ·
           <NuxtLink to="/longevity/diet" class="underline">Diet</NuxtLink> ·
+          <NuxtLink to="/longevity/stack" class="underline">Stack</NuxtLink> ·
           <NuxtLink to="/longevity/workouts" class="underline">Workouts</NuxtLink> ·
           <NuxtLink to="/longevity/meditation" class="underline">Meditation</NuxtLink>
         </div>

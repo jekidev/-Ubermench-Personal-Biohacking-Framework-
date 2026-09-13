@@ -15,6 +15,8 @@ import { formatSuggestedTools, resolveToolCallsFromModel } from './suggest-tools
 import { auditTaskSecurity } from './security-audit'
 import { listAllChatRules, listEnabledChatRules } from '~/services/chat-session/rule-registry'
 import { buildStackSynergySnapshot, formatStackSynergyContext } from '~/services/chat-session/stack-synergy'
+import { loadBiologyProfile } from '~/services/biology-store'
+import { formatPersonalRegimenContext } from '~/services/personal-regimen-context'
 
 const skillEvolution = new SkillEvolutionEngine()
 
@@ -84,6 +86,7 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
         workflowId: task.chatOptions?.workflowId,
       }))
       : ''
+    const regimenContext = formatPersonalRegimenContext(await loadBiologyProfile())
     const catalog = listAgentToolCatalog()
     const suggested = formatSuggestedTools(resolveToolCallsFromModel('', task.prompt, catalog, extractToolCalls).calls)
     const system = [
@@ -105,6 +108,7 @@ export async function runAgentTask(task: AgentTask): Promise<AgentRun> {
       task.chatOptions?.conversationHistory ? `Conversation history:\n${task.chatOptions.conversationHistory}` : '',
       task.chatOptions?.ragContext ? `Indexed document excerpts:\n${task.chatOptions.ragContext}` : '',
       stackContext,
+      regimenContext,
     ].filter(Boolean).join('\n\n')
     run.status = 'executing'
     const response = await withRecovery(

@@ -16,6 +16,7 @@ export const LONGEVITY_NAV: AppNavItem[] = [
   { label: 'Workouts', to: '/longevity/workouts' },
   { label: 'Sleep', to: '/longevity/sleep' },
   { label: 'Diet', to: '/longevity/diet' },
+  { label: 'Stack', to: '/longevity/stack' },
   { label: 'Meditation', to: '/longevity/meditation' },
   { label: 'Evidence', to: '/longevity/evidence' },
   { label: 'Timeline', to: '/longevity/timeline' },

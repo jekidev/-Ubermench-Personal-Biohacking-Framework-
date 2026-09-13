@@ -21,6 +21,7 @@ describe('overview dashboard helpers', () => {
     expect(summary.navigation.some((item) => item.to === '/longevity/workouts')).toBe(true)
     expect(summary.navigation.some((item) => item.to === '/longevity/sleep')).toBe(true)
     expect(summary.navigation.some((item) => item.to === '/longevity/diet')).toBe(true)
+    expect(summary.navigation.some((item) => item.to === '/longevity/stack')).toBe(true)
     expect(summary.navigation.some((item) => item.to === '/longevity/meditation')).toBe(true)
     expect(summary.navigation.some((item) => item.to === '/news')).toBe(true)
     expect(summary.navigation.some((item) => item.to === '/settings?tab=plugins')).toBe(true)
