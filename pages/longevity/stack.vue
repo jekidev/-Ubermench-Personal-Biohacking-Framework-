@@ -20,7 +20,7 @@
           <span class="text-xs text-zinc-500">{{ activeSupplementCount }} active</span>
         </div>
       </template>
-      <div class="grid gap-3 sm:grid-cols-2">
+      <div :key="supplementFormKey" class="grid gap-3 sm:grid-cols-2">
         <UFormField label="Name">
           <UInput v-model="supplementDraft.name" placeholder="e.g. Magnesium glycinate" />
         </UFormField>
@@ -73,7 +73,7 @@
     <UCard>
       <template #header><div class="font-medium">Add a medication</div></template>
       <p class="text-sm text-zinc-500">Medications stay on the same local profile so interaction checks can see them.</p>
-      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+      <div :key="medicationFormKey" class="mt-3 grid gap-3 sm:grid-cols-2">
         <UFormField label="Name">
           <UInput v-model="medicationDraft.name" placeholder="e.g. Levothyroxine" />
         </UFormField>
@@ -147,6 +147,8 @@ const profile = biology.profile
 await biology.initialize()
 
 const savedKind = ref<'supplement' | 'medication' | ''>('')
+const supplementFormKey = ref(0)
+const medicationFormKey = ref(0)
 const supplementDraft = reactive({
   name: '',
   dose: '',
@@ -179,6 +181,7 @@ async function saveSupplement() {
   supplementDraft.frequency = ''
   supplementDraft.timing = ''
   supplementDraft.notes = ''
+  supplementFormKey.value += 1
   flash('supplement')
 }
 
@@ -189,6 +192,7 @@ async function saveMedication() {
   medicationDraft.dose = ''
   medicationDraft.frequency = ''
   medicationDraft.notes = ''
+  medicationFormKey.value += 1
   flash('medication')
 }
 
