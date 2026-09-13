@@ -5,9 +5,11 @@ import { buildLongitudinalDashboard } from '~/services/longitudinal-dashboard'
 import { describeBackupStatus, loadBackupStatus } from '~/services/backup-status'
 import type { SafetySeverity } from '~/services/safety-engine'
 
-const { profile, initialize, interactionFlags, exportBackup, importBackup, previewImport, exportEncryptedBackup, importEncryptedBackup, exportBackupToFile, importBackupFromFile } = usePersonalBiology()
+const { profile, initialize, interactionFlags, saveGoals, exportBackup, importBackup, previewImport, exportEncryptedBackup, importEncryptedBackup, exportBackupToFile, importBackupFromFile } = usePersonalBiology()
 const { selectModel, evidenceQuery } = useBiohackingAI()
 const chronologicalAge = ref(35)
+const goalDraft = ref('')
+const goalSuggestions = ['Healthspan', 'Sleep quality', 'Metabolic health', 'Body composition', 'Recovery', 'Cognitive performance']
 
 const importInput = ref<HTMLInputElement | null>(null)
 const encryptedImportInput = ref<HTMLInputElement | null>(null)
@@ -43,6 +45,21 @@ function safetyColor(severity: SafetySeverity) {
   return 'success'
 }
 const phenotypicAge = computed(() => computePhenotypicAge(biomarkersToPhenotypicInputs(profile.value.biomarkers, chronologicalAge.value)))
+
+async function addGoal(goal: string) {
+  const next = goal.trim()
+  if (!next) return
+  await saveGoals([...profile.value.goals, next])
+}
+
+async function addCustomGoal() {
+  await addGoal(goalDraft.value)
+  goalDraft.value = ''
+}
+
+async function removeGoal(goal: string) {
+  await saveGoals(profile.value.goals.filter((item) => item !== goal))
+}
 
 function resetBackupStatus() {
   backupError.value = ''
@@ -217,6 +234,37 @@ async function handleEncryptedBackupFile(event: Event) {
         <p v-else class="text-sm text-muted">Missing markers: {{ phenotypicAge.missingMarkers.join(', ') }}</p>
       </div>
       <p class="mt-3 text-xs text-muted">{{ phenotypicAge.disclaimer }}</p>
+    </UCard>
+
+    <UCard>
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Goals</h2>
+        <span class="text-xs text-muted">{{ profile.goals.length }} set</span>
+      </div>
+      <p class="mt-1 text-sm text-muted">These weight evidence search, safety rules and chat. Stored on this phone.</p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <UButton
+          v-for="suggestion in goalSuggestions"
+          :key="suggestion"
+          size="xs"
+          variant="outline"
+          :disabled="profile.goals.some((goal) => goal.toLowerCase() === suggestion.toLowerCase())"
+          @click="addGoal(suggestion)"
+        >
+          {{ suggestion }}
+        </UButton>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <UInput v-model="goalDraft" class="min-w-64 flex-1" placeholder="e.g. Improve deep sleep" @keyup.enter="addCustomGoal" />
+        <UButton :disabled="!goalDraft.trim()" @click="addCustomGoal">Add goal</UButton>
+      </div>
+      <p v-if="!profile.goals.length" class="mt-3 text-sm text-muted">No goals yet. Add one to stop using the generic fallback query.</p>
+      <ul v-else class="mt-4 divide-y divide-default text-sm">
+        <li v-for="goal in profile.goals" :key="goal" class="flex flex-wrap items-center justify-between gap-2 py-2">
+          <span>{{ goal }}</span>
+          <UButton size="xs" color="neutral" variant="ghost" @click="removeGoal(goal)">Remove</UButton>
+        </li>
+      </ul>
     </UCard>
 
     <UCard>

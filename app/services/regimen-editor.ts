@@ -131,3 +131,22 @@ export function applySupplement(profile: PersonalBiologyProfile, record: Supplem
 export function applyMedication(profile: PersonalBiologyProfile, record: MedicationRecord): PersonalBiologyProfile {
   return { ...profile, medications: upsertRecord(profile.medications, record) }
 }
+
+export function normalizeGoals(values: unknown): string[] {
+  if (!Array.isArray(values)) return []
+  const seen = new Set<string>()
+  const goals: string[] = []
+  for (const value of values) {
+    const goal = trimText(value)
+    if (!goal) continue
+    const key = goal.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    goals.push(goal)
+  }
+  return goals
+}
+
+export function applyGoals(profile: PersonalBiologyProfile, goals: unknown): PersonalBiologyProfile {
+  return { ...profile, goals: normalizeGoals(goals) }
+}

@@ -36,3 +36,13 @@ export async function syncAndPersistHealth(
 
   return { results, observations, store }
 }
+
+export function persistCanonicalObservations(
+  observations: CanonicalObservation[],
+  storage: Pick<Storage, 'getItem' | 'setItem'>,
+): PersonalStateStore {
+  const current = loadPersonalStateStore(storage)
+  const store = appendCanonicalObservations(current, observations)
+  savePersonalStateStore(storage, store)
+  return store
+}

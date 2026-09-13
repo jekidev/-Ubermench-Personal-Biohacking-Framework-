@@ -1,5 +1,5 @@
 import type { BiomarkerRecord, DietProtocol, MedicationRecord, PersonalBiologyProfile, SupplementRecord } from '~/types/biology'
-import { applyDietProtocol, applyMedication, applySupplement, removeRecord } from '~/services/regimen-editor'
+import { applyDietProtocol, applyGoals, applyMedication, applySupplement, removeRecord } from '~/services/regimen-editor'
 import { emptyBiologyProfile, loadBiologyProfile, saveBiologyProfile, clearBiologyProfile } from '~/services/biology-store'
 import { calculateBiomarkerTrend, getBiomarkerNames } from '~/services/biomarker-engine'
 import { screenInteractions } from '~/services/interaction-engine'
@@ -54,6 +54,10 @@ export function usePersonalBiology() {
 
   async function saveDiet(diet: DietProtocol | undefined) {
     await persist(applyDietProtocol(profile.value, diet))
+  }
+
+  async function saveGoals(goals: string[]) {
+    await persist(applyGoals(profile.value, goals))
   }
 
   function rememberBackup(exportedAt: string, checksum?: string, biomarkerCount?: number) {
@@ -157,6 +161,7 @@ export function usePersonalBiology() {
     saveMedication,
     removeMedication,
     saveDiet,
+    saveGoals,
     exportBackup,
     exportBackupToFile,
     importBackup,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyBiologyProfile } from './biology-store'
 import {
   applyDietProtocol,
+  applyGoals,
   applySupplement,
   createMedicationRecord,
   createSupplementRecord,
@@ -56,5 +57,11 @@ describe('regimen editor', () => {
     const next = applyDietProtocol(emptyBiologyProfile(), diet)
     expect(next.diet?.pattern).toBe('High-protein Mediterranean')
     expect(applyDietProtocol(next, {}).diet).toBeUndefined()
+  })
+
+  it('normalizes goals and drops blanks and duplicates', () => {
+    const next = applyGoals(emptyBiologyProfile(), ['  Sleep quality  ', 'sleep quality', '', 'Healthspan'])
+    expect(next.goals).toEqual(['Sleep quality', 'Healthspan'])
+    expect(applyGoals(next, []).goals).toEqual([])
   })
 })

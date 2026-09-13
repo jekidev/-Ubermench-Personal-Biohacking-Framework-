@@ -21,6 +21,7 @@ import app.tauri.plugin.Plugin
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
 
 @TauriPlugin
 class HealthConnectPlugin(private val activity: Activity) : Plugin(activity) {
@@ -31,6 +32,7 @@ class HealthConnectPlugin(private val activity: Activity) : Plugin(activity) {
         HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
     )
+    private var pendingPermissionInvoke: Invoke? = null
 
     private fun clientOrNull(): HealthConnectClient? {
         return if (HealthConnectClient.getSdkStatus(activity) == HealthConnectClient.SDK_AVAILABLE) {
@@ -40,38 +42,40 @@ class HealthConnectPlugin(private val activity: Activity) : Plugin(activity) {
         }
     }
 
-    @Command
-    fun healthConnectIsAvailable(invoke: Invoke) {
-        val installed = HealthConnectClient.getSdkStatus(activity) == HealthConnectClient.SDK_AVAILABLE
-        val result = JSObject()
-        result.put("available", installed)
-        result.put("installed", installed)
-        result.put("granted", JSObject())
-        result.put("missing", JSObject())
-        invoke.resolve(result)
+    private fun permissionStatus(client: HealthConnectClient): JSObject {
+        val granted = runBlocking { client.permissionController.getGrantedPermissions() }
+        val missing = permissions.filterNot { granted.contains(it) }
+        return JSObject().apply {
+            put("available", true)
+            put("installed", true)
+            put("granted", JSONArray(granted.map { it.toString() }))
+            put("missing", JSONArray(missing.map { it.toString() }))
+        }
     }
 
     @Command
-    fun healthConnectGetPermissionStatus(invoke: Invoke) {
+    fun health_connect_is_available(invoke: Invoke) {
+        val installed = HealthConnectClient.getSdkStatus(activity) == HealthConnectClient.SDK_AVAILABLE
+        invoke.resolve(JSObject().apply {
+            put("available", installed)
+            put("installed", installed)
+            put("granted", JSONArray())
+            put("missing", JSONArray())
+        })
+    }
+
+    @Command
+    fun health_connect_get_permission_status(invoke: Invoke) {
         val client = clientOrNull()
         if (client == null) {
             invoke.reject("Health Connect is not installed on this device.")
             return
         }
-        runBlocking {
-            val granted = client.permissionController.getGrantedPermissions()
-            val missing = permissions.filterNot { granted.contains(it) }
-            val result = JSObject()
-            result.put("available", true)
-            result.put("installed", true)
-            result.put("granted", granted.map { it.toString() }.toTypedArray())
-            result.put("missing", missing.map { it.toString() }.toTypedArray())
-            invoke.resolve(result)
-        }
+        invoke.resolve(permissionStatus(client))
     }
 
     @Command
-    fun healthConnectRequestPermissions(invoke: Invoke) {
+    fun health_connect_request_permissions(invoke: Invoke) {
         val client = clientOrNull()
         if (client == null) {
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
@@ -82,18 +86,18 @@ class HealthConnectPlugin(private val activity: Activity) : Plugin(activity) {
             invoke.reject("Install Health Connect from Play Store, then retry.")
             return
         }
+        val already = permissionStatus(client)
+        if (already.getJSONArray("missing").length() == 0) {
+            invoke.resolve(already)
+            return
+        }
+        pendingPermissionInvoke = invoke
         val contract = PermissionController.createRequestPermissionResultContract()
-        activity.startActivityForResult(contract.createIntent(activity, permissions), 9911)
-        invoke.resolve(JSObject().apply {
-            put("available", true)
-            put("installed", true)
-            put("granted", emptyArray<String>())
-            put("missing", permissions.map { it.toString() }.toTypedArray())
-        })
+        activity.startActivityForResult(contract.createIntent(activity, permissions), PERMISSION_REQUEST)
     }
 
     @Command
-    fun healthConnectSyncRecords(invoke: Invoke) {
+    fun health_connect_sync_records(invoke: Invoke) {
         val client = clientOrNull()
         if (client == null) {
             invoke.reject("Health Connect is not available.")
@@ -106,55 +110,76 @@ class HealthConnectPlugin(private val activity: Activity) : Plugin(activity) {
         val range = TimeRangeFilter.between(start, end)
 
         runBlocking {
-            val samples = JSObject()
             val warnings = mutableListOf<String>()
             val payload = mutableListOf<JSObject>()
 
             val steps = client.readRecords(ReadRecordsRequest(StepsRecord::class, range))
             steps.records.forEach { record ->
-                payload.add(sample("steps", record.count.toDouble(), "count", record.endTime.toString(), "steps"))
+                payload.add(sample("steps", record.count.toDouble(), "count", record.endTime.toString(), "steps-${record.endTime}"))
             }
 
             val heartRates = client.readRecords(ReadRecordsRequest(HeartRateRecord::class, range))
             heartRates.records.forEach { record ->
                 record.samples.forEachIndexed { index, sample ->
-                    payload.add(sample("heart-rate", sample.beatsPerMinute.toDouble(), "bpm", sample.time.toString(), "heart-rate-$index"))
+                    payload.add(sample("heart-rate", sample.beatsPerMinute.toDouble(), "bpm", sample.time.toString(), "heart-rate-${sample.time}-$index"))
                 }
             }
 
             val resting = client.readRecords(ReadRecordsRequest(RestingHeartRateRecord::class, range))
             resting.records.forEach { record ->
-                payload.add(sample("resting-heart-rate", record.beatsPerMinute.toDouble(), "bpm", record.time.toString(), "resting-hr"))
+                payload.add(sample("resting_heart_rate", record.beatsPerMinute.toDouble(), "bpm", record.time.toString(), "resting-hr-${record.time}"))
             }
 
             val hrv = client.readRecords(ReadRecordsRequest(HeartRateVariabilityRmssdRecord::class, range))
             hrv.records.forEach { record ->
-                payload.add(sample("hrv", record.heartRateVariabilityMillis.toDouble(), "ms", record.time.toString(), "hrv"))
+                payload.add(sample("hrv", record.heartRateVariabilityMillis.toDouble(), "ms", record.time.toString(), "hrv-${record.time}"))
             }
 
             val sleep = client.readRecords(ReadRecordsRequest(SleepSessionRecord::class, range))
             sleep.records.forEach { record ->
                 val hours = (record.endTime.epochSecond - record.startTime.epochSecond) / 3600.0
-                payload.add(sample("sleep", hours, "hours", record.endTime.toString(), "sleep"))
+                payload.add(sample("sleep", hours, "hours", record.endTime.toString(), "sleep-${record.startTime}-${record.endTime}"))
             }
 
             if (payload.isEmpty()) warnings.add("No Health Connect records found in the selected time range.")
 
-            val result = JSObject()
-            result.put("samples", payload.toTypedArray())
-            result.put("cursor", end.toString())
-            result.put("warnings", warnings.toTypedArray())
-            invoke.resolve(result)
+            val samples = JSONArray()
+            payload.forEach { samples.put(it) }
+            invoke.resolve(JSObject().apply {
+                put("samples", samples)
+                put("cursor", end.toString())
+                put("warnings", JSONArray(warnings))
+            })
         }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode != PERMISSION_REQUEST) {
+            super.onActivityResult(requestCode, resultCode, data)
+            return
+        }
+        val invoke = pendingPermissionInvoke
+        pendingPermissionInvoke = null
+        val client = clientOrNull()
+        if (invoke == null) return
+        if (client == null) {
+            invoke.reject("Health Connect is not available.")
+            return
+        }
+        invoke.resolve(permissionStatus(client))
     }
 
     private fun sample(metric: String, value: Double, unit: String, recordedAt: String, suffix: String): JSObject {
         return JSObject().apply {
-            put("id", "hc-$suffix-$recordedAt")
+            put("id", "hc-$suffix")
             put("metric", metric)
             put("value", value)
             put("unit", unit)
             put("recordedAt", recordedAt)
         }
+    }
+
+    companion object {
+        private const val PERMISSION_REQUEST = 9911
     }
 }

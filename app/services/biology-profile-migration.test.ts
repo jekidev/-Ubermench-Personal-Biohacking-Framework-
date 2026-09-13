@@ -27,7 +27,7 @@ describe('biology profile migration', () => {
   it('normalizes missing arrays on version 1 profiles', () => {
     const migrated = migrateBiologyProfile({
       version: 1,
-      goals: ['longevity', 42],
+      goals: ['  longevity  ', 'longevity', 42],
       updatedAt: '2026-01-01T00:00:00.000Z',
     })
     expect(migrated.goals).toEqual(['longevity'])
