@@ -13,43 +13,71 @@ pub struct FileHit {
 static WORKSPACE: Mutex<Option<PathBuf>> = Mutex::new(None);
 
 fn repo_root() -> Result<PathBuf, String> {
-    WORKSPACE.lock().map_err(|_| "Workspace lock unavailable")?
-        .clone().ok_or_else(|| "Select a framework workspace in Settings first.".into())
+    WORKSPACE
+        .lock()
+        .map_err(|_| "Workspace lock unavailable")?
+        .clone()
+        .ok_or_else(|| "Select a framework workspace in Settings first.".into())
 }
 
 pub fn restore_workspace(app: &tauri::AppHandle) {
-    let Ok(dir) = app.path().app_config_dir() else { return };
-    let Ok(raw) = fs::read_to_string(dir.join("workspace.json")) else { return };
-    let Ok(path) = serde_json::from_str::<PathBuf>(&raw) else { return };
+    let Ok(dir) = app.path().app_config_dir() else {
+        return;
+    };
+    let Ok(raw) = fs::read_to_string(dir.join("workspace.json")) else {
+        return;
+    };
+    let Ok(path) = serde_json::from_str::<PathBuf>(&raw) else {
+        return;
+    };
     if let Ok(path) = path.canonicalize() {
         if path.is_dir() {
-            if let Ok(mut workspace) = WORKSPACE.lock() { *workspace = Some(path); }
+            if let Ok(mut workspace) = WORKSPACE.lock() {
+                *workspace = Some(path);
+            }
         }
     }
 }
 
 #[tauri::command]
 pub fn framework_get_workspace() -> Result<Option<String>, String> {
-    Ok(WORKSPACE.lock().map_err(|_| "Workspace lock unavailable")?
-        .as_ref().map(|path| path.to_string_lossy().into_owned()))
+    Ok(WORKSPACE
+        .lock()
+        .map_err(|_| "Workspace lock unavailable")?
+        .as_ref()
+        .map(|path| path.to_string_lossy().into_owned()))
 }
 
 #[tauri::command]
 pub fn framework_set_workspace(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let root = PathBuf::from(path).canonicalize().map_err(|e| e.to_string())?;
-    if !root.is_dir() { return Err("Workspace must be a directory".into()); }
+    let root = PathBuf::from(path)
+        .canonicalize()
+        .map_err(|e| e.to_string())?;
+    if !root.is_dir() {
+        return Err("Workspace must be a directory".into());
+    }
     let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    fs::write(dir.join("workspace.json"), serde_json::to_vec(&root).map_err(|e| e.to_string())?)
-        .map_err(|e| e.to_string())?;
+    fs::write(
+        dir.join("workspace.json"),
+        serde_json::to_vec(&root).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
     *WORKSPACE.lock().map_err(|_| "Workspace lock unavailable")? = Some(root.clone());
     Ok(root.to_string_lossy().into_owned())
 }
 
 fn safe_relative_path_in(root: &Path, relative: &str) -> Result<PathBuf, String> {
     let path = Path::new(relative);
-    if relative.is_empty() || path.is_absolute() || path.components().any(|part|
-        matches!(part, Component::ParentDir | Component::RootDir | Component::Prefix(_))) {
+    if relative.is_empty()
+        || path.is_absolute()
+        || path.components().any(|part| {
+            matches!(
+                part,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
+    {
         return Err("unsafe path: expected a relative workspace path".into());
     }
     let root = root.canonicalize().map_err(|e| e.to_string())?;
@@ -61,11 +89,15 @@ fn safe_relative_path_in(root: &Path, relative: &str) -> Result<PathBuf, String>
                 if metadata.file_type().is_symlink() {
                     return Err("unsafe path: symbolic links are not allowed".into());
                 }
-                if !target.canonicalize().map_err(|e| e.to_string())?.starts_with(&root) {
+                if !target
+                    .canonicalize()
+                    .map_err(|e| e.to_string())?
+                    .starts_with(&root)
+                {
                     return Err("unsafe path: outside workspace".into());
                 }
             }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {},
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(error) => return Err(error.to_string()),
         }
     }
@@ -82,14 +114,20 @@ fn text_preview(text: &str, needle: &str) -> Option<String> {
     let index = lower.find(needle)?;
     let mut start = index.saturating_sub(160);
     let mut end = (index + needle.len() + 300).min(lower.len());
-    while !lower.is_char_boundary(start) { start -= 1; }
-    while !lower.is_char_boundary(end) { end -= 1; }
+    while !lower.is_char_boundary(start) {
+        start -= 1;
+    }
+    while !lower.is_char_boundary(end) {
+        end -= 1;
+    }
     Some(lower[start..end].replace('\n', " "))
 }
 
 fn truncate_output(text: &mut String, max: usize) {
     let mut end = text.len().min(max);
-    while !text.is_char_boundary(end) { end -= 1; }
+    while !text.is_char_boundary(end) {
+        end -= 1;
+    }
     text.truncate(end);
 }
 
@@ -105,7 +143,13 @@ fn walk_files(root: &Path, current: &Path, output: &mut Vec<String>) {
     if let Ok(entries) = fs::read_dir(current) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if entry.file_type().map(|kind| kind.is_symlink()).unwrap_or(true) { continue; }
+            if entry
+                .file_type()
+                .map(|kind| kind.is_symlink())
+                .unwrap_or(true)
+            {
+                continue;
+            }
             let rel = path
                 .strip_prefix(root)
                 .unwrap_or(&path)
@@ -153,7 +197,13 @@ pub fn framework_search(query: String, limit: usize) -> Result<Vec<FileHit>, Str
                     return;
                 }
                 let path = entry.path();
-            if entry.file_type().map(|kind| kind.is_symlink()).unwrap_or(true) { continue; }
+                if entry
+                .file_type()
+                .map(|kind| kind.is_symlink())
+                .unwrap_or(true)
+            {
+                continue;
+            }
                 let rel = path
                     .strip_prefix(root)
                     .unwrap_or(&path)
