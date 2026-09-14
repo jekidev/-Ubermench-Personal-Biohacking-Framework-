@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-const result = spawnSync('npm', ['run', 'deployment:bootstrap'], {
+const result = spawnSync('pnpm', ['deployment:bootstrap'], {
   stdio: 'inherit',
   shell: process.platform === 'win32',
   env: { ...process.env, DEPLOYMENT_TARGET: 'manus', MANUS_ENV: process.env.MANUS_ENV ?? '1' },
