@@ -198,12 +198,12 @@ pub fn framework_search(query: String, limit: usize) -> Result<Vec<FileHit>, Str
                 }
                 let path = entry.path();
                 if entry
-                .file_type()
-                .map(|kind| kind.is_symlink())
-                .unwrap_or(true)
-            {
-                continue;
-            }
+                    .file_type()
+                    .map(|kind| kind.is_symlink())
+                    .unwrap_or(true)
+                {
+                    continue;
+                }
                 let rel = path
                     .strip_prefix(root)
                     .unwrap_or(&path)
