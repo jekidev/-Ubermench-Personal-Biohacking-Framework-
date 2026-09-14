@@ -15,6 +15,7 @@ export function usePersonalBiology() {
   const profile = useState<PersonalBiologyProfile>('personal-biology-profile', () => emptyBiologyProfile())
   const initialized = useState<boolean>('personal-biology-initialized', () => false)
   const initializing = useState<boolean>('personal-biology-initializing', () => false)
+  const loadError = useState<string>('personal-biology-load-error', () => '')
 
   async function initialize() {
     if (initialized.value || initializing.value) return
@@ -22,14 +23,25 @@ export function usePersonalBiology() {
     try {
       profile.value = await loadBiologyProfile()
       initialized.value = true
+      loadError.value = ''
+    } catch (cause) {
+      loadError.value = cause instanceof Error ? cause.message : 'Unable to load saved biology data.'
     } finally {
       initializing.value = false
     }
   }
 
-  async function persist(next: PersonalBiologyProfile) {
-    profile.value = { ...next, updatedAt: new Date().toISOString() }
-    await saveBiologyProfile(profile.value)
+  function requireLoaded() {
+    if (!initialized.value || loadError.value) throw new Error(loadError.value || 'Load the biology profile before editing or exporting it.')
+  }
+
+  async function persist(next: PersonalBiologyProfile, recovery = false) {
+    if (!recovery) requireLoaded()
+    const saved = JSON.parse(JSON.stringify({ ...next, updatedAt: new Date().toISOString() })) as PersonalBiologyProfile
+    await saveBiologyProfile(saved)
+    profile.value = saved
+    initialized.value = true
+    loadError.value = ''
   }
 
   async function addBiomarker(record: BiomarkerRecord) {
@@ -65,15 +77,17 @@ export function usePersonalBiology() {
   }
 
   async function exportBackup() {
+    requireLoaded()
     const backup = await createBiologyBackup(profile.value)
-    rememberBackup(backup.exportedAt, backup.checksum, backup.metadata?.biomarkerCount)
     return serializeBiologyBackup(backup)
   }
 
   async function exportBackupToFile() {
+    requireLoaded()
     const backup = await createBiologyBackup(profile.value)
-    rememberBackup(backup.exportedAt, backup.checksum, backup.metadata?.biomarkerCount)
-    return saveBiologyBackupNative(backup)
+    const path = await saveBiologyBackupNative(backup)
+    if (path) rememberBackup(backup.exportedAt, backup.checksum, backup.metadata?.biomarkerCount)
+    return path
   }
 
   async function importBackup(raw: string, options?: { force?: boolean }) {
@@ -82,7 +96,7 @@ export function usePersonalBiology() {
     if (!validation.valid && !options?.force) {
       throw new Error(validation.issues.map((issue) => issue.message).join(' '))
     }
-    await persist(validation.incoming)
+    await persist(validation.incoming, true)
     return validation
   }
 
@@ -98,20 +112,22 @@ export function usePersonalBiology() {
     if (!validation.valid && !options?.force) {
       throw new Error(validation.issues.map((issue) => issue.message).join(' '))
     }
-    await persist(validation.incoming)
+    await persist(validation.incoming, true)
     return validation
   }
 
   async function exportEncryptedBackup(passphrase: string) {
+    requireLoaded()
     const backup = await createBiologyBackup(profile.value)
-    rememberBackup(backup.exportedAt, backup.checksum, backup.metadata?.biomarkerCount)
     return serializeEncryptedBiologyBackup(await encryptBiologyBackup(backup, passphrase))
   }
 
   async function exportEncryptedBackupToFile(passphrase: string) {
+    requireLoaded()
     const backup = await createBiologyBackup(profile.value)
-    rememberBackup(backup.exportedAt, backup.checksum, backup.metadata?.biomarkerCount)
-    return saveEncryptedBiologyBackupNative(backup, passphrase)
+    const path = await saveEncryptedBiologyBackupNative(backup, passphrase)
+    if (path) rememberBackup(backup.exportedAt, backup.checksum, backup.metadata?.biomarkerCount)
+    return path
   }
 
   async function importEncryptedBackup(raw: string, passphrase: string, options?: { force?: boolean }) {
@@ -121,7 +137,7 @@ export function usePersonalBiology() {
     if (!validation.valid && !options?.force) {
       throw new Error(validation.issues.map((issue) => issue.message).join(' '))
     }
-    await persist(validation.incoming)
+    await persist(validation.incoming, true)
     return validation
   }
 
@@ -132,7 +148,7 @@ export function usePersonalBiology() {
     if (!validation.valid && !options?.force) {
       throw new Error(validation.issues.map((issue) => issue.message).join(' '))
     }
-    await persist(validation.incoming)
+    await persist(validation.incoming, true)
     return validation
   }
 
@@ -143,12 +159,15 @@ export function usePersonalBiology() {
   async function reset() {
     await clearBiologyProfile()
     profile.value = emptyBiologyProfile()
+    initialized.value = true
+    loadError.value = ''
   }
 
   return {
     profile,
     initialized,
     initializing,
+    loadError,
     initialize,
     persist,
     addBiomarker,

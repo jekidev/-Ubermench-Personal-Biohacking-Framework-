@@ -6,7 +6,10 @@ export const SUPPORTED_BIOLOGY_PROFILE_VERSIONS = [1] as const
 export type BiologyProfileVersion = (typeof SUPPORTED_BIOLOGY_PROFILE_VERSIONS)[number]
 
 export function migrateBiologyProfile(raw: unknown): PersonalBiologyProfile {
-  if (!isRecord(raw)) return emptyBiologyProfile()
+  if (!isRecord(raw)) throw new Error('Invalid biology profile: expected an object.')
+  for (const field of ['biomarkers', 'variants', 'medications', 'supplements', 'symptoms', 'sleep', 'training', 'goals']) {
+    if (field in raw && !Array.isArray(raw[field])) throw new Error(`Invalid biology profile field: ${field}`)
+  }
 
   const version = raw.version
   if (version === 1) return normalizeV1Profile(raw)

@@ -37,12 +37,9 @@ export async function loadSqliteBiologyProfile(): Promise<PersonalBiologyProfile
     [PROFILE_KEY],
   )
   const row = rows[0]
-  if (!row || row.schema_version !== 1) return null
-  try {
-    return migrateBiologyProfile(JSON.parse(row.payload))
-  } catch {
-    return null
-  }
+  if (!row) return null
+  if (row.schema_version !== 1) throw new Error(`Unsupported stored profile version: ${row.schema_version}`)
+  return migrateBiologyProfile(JSON.parse(row.payload))
 }
 
 export async function saveSqliteBiologyProfile(profile: PersonalBiologyProfile): Promise<void> {

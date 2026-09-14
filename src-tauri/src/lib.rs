@@ -32,6 +32,10 @@ fn app_name() -> &'static str {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            framework::restore_workspace(app.handle());
+            Ok(())
+        })
         .manage(mcp::McpApprovalRegistry::default())
         .manage(mcp::McpSessionRegistry::default())
         .plugin(tauri_plugin_dialog::init())
@@ -65,6 +69,8 @@ pub fn run() {
             mcp::mcp_stdio_session_call,
             mcp::mcp_stdio_session_close,
             mcp::mcp_stdio_session_list,
+            framework::framework_get_workspace,
+            framework::framework_set_workspace,
             framework::framework_snapshot,
             framework::framework_search,
             framework::framework_read_file,
