@@ -3,7 +3,7 @@
     <div>
       <h1 class="text-2xl font-semibold">Settings</h1>
       <p class="text-zinc-500">
-        Provider configuration is persistent metadata; API keys use the Tauri Stronghold vault on desktop and this browser's local vault on Android Chrome.
+        Provider configuration is persistent metadata; API keys use the Tauri Stronghold vault on desktop and session storage in browsers by default.
         Google OAuth and Drive live on <NuxtLink to="/connectors" class="underline underline-offset-4">Connectors</NuxtLink>.
       </p>
     </div>
@@ -47,7 +47,17 @@
     </div>
 
     <template v-if="activeTab === 'general'">
+      <UCard v-if="!browserDevPath">
+        <template #header>Framework workspace</template>
+        <p class="text-sm">{{ workspacePath || 'Choose the project folder for agent file tools.' }}</p>
+        <UButton class="mt-2" @click="chooseWorkspace">Choose folder</UButton>
+        <p v-if="workspaceError" role="alert">{{ workspaceError }}</p>
+      </UCard>
       <UCard>
+        <label v-if="browserDevPath" class="mb-3 flex gap-2 text-sm">
+          <input v-model="persistBrowserKeys" type="checkbox" @change="changeBrowserPersistence" />
+          Remember credentials on this device (unencrypted browser storage)
+        </label>
         <template #header><div class="flex items-center justify-between"><span class="font-medium">Secret vault</span><span class="text-xs text-zinc-500">{{ vaultUnlocked ? 'Unlocked' : 'Locked' }}</span></div></template>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
           <UInput v-model="vaultPassword" type="password" placeholder="Vault password" autocomplete="new-password" class="sm:flex-1" />
@@ -55,12 +65,12 @@
           <UButton v-else color="neutral" variant="outline" :loading="vaultBusy" @click="lockVault">Lock vault</UButton>
         </div>
         <p v-if="vaultError" class="mt-2 text-sm text-red-500">{{ vaultError }}</p>
-        <p class="mt-2 text-xs text-zinc-500">On Tauri desktop, provider API keys are stored in Stronghold. On Android Chrome they persist in this browser's local vault. The vault password is never persisted.</p>
+        <p class="mt-2 text-xs text-zinc-500">On Tauri desktop, provider API keys are stored in Stronghold. Browser credentials last for this session unless you enable persistent storage. The vault password is never persisted.</p>
         <UAlert
           v-if="androidPhone"
           class="mt-3"
           title="Android Chrome vault"
-          description="Secrets stay in this browser's local vault (localStorage). Unlock is a no-op here — save Garmin/Google tokens on this phone. This is the Android path, not a leftover desktop preview."
+          description="Browser storage is not encrypted. Session-only storage is the default; persistent storage is optional."
           color="primary"
           variant="subtle"
         />
@@ -68,7 +78,7 @@
           v-else-if="browserDevPath"
           class="mt-3"
           title="Browser development credential path"
-          description="You are not in the Tauri runtime. Secrets persist in this browser's local vault. Prefer the Android Chrome or desktop Tauri path for real credentials."
+          description="Browser storage is not encrypted. Use session-only storage or explicitly opt into persistent storage on this device."
           color="warning"
           variant="subtle"
         />
@@ -784,9 +794,22 @@ import {
   refreshOpenRouterCatalog,
   type OpenRouterCatalogStatus,
 } from '~/services/llm-provider-bridge'
+import { browserSecretsPersist, setBrowserSecretPersistence } from '~/services/browser-secret-store'
 import { isAndroidUserAgent, isTauriRuntime } from '~/utils/runtime-platform'
 import { parseSettingsTab, settingsTabQuery, type SettingsTab } from '~/utils/settings-tabs'
 
+const workspacePath = ref('')
+const workspaceError = ref('')
+async function chooseWorkspace() {
+  workspaceError.value = ''
+  try {
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const path = await open({ directory: true, multiple: false, title: 'Choose framework workspace' })
+    if (!path || Array.isArray(path)) return
+    const { invoke } = await import('@tauri-apps/api/core')
+    workspacePath.value = await invoke<string>('framework_set_workspace', { path })
+  } catch (cause) { workspaceError.value = cause instanceof Error ? cause.message : String(cause) }
+}
 const route = useRoute()
 const router = useRouter()
 const activeTab = computed(() => parseSettingsTab(route.query.tab))
@@ -805,6 +828,11 @@ const androidPhone = computed(() => isAndroidUserAgent())
 const vaultPassword = ref('')
 const vaultBusy = ref(false)
 const vaultError = ref('')
+const persistBrowserKeys = ref(browserSecretsPersist())
+function changeBrowserPersistence() {
+  try { setBrowserSecretPersistence(persistBrowserKeys.value) }
+  catch (cause) { vaultError.value = String(cause); persistBrowserKeys.value = browserSecretsPersist() }
+}
 const catalogBusy = ref(false)
 const catalogStatus = ref<OpenRouterCatalogStatus>(getOpenRouterCatalogStatus(settings.value))
 const githubConnectorStatus = ref('disabled')
@@ -837,6 +865,12 @@ watch(activeTab, (tab) => {
 })
 
 onMounted(async () => {
+  if (isTauriRuntime()) {
+    const { invoke } = await import('@tauri-apps/api/core')
+    try { workspacePath.value = await invoke<string | null>('framework_get_workspace') ?? '' }
+    catch (cause) { workspaceError.value = String(cause) }
+  }
+  if (!vaultUnlocked.value) return
   await github.loadCredentials()
   github.runSearch()
   githubConnectorStatus.value = (await github.refreshStatus()).status

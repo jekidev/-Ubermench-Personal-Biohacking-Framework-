@@ -175,9 +175,9 @@ The aggregation contract is explicitly documented and covered by tests: quality 
 The deployment pattern is based on the working `jekidev/T1` pattern: one canonical GitHub repository, a platform-specific launcher, setup/validation before launch, and Google Drive kept outside GitHub credentials.
 
 ```bash
-pnpm deployment:replit
+npm run deployment:replit
 # or
-pnpm deployment:manus
+npm run deployment:manus
 ```
 
 The deployment bootstrap:
@@ -206,7 +206,7 @@ npm run build
 For deployment validation and launch:
 
 ```bash
-pnpm deployment:bootstrap
+npm run deployment:bootstrap
 ```
 
 GitHub Actions runs the repository's quality checks on pushes and pull requests to `main`, including JavaScript tests/typecheck/build and the Rust/Tauri validation path.

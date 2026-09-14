@@ -34,8 +34,8 @@ export async function loadBiologyProfile(): Promise<PersonalBiologyProfile> {
     if (!raw) return emptyBiologyProfile()
     const parsed = JSON.parse(raw) as PersonalBiologyProfile
     return migrateBiologyProfile(parsed)
-  } catch {
-    return emptyBiologyProfile()
+  } catch (cause) {
+    throw new Error('Unable to load the saved biology profile. Existing data has been preserved.', { cause })
   }
 }
 

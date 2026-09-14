@@ -46,6 +46,11 @@
         </nav>
 
         <main id="main-content" role="main" tabindex="-1" class="min-w-0 flex-1 p-4 sm:p-6">
+          <div v-if="biologyLoadError" role="alert" class="mb-4 rounded border border-red-500 p-4">
+            <p>{{ biologyLoadError }} Editing and exports are blocked until recovery.</p>
+            <UButton class="mt-2" @click="retryBiologyLoad">Retry loading</UButton>
+            <NuxtLink class="ml-3 underline" to="/biology">Restore a backup</NuxtLink>
+          </div>
           <NuxtPage />
         </main>
       </div>
@@ -56,6 +61,7 @@
 <script setup lang="ts">
 import { APP_NAV_GROUPS, flattenAppNav, isNavCurrent } from '~/utils/app-navigation'
 
+const { loadError: biologyLoadError, initialize: retryBiologyLoad } = usePersonalBiology()
 const route = useRoute()
 const navGroups = APP_NAV_GROUPS
 const flatNav = flattenAppNav()

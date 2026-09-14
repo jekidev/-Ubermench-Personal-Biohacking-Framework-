@@ -52,7 +52,10 @@ async function openRouterFreeModelIds(settings: LLMSettings, force = false): Pro
   }
 
   try {
-    const models = await discoverOpenRouterFreeModels(openrouter.apiKey)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 1500)
+    const models = await discoverOpenRouterFreeModels(openrouter.apiKey, controller.signal)
+    clearTimeout(timeout)
     const ids = models.slice(0, 12).map((model) => model.id)
     freeModelCache = { key: cacheKey, fetchedAt: Date.now(), models: ids }
     return ids
@@ -172,8 +175,9 @@ export async function selectProvidersForRequest(
   settings: LLMSettings,
   request: LLMRequest,
 ): Promise<LLMProviderConfig[]> {
-  const candidates = await toProviderCandidatesAsync(settings)
   const hasPreferred = Boolean(request.preferredProvider || request.preferredModel)
+  // Explicit requests must be deterministic and must not trigger a remote catalog lookup.
+  const candidates = hasPreferred ? toProviderCandidates(settings) : await toProviderCandidatesAsync(settings)
   const policy = {
     ...toRotationPolicy(settings),
     autoFreeOnly: hasPreferred ? false : settings.preferFree,

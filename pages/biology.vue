@@ -62,7 +62,7 @@ async function downloadBackup() {
   anchor.download = `ubermench-biology-${new Date().toISOString().slice(0, 10)}.json`
   anchor.click()
   URL.revokeObjectURL(url)
-  backupMessage.value = `Biology backup exported. Checksum ${parsed.checksum?.slice(0, 16)}… · ${parsed.metadata?.biomarkerCount ?? 0} biomarkers.`
+  backupMessage.value = `Backup download requested; verify the downloaded file. Checksum ${parsed.checksum?.slice(0, 16)}… · ${parsed.metadata?.biomarkerCount ?? 0} biomarkers.`
 }
 
 async function downloadNativeBackup() {
@@ -70,6 +70,7 @@ async function downloadNativeBackup() {
   try {
     const path = await exportBackupToFile()
     backupMessage.value = path ? `Backup saved to ${path}` : 'Native export cancelled.'
+    backupStatusText.value = describeBackupStatus(loadBackupStatus())
   } catch (error) {
     backupError.value = error instanceof Error ? error.message : 'Native export failed.'
   }
@@ -101,7 +102,7 @@ async function downloadEncryptedBackup() {
     anchor.click()
     URL.revokeObjectURL(url)
     encryptedPassphrase.value = ''
-    backupMessage.value = 'Encrypted biology backup exported. Store the passphrase separately; it cannot be recovered by the app.'
+    backupMessage.value = 'Encrypted backup download requested; verify the downloaded file. Store the passphrase separately; it cannot be recovered by the app.'
   } catch (error) {
     backupError.value = error instanceof Error ? error.message : 'Unable to export encrypted biology backup.'
   }

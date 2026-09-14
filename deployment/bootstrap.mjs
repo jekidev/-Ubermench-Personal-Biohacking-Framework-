@@ -21,11 +21,10 @@ const platform = process.env.DEPLOYMENT_TARGET
 
 console.log(`Ubermench deployment bootstrap: ${platform}`);
 
-// Ubermench currently ships without a pnpm lockfile, so dependency resolution is intentionally non-frozen.
-run('pnpm', ['install', '--no-frozen-lockfile']);
-run('pnpm', ['typecheck']);
-run('pnpm', ['test']);
-run('pnpm', ['generate']);
+run('npm', ['ci', '--no-audit', '--no-fund']);
+run('npm', ['run', 'typecheck']);
+run('npm', ['test']);
+run('npm', ['run', 'build']);
 
 const googleDriveConnected = process.env.GOOGLE_DRIVE_CONNECTED === 'true'
   || Boolean(
@@ -46,14 +45,14 @@ await writeFile(
 
 if (!googleDriveConnected) {
   console.log('\nGoogle Drive is not connected. OAuth credentials must remain in platform connections/secrets.');
-  if (platform === 'replit') console.log('Connect Google Drive in Replit Connections, then set GOOGLE_DRIVE_CONNECTED=true and rerun: pnpm deployment:replit');
-  else if (platform === 'manus') console.log('Connect Google Drive in Manus, then set GOOGLE_DRIVE_CONNECTED=true and rerun: pnpm deployment:manus');
+  if (platform === 'replit') console.log('Connect Google Drive in Replit Connections, then set GOOGLE_DRIVE_CONNECTED=true and rerun: npm run deployment:replit');
+  else if (platform === 'manus') console.log('Connect Google Drive in Manus, then set GOOGLE_DRIVE_CONNECTED=true and rerun: npm run deployment:manus');
   else console.log('For local use, set GOOGLE_DRIVE_RAG_PATH to a synchronized local Drive folder.');
   process.exit(2);
 }
 
-console.log('\nGoogle Drive connection detected. Starting generated application...');
-run('npx', ['--yes', 'serve@14', '.output/public', '-l', String(process.env.PORT ?? 3000)], {
+console.log('\nGoogle Drive connection detected. Starting application server...');
+run(process.execPath, ['.output/server/index.mjs'], {
   ...process.env,
   NODE_ENV: 'production',
 });
