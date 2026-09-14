@@ -164,7 +164,8 @@ function impactLabel(value: number) {
       <div class="flex flex-wrap gap-3 text-sm">
         <NuxtLink to="/longevity/bloods"><UButton variant="outline" size="sm">Import lab results</UButton></NuxtLink>
         <NuxtLink to="/health-sync"><UButton variant="outline" size="sm">Sync health data</UButton></NuxtLink>
-        <NuxtLink to="/biology"><UButton variant="outline" size="sm">Manage biology profile</UButton></NuxtLink>
+        <NuxtLink to="/biology"><UButton variant="outline" size="sm">Set goals</UButton></NuxtLink>
+        <NuxtLink to="/longevity/stack"><UButton variant="outline" size="sm">Edit stack</UButton></NuxtLink>
         <NuxtLink to="/safety"><UButton variant="outline" size="sm">Review safety</UButton></NuxtLink>
         <NuxtLink to="/experiments"><UButton variant="outline" size="sm">Start N-of-1 protocol</UButton></NuxtLink>
       </div>

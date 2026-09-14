@@ -12,6 +12,7 @@
         <UButton to="/longevity/sleep" variant="outline">Sleep</UButton>
         <UButton to="/longevity/diet" variant="outline">Diet</UButton>
         <UButton to="/longevity/stack" variant="outline">Stack</UButton>
+        <UButton to="/biology" variant="outline">Goals</UButton>
         <UButton to="/longevity/meditation" variant="outline">Meditation</UButton>
       </div>
     </div>
@@ -62,6 +63,7 @@
           <li>Supplements · {{ profile.supplements.length }} records · <NuxtLink to="/longevity/stack" class="underline">edit</NuxtLink></li>
           <li>Sleep · {{ profile.sleep.length }} records · <NuxtLink to="/longevity/sleep" class="underline">log</NuxtLink></li>
           <li>Training · {{ profile.training.length }} records · <NuxtLink to="/longevity/workouts" class="underline">workouts</NuxtLink></li>
+          <li>Goals · {{ profile.goals.length }} · <NuxtLink to="/biology" class="underline">edit</NuxtLink></li>
           <li>Diet / meditation · <NuxtLink to="/longevity/diet" class="underline">diet</NuxtLink> · <NuxtLink to="/longevity/meditation" class="underline">meditation</NuxtLink></li>
         </ul>
       </UCard>

@@ -32,7 +32,7 @@ export const HEALTH_PROVIDER_REGISTRY: HealthProviderCapability[] = [
     id: 'health-connect',
     name: 'Android Health Connect',
     platform: 'android',
-    supports: ['sleep', 'heart-rate', 'hrv', 'training', 'steps', 'temperature', 'respiratory-rate'],
+    supports: ['sleep', 'heart-rate', 'resting_heart_rate', 'hrv', 'training', 'steps', 'temperature', 'respiratory-rate'],
     requiresNativeAdapter: true,
   },
   {

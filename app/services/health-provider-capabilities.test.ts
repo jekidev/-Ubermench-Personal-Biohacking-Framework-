@@ -9,6 +9,10 @@ describe('health-provider-capabilities', () => {
     expect(isSupportedProviderMetric('garmin', 'training_load')).toBe(true)
     expect(isSupportedProviderMetric('garmin', 'respiratory-rate')).toBe(false)
     expect(isSupportedProviderMetric('health-connect', 'respiratory-rate')).toBe(true)
+    expect(isSupportedProviderMetric('health-connect', 'resting_heart_rate')).toBe(true)
+    expect(isSupportedProviderMetric('health-connect', 'resting-heart-rate')).toBe(true)
+    expect(isSupportedProviderMetric('health-connect', 'sleep')).toBe(true)
+    expect(isSupportedProviderMetric('health-connect', 'sleep_duration')).toBe(true)
   })
 
   it('normalizes metric names before capability checks', () => {
@@ -32,6 +36,17 @@ describe('health-provider-capabilities', () => {
     }
 
     expect(filterSupportedProviderSamples([accepted, rejected])).toEqual([accepted])
+  })
+
+  it('rewrites Health Connect aliases before the allow-list check', () => {
+    const sample: ExternalHealthSample = {
+      id: 'hc-1',
+      metric: 'resting-heart-rate',
+      value: 52,
+      recordedAt: '2026-09-13T08:00:00.000Z',
+      source: 'health-connect',
+    }
+    expect(filterSupportedProviderSamples([sample])).toEqual([{ ...sample, metric: 'resting_heart_rate' }])
   })
 
   it('has no path for removed providers', () => {

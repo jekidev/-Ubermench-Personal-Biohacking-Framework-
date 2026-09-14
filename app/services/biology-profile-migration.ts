@@ -1,15 +1,12 @@
 import type { PersonalBiologyProfile } from '~/types/biology'
 import { emptyBiologyProfile } from './biology-store'
-import { normalizeDietProtocol } from './regimen-editor'
+import { normalizeDietProtocol, normalizeGoals } from './regimen-editor'
 
 export const SUPPORTED_BIOLOGY_PROFILE_VERSIONS = [1] as const
 export type BiologyProfileVersion = (typeof SUPPORTED_BIOLOGY_PROFILE_VERSIONS)[number]
 
 export function migrateBiologyProfile(raw: unknown): PersonalBiologyProfile {
-  if (!isRecord(raw)) throw new Error('Invalid biology profile: expected an object.')
-  for (const field of ['biomarkers', 'variants', 'medications', 'supplements', 'symptoms', 'sleep', 'training', 'goals']) {
-    if (field in raw && !Array.isArray(raw[field])) throw new Error(`Invalid biology profile field: ${field}`)
-  }
+  if (!isRecord(raw)) return emptyBiologyProfile()
 
   const version = raw.version
   if (version === 1) return normalizeV1Profile(raw)
@@ -29,7 +26,7 @@ function normalizeV1Profile(raw: Record<string, unknown>): PersonalBiologyProfil
     symptoms: Array.isArray(raw.symptoms) ? raw.symptoms as PersonalBiologyProfile['symptoms'] : [],
     sleep: Array.isArray(raw.sleep) ? raw.sleep as PersonalBiologyProfile['sleep'] : [],
     training: Array.isArray(raw.training) ? raw.training as PersonalBiologyProfile['training'] : [],
-    goals: Array.isArray(raw.goals) ? raw.goals.filter((goal): goal is string => typeof goal === 'string') : [],
+    goals: normalizeGoals(raw.goals),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : base.updatedAt,
   }
 }

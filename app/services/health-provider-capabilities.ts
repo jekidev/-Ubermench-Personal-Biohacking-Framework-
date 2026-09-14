@@ -1,4 +1,5 @@
 import type { ExternalHealthSample } from './health-data-adapters'
+import { canonicalizeHealthConnectMetric } from './health-connect-metrics'
 import { getHealthProvider, type HealthProviderId } from './health-provider-registry'
 
 /**
@@ -12,10 +13,16 @@ export function isSupportedProviderMetric(provider: HealthProviderId, metric: st
   const capability = getHealthProvider(provider)
   if (!capability) return false
 
-  const normalized = metric.trim().toLowerCase()
+  const normalized = provider === 'health-connect'
+    ? canonicalizeHealthConnectMetric(metric)
+    : metric.trim().toLowerCase()
   return capability.supports.includes(normalized as (typeof capability.supports)[number])
 }
 
 export function filterSupportedProviderSamples(samples: ExternalHealthSample[]): ExternalHealthSample[] {
-  return samples.filter((sample) => isSupportedProviderMetric(sample.source, sample.metric))
+  return samples
+    .map((sample) => sample.source === 'health-connect'
+      ? { ...sample, metric: canonicalizeHealthConnectMetric(sample.metric) }
+      : sample)
+    .filter((sample) => isSupportedProviderMetric(sample.source, sample.metric))
 }
