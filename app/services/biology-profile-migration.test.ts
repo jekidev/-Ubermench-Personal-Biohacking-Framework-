@@ -19,9 +19,11 @@ describe('biology profile migration', () => {
     expect(() => migrateBiologyProfile({ version: 99 })).toThrow(/unsupported/i)
   })
 
-  it('returns empty profile for invalid input', () => {
-    expect(migrateBiologyProfile(null).version).toBe(1)
-    expect(migrateBiologyProfile(null).biomarkers).toEqual([])
+  it('rejects invalid input instead of replacing it with an empty profile', () => {
+    expect(() => migrateBiologyProfile(null)).toThrow(/invalid/i)
+    for (const field of ['biomarkers', 'variants', 'medications', 'supplements', 'symptoms', 'sleep', 'training', 'goals']) {
+      expect(() => migrateBiologyProfile({ version: 1, [field]: {} })).toThrow(field)
+    }
   })
 
   it('normalizes missing arrays on version 1 profiles', () => {
