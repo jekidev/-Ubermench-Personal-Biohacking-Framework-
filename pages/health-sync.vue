@@ -106,20 +106,38 @@
 
     <div class="grid gap-4 lg:grid-cols-2">
       <UCard>
-        <template #header><div class="font-medium">Android Health Connect</div></template>
-        <p class="text-sm text-zinc-400">
-          Native Android app only. Chrome/PWA cannot read Health Connect and will not invent step counts.
-        </p>
-        <UButton
-          class="mt-3"
-          :loading="healthConnectBusy"
-          :disabled="hcMode === 'browser-blocked'"
-          @click="connectAndSync('health-connect')"
-        >
-          Connect & sync
-        </UButton>
+        <template #header>
+          <div class="flex items-center justify-between gap-3">
+            <span class="font-medium">Android Health Connect</span>
+            <span class="text-xs text-zinc-500">{{ hcMode }}</span>
+          </div>
+        </template>
+        <p class="text-sm text-zinc-400">{{ hcHelp }}</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <UButton
+            :loading="healthConnectBusy"
+            :disabled="hcMode !== 'native'"
+            @click="connectAndSync('health-connect')"
+          >
+            Connect & sync
+          </UButton>
+          <UButton
+            color="neutral"
+            variant="outline"
+            :loading="healthConnectBusy"
+            :disabled="hcMode !== 'native'"
+            @click="refreshHealthConnectPermissions"
+          >
+            Refresh permissions
+          </UButton>
+        </div>
         <p v-if="healthConnectStatus" class="mt-3 text-sm text-zinc-400">{{ healthConnectStatus }}</p>
-        <p class="mt-3 text-xs text-zinc-500">Runtime mode: {{ hcMode }}</p>
+        <p v-if="hcPermissionError" class="mt-3 text-sm text-red-400">{{ hcPermissionError }}</p>
+        <div v-if="hcPermissions" class="mt-3 grid gap-1 text-xs text-zinc-500">
+          <div>Installed: {{ hcPermissions.installed ? 'yes' : 'no' }}</div>
+          <div>Granted: {{ hcPermissions.granted.length ? hcPermissions.granted.join(', ') : 'none' }}</div>
+          <div>Missing: {{ hcPermissions.missing.length ? hcPermissions.missing.join(', ') : 'none' }}</div>
+        </div>
       </UCard>
 
       <UCard>
@@ -129,6 +147,35 @@
         <p v-if="persistedCount" class="mt-3 text-sm text-zinc-400">Last sync wrote {{ persistedCount }} canonical observation(s).</p>
       </UCard>
     </div>
+
+    <UCard v-if="healthConnectSamples.length">
+      <template #header>
+        <div class="flex items-center justify-between gap-3">
+          <span class="font-medium">Health Connect samples</span>
+          <span class="text-xs text-zinc-500">{{ healthConnectSamples.length }} records</span>
+        </div>
+      </template>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs uppercase text-zinc-500">
+            <tr>
+              <th class="py-2 pr-3">Metric</th>
+              <th class="py-2 pr-3">Value</th>
+              <th class="py-2 pr-3">Recorded</th>
+              <th class="py-2">Id</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="sample in healthConnectSamples" :key="sample.id" class="border-t border-zinc-800">
+              <td class="py-2 pr-3">{{ sample.metric }}</td>
+              <td class="py-2 pr-3">{{ sample.value }} {{ sample.unit }}</td>
+              <td class="py-2 pr-3">{{ sample.recordedAt.slice(0, 10) }}</td>
+              <td class="py-2 font-mono text-xs text-zinc-500">{{ sample.id.slice(0, 18) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </UCard>
 
     <UCard>
       <template #header><div class="font-medium">Live Garmin plugin status</div></template>
@@ -176,14 +223,18 @@
 <script setup lang="ts">
 import type { ExternalHealthSample } from '~/services/health-data-adapters'
 import { detectHealthConnectRuntimeMode } from '~/services/health-adapters/health-connect-adapter'
+import type { HealthConnectPermissionStatus } from '~~/plugins/health-connect/bridge'
+import { healthConnectGetPermissionStatus } from '~~/plugins/health-connect/bridge'
 import {
   createHealthSyncOrchestrator,
   importGarminWellnessAndPersist,
   storeGarminAccessToken,
   syncAndPersistAllHealth,
+  syncAndPersistProvider,
 } from '~/services/health-sync-runtime'
 import { defaultGoogleRedirectUri } from '~~/plugins/connectors/oauth/google-oauth'
 import { HEALTH_CONNECT_BROWSER_MESSAGE } from '~/services/android-fallbacks'
+import { isTauriAndroid } from '~/utils/runtime-platform'
 
 const garminOAuth = useGarminOAuth()
 const garminPlugin = useGarminPluginStatus()
@@ -197,15 +248,31 @@ const tokenStatus = ref('')
 const healthConnectStatus = ref('')
 const persistedCount = ref(0)
 const importedSamples = ref<ExternalHealthSample[]>([])
+const healthConnectSamples = ref<ExternalHealthSample[]>([])
 const garminBusy = ref(false)
 const healthConnectBusy = ref(false)
 const persistBusy = ref(false)
 const hcMode = ref<Awaited<ReturnType<typeof detectHealthConnectRuntimeMode>>>('unavailable')
+const tauriAndroid = ref(false)
+const hcPermissions = ref<HealthConnectPermissionStatus | null>(null)
+const hcPermissionError = ref('')
 const redirectUri = defaultGoogleRedirectUri()
 const healthConnectBrowserMessage = HEALTH_CONNECT_BROWSER_MESSAGE
+const hcHelp = computed(() => {
+  if (hcMode.value === 'browser-blocked') return healthConnectBrowserMessage
+  if (hcMode.value === 'native') {
+    return 'Reads steps, heart rate, resting HR, HRV and sleep from Health Connect on this phone. Connect & sync persists those observations locally. The adapter never invents measurements.'
+  }
+  if (tauriAndroid.value) {
+    return 'Health Connect plugin is not registered in this Android build. Merge HealthConnectPlugin into MainActivity after tauri:android:init, then rebuild. Chrome/PWA still cannot read Health Connect.'
+  }
+  return 'Health Connect only works in the Ubermench Android app. On this computer, import Garmin Wellness JSON instead. Desktop stubs stay unavailable and do not invent samples.'
+})
 
 onMounted(async () => {
+  tauriAndroid.value = await isTauriAndroid()
   hcMode.value = await detectHealthConnectRuntimeMode()
+  if (hcMode.value === 'native') await refreshHealthConnectPermissions()
   await garminOAuth.refreshStatus()
   await refreshGarminPlugins()
 })
@@ -269,21 +336,35 @@ async function saveGarminToken() {
   }
 }
 
+async function refreshHealthConnectPermissions() {
+  hcPermissionError.value = ''
+  try {
+    hcPermissions.value = await healthConnectGetPermissionStatus()
+  } catch (error) {
+    hcPermissions.value = null
+    hcPermissionError.value = error instanceof Error ? error.message : String(error)
+  }
+}
+
 async function connectAndSync(provider: 'garmin' | 'health-connect') {
   const busy = provider === 'garmin' ? garminBusy : healthConnectBusy
   busy.value = true
   if (provider === 'garmin') garminError.value = ''
   try {
+    if (provider === 'health-connect') {
+      const result = await syncAndPersistProvider('health-connect')
+      if (result.samples.length) healthConnectSamples.value = result.samples
+      persistedCount.value = result.observations.length
+      healthConnectStatus.value = result.state.lastError
+        ?? `Synced ${result.samples.length} sample(s) and persisted ${result.observations.length} observation(s).`
+      await refreshHealthConnectPermissions()
+      return
+    }
     const orchestrator = createHealthSyncOrchestrator()
     const state = await orchestrator.syncProvider(provider)
-    const message = state.state.lastError ?? `Synced ${state.samples.length} samples (${state.observations.length} observations)`
-    if (provider === 'garmin') {
-      garminStatus.value = message
-      if (state.samples.length) importedSamples.value = state.samples
-      await refreshGarminPlugins()
-    } else {
-      healthConnectStatus.value = message
-    }
+    garminStatus.value = state.state.lastError ?? `Synced ${state.samples.length} samples (${state.observations.length} observations)`
+    if (state.samples.length) importedSamples.value = state.samples
+    await refreshGarminPlugins()
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     if (provider === 'garmin') garminError.value = message

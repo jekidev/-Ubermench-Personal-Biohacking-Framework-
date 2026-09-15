@@ -8,6 +8,7 @@ import {
   healthConnectRequestPermissions,
   healthConnectSyncRecords,
 } from '../../../plugins/health-connect/bridge'
+import { canonicalizeHealthConnectSample } from '../health-connect-metrics'
 import { loadSyncCursor, saveSyncCursor } from './stub-adapters'
 
 export type HealthConnectRuntimeMode = 'native' | 'browser-blocked' | 'unavailable'
@@ -64,19 +65,22 @@ export class HealthConnectAdapter implements HealthProviderAdapter {
 
     const cursor = loadSyncCursor('health-connect')
     const result = await healthConnectSyncRecords(from ?? cursor.cursor, to)
-    const samples: ExternalHealthSample[] = result.samples.map((item) => ({
-      id: item.id,
-      metric: item.metric,
-      value: item.value,
-      unit: item.unit,
-      recordedAt: item.recordedAt,
-      source: 'health-connect',
-      metadata: {
-        adapter: 'health-connect-native',
-        warningCount: result.warnings.length,
-        warnings: result.warnings.join(' | '),
-      },
-    }))
+    const samples: ExternalHealthSample[] = result.samples.map((item) => {
+      const normalized = canonicalizeHealthConnectSample(item)
+      return {
+        id: normalized.id,
+        metric: normalized.metric,
+        value: normalized.value,
+        unit: normalized.unit,
+        recordedAt: normalized.recordedAt,
+        source: 'health-connect',
+        metadata: {
+          adapter: 'health-connect-native',
+          warningCount: result.warnings.length,
+          warnings: result.warnings.join(' | '),
+        },
+      }
+    })
 
     if (result.cursor) {
       saveSyncCursor({ provider: 'health-connect', lastSyncedAt: new Date().toISOString(), cursor: result.cursor })

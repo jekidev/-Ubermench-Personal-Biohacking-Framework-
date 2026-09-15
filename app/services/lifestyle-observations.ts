@@ -1,6 +1,7 @@
 import type { CanonicalObservation } from '~/types/personal-state'
 
 export const LIFESTYLE_SLEEP_METRICS = [
+  'sleep',
   'sleep_score',
   'sleepDuration',
   'sleep_duration',

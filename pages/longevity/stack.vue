@@ -9,7 +9,7 @@
     <div class="flex flex-wrap gap-2">
       <UButton to="/longevity/diet" variant="outline" size="sm">Diet protocol</UButton>
       <UButton to="/safety" variant="outline" size="sm">Safety screening</UButton>
-      <UButton to="/biology" variant="outline" size="sm">Biology profile</UButton>
+      <UButton to="/biology" variant="outline" size="sm">Goals & biology</UButton>
       <UButton to="/longevity/interventions" variant="outline" size="sm">Interventions</UButton>
     </div>
 
@@ -52,19 +52,41 @@
       </template>
       <p v-if="!profile.supplements.length" class="text-sm text-zinc-500">No supplements yet. This is the standing stack used by chat, safety, and interventions.</p>
       <ul v-else class="divide-y divide-zinc-800 text-sm">
-        <li v-for="item in profile.supplements" :key="item.id" class="flex flex-wrap items-center justify-between gap-2 py-3">
-          <div>
-            <div class="font-medium">{{ item.name }} <span v-if="!item.active" class="text-xs text-zinc-500">· paused</span></div>
-            <div class="text-xs text-zinc-500">
-              <span v-if="item.dose">{{ item.dose }}</span>
-              <span v-if="item.frequency"> · {{ item.frequency }}</span>
-              <span v-if="item.timing"> · {{ item.timing }}</span>
-              <span v-if="item.notes"> · {{ item.notes }}</span>
+        <li v-for="item in profile.supplements" :key="item.id" class="py-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="font-medium">{{ item.name }} <span v-if="!item.active" class="text-xs text-zinc-500">· paused</span></div>
+              <div class="text-xs text-zinc-500">
+                <span v-if="item.dose">{{ item.dose }}</span>
+                <span v-if="item.frequency"> · {{ item.frequency }}</span>
+                <span v-if="item.timing"> · {{ item.timing }}</span>
+                <span v-if="item.notes"> · {{ item.notes }}</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <UButton size="xs" variant="outline" @click="startEditSupplement(item)">{{ editingSupplementId === item.id ? 'Close' : 'Edit dose' }}</UButton>
+              <UButton size="xs" variant="outline" @click="toggleSupplement(item)">{{ item.active ? 'Pause' : 'Resume' }}</UButton>
+              <UButton size="xs" color="neutral" variant="ghost" @click="biology.removeSupplement(item.id)">Remove</UButton>
             </div>
           </div>
-          <div class="flex flex-wrap gap-2">
-            <UButton size="xs" variant="outline" @click="toggleSupplement(item)">{{ item.active ? 'Pause' : 'Resume' }}</UButton>
-            <UButton size="xs" color="neutral" variant="ghost" @click="biology.removeSupplement(item.id)">Remove</UButton>
+          <div v-if="editingSupplementId === item.id" class="mt-3 grid gap-3 sm:grid-cols-2">
+            <UFormField label="Dose">
+              <UInput v-model="supplementEdit.dose" placeholder="e.g. 200 mg" />
+            </UFormField>
+            <UFormField label="Frequency">
+              <UInput v-model="supplementEdit.frequency" placeholder="e.g. nightly" />
+            </UFormField>
+            <UFormField label="Timing">
+              <UInput v-model="supplementEdit.timing" placeholder="e.g. bedtime" />
+            </UFormField>
+            <UFormField label="Notes">
+              <UInput v-model="supplementEdit.notes" placeholder="Optional" />
+            </UFormField>
+            <div class="sm:col-span-2 flex flex-wrap gap-2">
+              <UButton size="sm" @click="saveSupplementEdit(item)">Save dose</UButton>
+              <UButton size="sm" variant="ghost" @click="editingSupplementId = ''">Cancel</UButton>
+              <span v-if="savedKind === 'supplement-edit'" class="text-sm text-zinc-400">Updated on this phone.</span>
+            </div>
           </div>
         </li>
       </ul>
@@ -102,18 +124,37 @@
       </template>
       <p v-if="!profile.medications.length" class="text-sm text-zinc-500">No medications recorded.</p>
       <ul v-else class="divide-y divide-zinc-800 text-sm">
-        <li v-for="item in profile.medications" :key="item.id" class="flex flex-wrap items-center justify-between gap-2 py-3">
-          <div>
-            <div class="font-medium">{{ item.name }} <span v-if="!item.active" class="text-xs text-zinc-500">· paused</span></div>
-            <div class="text-xs text-zinc-500">
-              <span v-if="item.dose">{{ item.dose }}</span>
-              <span v-if="item.frequency"> · {{ item.frequency }}</span>
-              <span v-if="item.notes"> · {{ item.notes }}</span>
+        <li v-for="item in profile.medications" :key="item.id" class="py-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="font-medium">{{ item.name }} <span v-if="!item.active" class="text-xs text-zinc-500">· paused</span></div>
+              <div class="text-xs text-zinc-500">
+                <span v-if="item.dose">{{ item.dose }}</span>
+                <span v-if="item.frequency"> · {{ item.frequency }}</span>
+                <span v-if="item.notes"> · {{ item.notes }}</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <UButton size="xs" variant="outline" @click="startEditMedication(item)">{{ editingMedicationId === item.id ? 'Close' : 'Edit dose' }}</UButton>
+              <UButton size="xs" variant="outline" @click="toggleMedication(item)">{{ item.active ? 'Pause' : 'Resume' }}</UButton>
+              <UButton size="xs" color="neutral" variant="ghost" @click="biology.removeMedication(item.id)">Remove</UButton>
             </div>
           </div>
-          <div class="flex flex-wrap gap-2">
-            <UButton size="xs" variant="outline" @click="toggleMedication(item)">{{ item.active ? 'Pause' : 'Resume' }}</UButton>
-            <UButton size="xs" color="neutral" variant="ghost" @click="biology.removeMedication(item.id)">Remove</UButton>
+          <div v-if="editingMedicationId === item.id" class="mt-3 grid gap-3 sm:grid-cols-2">
+            <UFormField label="Dose">
+              <UInput v-model="medicationEdit.dose" placeholder="e.g. 50 mcg" />
+            </UFormField>
+            <UFormField label="Frequency">
+              <UInput v-model="medicationEdit.frequency" placeholder="e.g. morning" />
+            </UFormField>
+            <UFormField label="Notes" class="sm:col-span-2">
+              <UInput v-model="medicationEdit.notes" placeholder="Optional" />
+            </UFormField>
+            <div class="sm:col-span-2 flex flex-wrap gap-2">
+              <UButton size="sm" @click="saveMedicationEdit(item)">Save dose</UButton>
+              <UButton size="sm" variant="ghost" @click="editingMedicationId = ''">Cancel</UButton>
+              <span v-if="savedKind === 'medication-edit'" class="text-sm text-zinc-400">Updated on this phone.</span>
+            </div>
           </div>
         </li>
       </ul>
@@ -146,7 +187,11 @@ const biology = usePersonalBiology()
 const profile = biology.profile
 await biology.initialize()
 
-const savedKind = ref<'supplement' | 'medication' | ''>('')
+const savedKind = ref<'supplement' | 'medication' | 'supplement-edit' | 'medication-edit' | ''>('')
+const editingSupplementId = ref('')
+const editingMedicationId = ref('')
+const supplementEdit = reactive({ dose: '', frequency: '', timing: '', notes: '' })
+const medicationEdit = reactive({ dose: '', frequency: '', notes: '' })
 const supplementFormKey = ref(0)
 const medicationFormKey = ref(0)
 const supplementDraft = reactive({
@@ -166,7 +211,7 @@ const medicationDraft = reactive({
 const activeSupplementCount = computed(() => profile.value.supplements.filter((item) => item.active).length)
 const safetyFlags = computed(() => screenProfileSafety(profile.value))
 
-function flash(kind: 'supplement' | 'medication') {
+function flash(kind: 'supplement' | 'medication' | 'supplement-edit' | 'medication-edit') {
   savedKind.value = kind
   window.setTimeout(() => {
     if (savedKind.value === kind) savedKind.value = ''
@@ -202,5 +247,51 @@ async function toggleSupplement(item: SupplementRecord) {
 
 async function toggleMedication(item: MedicationRecord) {
   await biology.saveMedication({ ...item, active: !item.active })
+}
+
+function startEditSupplement(item: SupplementRecord) {
+  if (editingSupplementId.value === item.id) {
+    editingSupplementId.value = ''
+    return
+  }
+  editingSupplementId.value = item.id
+  supplementEdit.dose = item.dose ?? ''
+  supplementEdit.frequency = item.frequency ?? ''
+  supplementEdit.timing = item.timing ?? ''
+  supplementEdit.notes = item.notes ?? ''
+}
+
+function startEditMedication(item: MedicationRecord) {
+  if (editingMedicationId.value === item.id) {
+    editingMedicationId.value = ''
+    return
+  }
+  editingMedicationId.value = item.id
+  medicationEdit.dose = item.dose ?? ''
+  medicationEdit.frequency = item.frequency ?? ''
+  medicationEdit.notes = item.notes ?? ''
+}
+
+async function saveSupplementEdit(item: SupplementRecord) {
+  await biology.saveSupplement({
+    ...item,
+    dose: supplementEdit.dose.trim() || undefined,
+    frequency: supplementEdit.frequency.trim() || undefined,
+    timing: supplementEdit.timing.trim() || undefined,
+    notes: supplementEdit.notes.trim() || undefined,
+  })
+  editingSupplementId.value = ''
+  flash('supplement-edit')
+}
+
+async function saveMedicationEdit(item: MedicationRecord) {
+  await biology.saveMedication({
+    ...item,
+    dose: medicationEdit.dose.trim() || undefined,
+    frequency: medicationEdit.frequency.trim() || undefined,
+    notes: medicationEdit.notes.trim() || undefined,
+  })
+  editingMedicationId.value = ''
+  flash('medication-edit')
 }
 </script>

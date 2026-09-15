@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { HealthProviderSyncResult, HealthSyncOrchestrator } from './health-sync-orchestrator'
-import { syncAndPersistHealth } from './health-sync-persistence'
+import { persistCanonicalObservations, syncAndPersistHealth } from './health-sync-persistence'
 import { PERSONAL_STATE_STORAGE_KEY } from './personal-state-store'
 
 function storage(): Storage {
@@ -78,5 +78,53 @@ describe('health sync persistence', () => {
     const result = await syncAndPersistHealth(source, store)
 
     expect(result.store.observations.map((item) => item.id)).toEqual(['obs-1', 'obs-2'])
+  })
+
+  it('persists a single Health Connect sync without inventing samples', () => {
+    const store = storage()
+    const next = persistCanonicalObservations([
+      {
+        id: 'health-connect:hc-steps',
+        subjectId: 'self',
+        metric: 'steps',
+        value: 8432,
+        unit: 'count',
+        observedAt: '2026-09-13T08:00:00.000Z',
+        source: 'wearable',
+        quality: 1,
+        confidence: 1,
+      },
+    ], store)
+    expect(next.observations).toHaveLength(1)
+    expect(next.observations[0]?.metric).toBe('steps')
+  })
+
+  it('persists canonical Health Connect sleep and resting heart rate', () => {
+    const store = storage()
+    const next = persistCanonicalObservations([
+      {
+        id: 'health-connect:hc-sleep',
+        subjectId: 'self',
+        metric: 'sleep',
+        value: 7.2,
+        unit: 'hours',
+        observedAt: '2026-09-13T06:00:00.000Z',
+        source: 'wearable',
+        quality: 1,
+        confidence: 1,
+      },
+      {
+        id: 'health-connect:hc-rhr',
+        subjectId: 'self',
+        metric: 'resting_heart_rate',
+        value: 52,
+        unit: 'bpm',
+        observedAt: '2026-09-13T06:05:00.000Z',
+        source: 'wearable',
+        quality: 1,
+        confidence: 1,
+      },
+    ], store)
+    expect(next.observations.map((item) => item.metric)).toEqual(['sleep', 'resting_heart_rate'])
   })
 })

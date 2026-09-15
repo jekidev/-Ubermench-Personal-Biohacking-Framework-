@@ -1,6 +1,6 @@
 import type { PersonalBiologyProfile } from '~/types/biology'
 import { emptyBiologyProfile } from './biology-store'
-import { normalizeDietProtocol } from './regimen-editor'
+import { normalizeDietProtocol, normalizeGoals } from './regimen-editor'
 
 export const SUPPORTED_BIOLOGY_PROFILE_VERSIONS = [1] as const
 export type BiologyProfileVersion = (typeof SUPPORTED_BIOLOGY_PROFILE_VERSIONS)[number]
@@ -29,7 +29,7 @@ function normalizeV1Profile(raw: Record<string, unknown>): PersonalBiologyProfil
     symptoms: Array.isArray(raw.symptoms) ? raw.symptoms as PersonalBiologyProfile['symptoms'] : [],
     sleep: Array.isArray(raw.sleep) ? raw.sleep as PersonalBiologyProfile['sleep'] : [],
     training: Array.isArray(raw.training) ? raw.training as PersonalBiologyProfile['training'] : [],
-    goals: Array.isArray(raw.goals) ? raw.goals.filter((goal): goal is string => typeof goal === 'string') : [],
+    goals: normalizeGoals(raw.goals),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : base.updatedAt,
   }
 }
